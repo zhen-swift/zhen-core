@@ -29,6 +29,12 @@ public struct DarwinScanner: Sendable {
     /// on whether a BPF device opened. Half-open SYN probing when it did, full connect
     /// when it did not, and nothing above here branches on which.
     public let ports: any PortScanning
+    /// UDP port probing, used by `zhen ports` for a spec's `U:` ports.
+    ///
+    /// Always the same engine: it needs no privilege, so nothing about how this scanner
+    /// assembled changes it. Deliberately NOT in `capabilities` — that set describes
+    /// what a `zhen scan` run did, and a scan does not probe UDP.
+    public let udpPorts: any PortScanning = DarwinUDPPortScan()
     /// Naming: Bonjour, UPnP and NetBIOS behind one stage.
     public let naming: DarwinNameResolver
     /// The descriptor soft limit the kernel actually granted at startup.

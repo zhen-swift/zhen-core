@@ -95,7 +95,7 @@ nonisolated struct PortsRenderer {
         // The summary states the shape of what was asked, because `zhen ports` has no
         // device table above it to say how many hosts were involved.
         var summary = "\(targets.count) host\(targets.count == 1 ? "" : "s")"
-            + " · \(spec.ports.count) port\(spec.ports.count == 1 ? "" : "s")"
+            + " · \(spec.probeCount) port\(spec.probeCount == 1 ? "" : "s")"
             + " · \(String(format: "%.0f", result.timing.totalElapsedMillis))ms"
         if result.outcome != .complete {
             summary += " · PARTIAL (\(result.outcome.rawValue))"

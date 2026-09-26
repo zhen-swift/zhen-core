@@ -237,7 +237,17 @@ struct Scan: AsyncParsableCommand {
     /// cannot drift apart on what `1-1024` means.
     private func parsePorts() throws(ScanSetupError) -> PortSpec {
         guard let ports else { return .commonServices }
-        do { return try PortSpec.parse(ports) }
+        let spec: PortSpec
+        do { spec = try PortSpec.parse(ports) }
         catch { throw .badArgument(error.message) }
+        // Refused rather than ignored. The deep scan's port stage is TCP; accepting `U:`
+        // here and probing nothing for it would be a run that measured less than it was
+        // asked to and said nothing about it.
+        guard spec.udpPorts.isEmpty else {
+            throw .badArgument(
+                "`zhen scan --deep` probes TCP only. Scan UDP ports on the hosts it finds "
+                + "with `zhen ports <hosts> U:\(spec.udpPorts.map(String.init).joined(separator: ","))`.")
+        }
+        return spec
     }
 }

@@ -73,6 +73,8 @@ public struct EngineCapabilities: OptionSet, Sendable, Hashable, Codable {
     /// it is how a scan reports a host it never got an answer from, which is a thing a
     /// caller displaying results genuinely wants to know about them.
     public static let neighborTable  = EngineCapabilities(rawValue: 1 << 6)
+    /// UDP port probing, with `open_filtered` for silence.
+    public static let udpScan        = EngineCapabilities(rawValue: 1 << 7)
 
     /// Stable wire names, in bit order.
     static let names: [(EngineCapabilities, String)] = [
@@ -83,6 +85,7 @@ public struct EngineCapabilities: OptionSet, Sendable, Hashable, Codable {
         (.connectScan, "connect_scan"),
         (.bannerProbe, "banner_probe"),
         (.neighborTable, "neighbor_table"),
+        (.udpScan, "udp_scan"),
     ]
 
     /// The capabilities present, as stable wire names.
@@ -123,7 +126,20 @@ public struct PortSpec: Sendable, Hashable, Codable {
     public var ports: [UInt16]
 
     /// Builds a spec from an explicit port list.
-    public init(_ ports: [UInt16]) { self.ports = ports }
+    /// UDP ports, in the order they will be probed. Empty unless a spec said `U:`.
+    ///
+    /// A separate list rather than a transport on each number, because the two are
+    /// probed by different engines with different outcomes — `open_filtered` exists only
+    /// on this side — and every existing reader of `ports` means TCP.
+    public var udpPorts: [UInt16]
+
+    public init(_ ports: [UInt16], udp udpPorts: [UInt16] = []) {
+        self.ports = ports
+        self.udpPorts = udpPorts
+    }
+
+    /// Every probe this spec asks for, both transports.
+    public var probeCount: Int { ports.count + udpPorts.count }
 
     /// What a home LAN actually answers on. Deliberately small — a deep scan is a
     /// deliberate act, not the default, and 65,535 ports across a /24 is 16 million
@@ -136,7 +152,19 @@ public struct PortSpec: Sendable, Hashable, Codable {
 
     /// Wire keys, spelled out. Renaming a Swift property is then a refactor; renaming a
     /// JSON key is a deliberate breaking change, and the compiler is what tells you so.
-    public enum CodingKeys: String, CodingKey { case ports }
+    public enum CodingKeys: String, CodingKey {
+        case ports
+        case udpPorts = "udp_ports"
+    }
+
+    /// Tolerates a spec encoded before `udp_ports` existed.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            try container.decode([UInt16].self, forKey: .ports),
+            udp: try container.decodeIfPresent([UInt16].self, forKey: .udpPorts) ?? []
+        )
+    }
 }
 
 /// What to scan.
@@ -319,6 +347,51 @@ public struct PortScanResult: Sendable, Hashable {
         self.usedCapabilities = usedCapabilities
         self.outcome = outcome
         self.timing = timing
+    }
+}
+
+extension PortScanResult {
+    /// Two engines' results over the same targets, as one — how `zhen ports` reports a
+    /// spec with both TCP and UDP in it.
+    ///
+    /// The worse outcome wins, so a UDP half cut short by the deadline is not reported
+    /// as a complete run on the strength of a TCP half that finished. Observations are
+    /// joined per host and put back in canonical order; stages are kept in the order the
+    /// engines ran.
+    public func combined(with other: PortScanResult) -> PortScanResult {
+        var ports = self.ports
+        for (host, observations) in other.ports {
+            ports[host, default: []].append(contentsOf: observations)
+        }
+        for host in ports.keys { ports[host]?.sort(by: PortObservation.canonicalOrder) }
+        let stages = timing.stages + other.timing.stages
+        let elapsed = stages.reduce(0) { $0 + $1.elapsedMillis }
+        let sent = timing.probesSent + other.timing.probesSent
+        return PortScanResult(
+            ports: ports,
+            fingerprints: fingerprints.merging(other.fingerprints) { mine, _ in mine },
+            degradations: degradations + other.degradations,
+            usedCapabilities: usedCapabilities.union(other.usedCapabilities),
+            outcome: Self.worse(outcome, other.outcome),
+            timing: Timing(
+                stages: stages,
+                probesSent: sent,
+                repliesSeen: timing.repliesSeen + other.timing.repliesSeen,
+                peakConcurrency: max(timing.peakConcurrency, other.timing.peakConcurrency),
+                effectiveProbesPerSecond: elapsed > 0 ? Double(sent) * 1000 / elapsed : 0
+            )
+        )
+    }
+
+    private static func worse(_ lhs: Outcome, _ rhs: Outcome) -> Outcome {
+        func rank(_ outcome: Outcome) -> Int {
+            switch outcome {
+            case .complete: 0
+            case .deadlineExpired: 1
+            case .cancelled: 2
+            }
+        }
+        return rank(lhs) >= rank(rhs) ? lhs : rhs
     }
 }
 

@@ -79,6 +79,8 @@ extension PortSpec {
 
         var included: [UInt16] = []
         var excluded: Set<UInt16> = []
+        var udpIncluded: [UInt16] = []
+        var udpExcluded: Set<UInt16> = []
         var sawInclusion = false
 
         // `omittingEmptySubsequences: false`, or the guard below can never fire:
@@ -93,20 +95,17 @@ extension PortSpec {
             guard !body.isEmpty else {
                 throw ParseError("'!' needs a port or range after it.")
             }
-            // A protocol prefix qualifies which transport is probed. The transport is
-            // carried separately from the numbers, so it is accepted and recorded here
-            // and the engine decides what to do with it — today, TCP only.
+            // A protocol prefix qualifies which transport is probed. The two transports
+            // are separate lists in `PortSpec`, because they are separate engines.
             let (transport, numbersText) = splitTransport(body)
-            if transport == .udp {
-                throw ParseError("UDP is not scannable yet, so 'U:' has nothing to do. "
-                                 + "See PORTS-plan.md on why UDP needs a fourth port state.")
-            }
             let numbers = try expand(numbersText, whole: piece)
-            if isExclusion {
-                excluded.formUnion(numbers)
-            } else {
-                sawInclusion = true
-                included.append(contentsOf: numbers)
+            // A prefix qualifies its own piece only: `U:53,80` is UDP 53 and TCP 80.
+            // No prefix is TCP, which is what every spec meant before UDP existed.
+            switch (transport == .udp, isExclusion) {
+            case (true, true): udpExcluded.formUnion(numbers)
+            case (true, false): sawInclusion = true; udpIncluded.append(contentsOf: numbers)
+            case (false, true): excluded.formUnion(numbers)
+            case (false, false): sawInclusion = true; included.append(contentsOf: numbers)
             }
         }
 
@@ -119,11 +118,13 @@ extension PortSpec {
         // property of `PortSpec`.
         var seen: Set<UInt16> = []
         let ports = included.filter { seen.insert($0).inserted && !excluded.contains($0) }
+        var seenUDP: Set<UInt16> = []
+        let udpPorts = udpIncluded.filter { seenUDP.insert($0).inserted && !udpExcluded.contains($0) }
 
-        guard !ports.isEmpty else {
+        guard !ports.isEmpty || !udpPorts.isEmpty else {
             throw ParseError("'\(trimmed)' excludes every port it includes.")
         }
-        return PortSpec(ports)
+        return PortSpec(ports, udp: udpPorts)
     }
 
     /// Splits a `T:`/`U:` prefix off, case-insensitively.

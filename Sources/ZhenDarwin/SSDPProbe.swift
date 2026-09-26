@@ -79,9 +79,9 @@ public struct DarwinSSDPDiscovery: SSDPDiscovery {
         let concurrency = fetchConcurrency
 
         let work = Task {
-            let socket: SSDPSocket
+            let socket: UDPProbe
             do {
-                socket = try SSDPSocket(interface: interface)
+                socket = try SSDPSocket.open(on: interface)
             } catch {
                 failureFlag.raise()
                 log.record(Degradation(
@@ -107,11 +107,14 @@ public struct DarwinSSDPDiscovery: SSDPDiscovery {
             // data race the compiler will not let through, and papering over it with a
             // lock would hide the real structure: the listen phase has a definite end,
             // and its output is a value handed to the phase after it.
-            let replies = socket.responses()
+            let replies = socket.events()
             let reader = Task { () -> [IPv4Address: SSDPResponse] in
                 var found: [IPv4Address: SSDPResponse] = [:]
-                for await reply in replies {
-                    guard let parsed = SSDPResponse.parse(reply.text, from: reply.source) else { continue }
+                for await event in replies {
+                    guard case .datagram(let reply) = event,
+                          let parsed = SSDPResponse.parse(
+                            String(decoding: reply.payload, as: UTF8.self), from: reply.source)
+                    else { continue }
                     // First response per address wins. A device answering `ssdp:all`
                     // sends one datagram per service it hosts — a television will send
                     // six — and every one of them carries the same LOCATION.
@@ -135,13 +138,13 @@ public struct DarwinSSDPDiscovery: SSDPDiscovery {
             // the request. A send late in the window asks for replies that arrive after
             // the window has closed.
             let request = SSDPSocket.searchRequest(mx: listenSeconds)
-            socket.send(request)
+            socket.send(request, to: SSDPSocket.group, port: SSDPSocket.port)
             var transmissions = 1
             while !Task.isCancelled, !listenDeadline.isExpired {
                 try? await Task.sleep(for: min(.milliseconds(200), listenDeadline.remaining))
                 let more = transmissions < DarwinSSDPDiscovery.searchTransmissions
                 if more, listenDeadline.remaining > .milliseconds(600) {
-                    socket.send(request)
+                    socket.send(request, to: SSDPSocket.group, port: SSDPSocket.port)
                     transmissions += 1
                 }
             }
@@ -503,103 +506,42 @@ final class RefuseRedirects: NSObject, URLSessionTaskDelegate, @unchecked Sendab
     }
 }
 
-/// One datagram received on the search socket.
-struct SSDPDatagram: Sendable {
-    /// Who sent it. The source address of the datagram, which a device cannot
-    /// misreport without also not receiving our request.
-    var source: IPv4Address
-    /// Its contents as text.
-    var text: String
-}
-
-/// The M-SEARCH socket: bound to one interface, non-blocking, readiness through a
-/// `DispatchSource`, closed in that source's cancel handler.
-///
-/// The descriptor rule is the same one the rest of this target follows and for the same
-/// reason. `DispatchSource.cancel()` is asynchronous: closing the descriptor before the
-/// cancel handler runs returns the number to the kernel while a source may still fire on
-/// it, and this process opens sockets by the thousand during a deep scan — the number is
-/// reissued almost immediately, and the stale source then reads somebody else's socket.
-final class SSDPSocket: @unchecked Sendable {
-    private let fd: Int32
-    private let queue = DispatchQueue(label: "com.jctec.zhen.ssdp", qos: .userInitiated)
-    private var source: DispatchSourceRead?
-    private var continuation: AsyncStream<SSDPDatagram>.Continuation?
-    private var stopped = false
-    /// Whether a read source has taken responsibility for closing the descriptor.
-    ///
-    /// Exactly one of the source's cancel handler and `deinit` closes it, never both.
-    /// The flag stays TRUE after `stop()` — `stop()` cancels the source, and cancellation
-    /// is asynchronous, so the handler has not run yet and the descriptor is still the
-    /// source's to close. Clearing it there and letting `deinit` close as well is a
-    /// double close, and a double close is not harmless: between the two, another thread
-    /// can open a socket and be handed the same number, and the second close then tears
-    /// down an unrelated connection.
-    private var sourceOwnsDescriptor = false
-
+/// The M-SEARCH socket's constants and its one extra rule, over the shared `UDPProbe`.
+enum SSDPSocket {
     /// The multicast group and port every UPnP device listens on.
     static let group = IPv4Address(raw: 0xEF_FF_FF_FA)   // 239.255.255.250
     static let port: UInt16 = 1900
 
-    /// Opens the socket and binds it to the interface's own address.
-    init(interface: NetworkInterface) throws(PlatformError) {
-        let descriptor = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
-        guard descriptor >= 0 else { throw PlatformError.syscall("socket(SOCK_DGRAM, UDP)") }
-
-        func fail(_ api: String) -> PlatformError {
-            let error = PlatformError.syscall(api)
-            _ = Darwin.close(descriptor)
-            return error
-        }
-
-        guard setNonBlocking(descriptor) else { throw fail("fcntl(O_NONBLOCK)") }
-
-        var reuse: Int32 = 1
-        // SAFETY: setsockopt reads one Int32 from storage we own and sized.
-        _ = unsafe setsockopt(descriptor, SOL_SOCKET, SO_REUSEADDR,
-                              &reuse, socklen_t(MemoryLayout<Int32>.size))
-
-        // Bind to the interface's address on an ephemeral port. The address is the part
-        // that matters — it is what makes the source address of our M-SEARCH correct, so
-        // responders unicast their replies back to the right place — and the ephemeral
-        // port is what keeps this socket from fighting anything already listening on
-        // 1900.
-        var local = socketAddress(interface.address, port: 0)
-        let bound = unsafe withUnsafePointer(to: &local) { pointer in
-            unsafe pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { address in
-                unsafe bind(descriptor, address, socklen_t(MemoryLayout<sockaddr_in>.size))
-            }
-        }
-        guard bound == 0 else { throw fail("bind(\(interface.address))") }
-
-        // And name the interface for multicast explicitly. Binding the address alone is
-        // NOT enough: the multicast egress interface is a separate socket option, and
-        // without it the kernel consults its multicast route — which on a machine with
-        // a VPN up names the tunnel.
-        var multicastInterface = in_addr(s_addr: interface.address.raw.bigEndian)
-        // SAFETY: setsockopt reads one in_addr from storage we own and sized.
-        guard unsafe setsockopt(descriptor, IPPROTO_IP, IP_MULTICAST_IF,
-                                &multicastInterface, socklen_t(MemoryLayout<in_addr>.size)) == 0
-        else { throw fail("setsockopt(IP_MULTICAST_IF)") }
-
-        // Two hops. The UPnP specification's default, and correct: SSDP describes a
-        // link, and a search that crosses routers finds devices the scan is not about.
-        var ttl: UInt8 = 2
-        _ = unsafe setsockopt(descriptor, IPPROTO_IP, IP_MULTICAST_TTL,
-                              &ttl, socklen_t(MemoryLayout<UInt8>.size))
-        // Do not hear our own search echoed back.
-        var loop: UInt8 = 0
-        _ = unsafe setsockopt(descriptor, IPPROTO_IP, IP_MULTICAST_LOOP,
-                              &loop, socklen_t(MemoryLayout<UInt8>.size))
-
-        self.fd = descriptor
-    }
-
-    deinit {
-        if let source {
-            source.cancel()               // the cancel handler closes it
-        } else if !sourceOwnsDescriptor {
-            _ = Darwin.close(fd)          // no source was ever armed, so nobody else will
+    /// Opens the search socket: a `UDPProbe` bound to the interface, plus the multicast
+    /// options a search needs.
+    static func open(on interface: NetworkInterface) throws(PlatformError) -> UDPProbe {
+        try UDPProbe(
+            interface: interface,
+            queue: DispatchQueue(label: "com.jctec.zhen.ssdp", qos: .userInitiated)
+        ) { descriptor in
+            var reuse: Int32 = 1
+            // SAFETY: setsockopt reads one Int32 from storage we own and sized.
+            _ = unsafe setsockopt(descriptor, SOL_SOCKET, SO_REUSEADDR,
+                                  &reuse, socklen_t(MemoryLayout<Int32>.size))
+            // Name the interface for multicast explicitly. Binding the address alone is
+            // NOT enough: the multicast egress interface is a separate socket option,
+            // and without it the kernel consults its multicast route — which on a
+            // machine with a VPN up names the tunnel.
+            var multicastInterface = in_addr(s_addr: interface.address.raw.bigEndian)
+            // SAFETY: setsockopt reads one in_addr from storage we own and sized.
+            guard unsafe setsockopt(descriptor, IPPROTO_IP, IP_MULTICAST_IF,
+                                    &multicastInterface, socklen_t(MemoryLayout<in_addr>.size)) == 0
+            else { return "setsockopt(IP_MULTICAST_IF)" }
+            // Two hops. The UPnP specification's default, and correct: SSDP describes a
+            // link, and a search that crosses routers finds devices the scan is not about.
+            var ttl: UInt8 = 2
+            _ = unsafe setsockopt(descriptor, IPPROTO_IP, IP_MULTICAST_TTL,
+                                  &ttl, socklen_t(MemoryLayout<UInt8>.size))
+            // Do not hear our own search echoed back.
+            var loop: UInt8 = 0
+            _ = unsafe setsockopt(descriptor, IPPROTO_IP, IP_MULTICAST_LOOP,
+                                  &loop, socklen_t(MemoryLayout<UInt8>.size))
+            return nil
         }
     }
 
@@ -627,85 +569,5 @@ final class SSDPSocket: @unchecked Sendable {
             """
         return Array(text.utf8)
     }
-
-    /// Sends one search. Best effort: a refused send is one lost probe, and the caller
-    /// sends more than one.
-    func send(_ request: [UInt8]) {
-        var destination = socketAddress(Self.group, port: Self.port)
-        // SAFETY: sendto reads `request.count` bytes from the array's storage and the
-        // sockaddr from storage we own, both for the duration of the call.
-        _ = unsafe request.withUnsafeBytes { bytes in
-            unsafe withUnsafePointer(to: &destination) { pointer in
-                unsafe pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { address in
-                    unsafe sendto(fd, bytes.baseAddress, bytes.count, 0,
-                                  address, socklen_t(MemoryLayout<sockaddr_in>.size))
-                }
-            }
-        }
-    }
-
-    /// Starts the reader and returns datagrams as they arrive.
-    func responses() -> AsyncStream<SSDPDatagram> {
-        let (stream, continuation) = AsyncStream<SSDPDatagram>.makeStream(
-            bufferingPolicy: .bufferingNewest(512)
-        )
-        self.continuation = continuation
-        let descriptor = fd
-        let readSource = DispatchSource.makeReadSource(fileDescriptor: fd, queue: queue)
-        readSource.setEventHandler {
-            // Drain everything ready in one wake-up. A network with a dozen UPnP
-            // devices answering `ssdp:all` produces sixty datagrams in a burst.
-            while let datagram = SSDPSocket.receive(descriptor) {
-                continuation.yield(datagram)
-            }
-        }
-        // The one place this descriptor is closed.
-        readSource.setCancelHandler { [fd] in
-            _ = Darwin.close(fd)
-            continuation.finish()
-        }
-        sourceOwnsDescriptor = true
-        readSource.resume()
-        self.source = readSource
-        return stream
-    }
-
-    /// Stops delivery and closes the descriptor, via the cancel handler.
-    func stop() {
-        guard !stopped else { return }
-        stopped = true
-        if let source {
-            source.cancel()
-            self.source = nil
-            continuation = nil
-        } else {
-            continuation?.finish()
-            continuation = nil
-        }
-    }
-
-    /// Reads one datagram, or nil when the socket is drained.
-    private static func receive(_ fd: Int32) -> SSDPDatagram? {
-        // 2 KB. An M-SEARCH response is a few hundred bytes of headers; anything larger
-        // is not a response we can use, and a truncated read of it parses to nothing
-        // rather than to something wrong.
-        var buffer = [UInt8](repeating: 0, count: 2048)
-        var from = sockaddr_storage()
-        var fromLength = socklen_t(MemoryLayout<sockaddr_storage>.size)
-        // SAFETY: recvfrom writes at most `buffer.count` bytes into storage we own and
-        // a sockaddr into storage we sized. A negative return means drained or failed
-        // and nothing was written.
-        let received = unsafe buffer.withUnsafeMutableBytes { bytes in
-            unsafe withUnsafeMutablePointer(to: &from) { pointer in
-                unsafe pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { address in
-                    unsafe recvfrom(fd, bytes.baseAddress, bytes.count, 0, address, &fromLength)
-                }
-            }
-        }
-        guard received > 0, let source = ipv4(from: from) else { return nil }
-        let text = String(decoding: buffer[0..<received], as: UTF8.self)
-        return SSDPDatagram(source: source, text: text)
-    }
 }
-
 #endif

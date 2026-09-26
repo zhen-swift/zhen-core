@@ -66,9 +66,16 @@ public struct DarwinNetBIOSQuery: NetBIOSQuerying {
         let failureFlag = failed
 
         let work = Task {
-            let socket: NetBIOSSocket
+            let socket: UDPProbe
             do {
-                socket = try NetBIOSSocket(interface: interface)
+                // Bound to the interface on an ephemeral port, not 137: binding the well-known
+                // port would collide with anything already running a NetBIOS name service —
+                // Samba, a Windows VM's bridged adapter — and a node-status reply is unicast
+                // back to the source port.
+                socket = try UDPProbe(
+                    interface: interface,
+                    queue: DispatchQueue(label: "com.jctec.zhen.netbios", qos: .userInitiated)
+                )
             } catch {
                 failureFlag.raise()
                 log.record(Degradation(
@@ -108,9 +115,10 @@ public struct DarwinNetBIOSQuery: NetBIOSQuerying {
             }
             let transactions = assigning
 
-            let replies = socket.replies()
+            let replies = socket.events()
             let reader = Task {
-                for await datagram in replies {
+                for await event in replies {
+                    guard case .datagram(let datagram) = event else { continue }
                     // Not an address this scan asked about. Nothing it says is an answer.
                     guard let expected = transactions[datagram.source] else { continue }
                     guard let sighting = NBSTAT.decode(
@@ -137,7 +145,7 @@ public struct DarwinNetBIOSQuery: NetBIOSQuerying {
                 for address in addresses where !answered.contains(address) {
                     guard !Task.isCancelled, !deadline.isExpired else { break }
                     guard let transaction = transactions[address] else { continue }
-                    socket.send(NBSTAT.query(transaction: transaction), to: address)
+                    socket.send(NBSTAT.query(transaction: transaction), to: address, port: NBSTAT.port)
                 }
                 guard round == 0, !answered.covers(addresses) else { break }
                 // A gap before asking again, so a reply to the first round is not
@@ -351,142 +359,6 @@ final class AnsweredSet: @unchecked Sendable {
     /// wait for.
     func covers(_ wanted: [IPv4Address]) -> Bool {
         lock.withLock { wanted.allSatisfy { addresses.contains($0) } }
-    }
-}
-
-/// One datagram received on the NetBIOS socket.
-struct NetBIOSDatagram: Sendable {
-    /// Who sent it.
-    var source: IPv4Address
-    /// Its bytes.
-    var payload: [UInt8]
-}
-
-/// The UDP/137 socket: one for every target, bound to the scanned interface,
-/// non-blocking, readiness through a `DispatchSource`, closed in that source's cancel
-/// handler.
-final class NetBIOSSocket: @unchecked Sendable {
-    private let fd: Int32
-    private let queue = DispatchQueue(label: "com.jctec.zhen.netbios", qos: .userInitiated)
-    private var source: DispatchSourceRead?
-    private var continuation: AsyncStream<NetBIOSDatagram>.Continuation?
-    private var stopped = false
-    /// Whether a read source has taken responsibility for closing the descriptor. Stays
-    /// true after `stop()`; see `SSDPSocket` for why clearing it is a double close.
-    private var sourceOwnsDescriptor = false
-
-    /// Opens the socket and binds it to the interface's address.
-    ///
-    /// Bound to the interface rather than to `INADDR_ANY` for the same reason the SSDP
-    /// socket is, minus the multicast part: the source address of the query decides
-    /// where the reply is sent, and on a multi-homed machine an unbound socket can put
-    /// the wrong one on the wire.
-    ///
-    /// Port 0, not 137. Binding the well-known port would collide with anything already
-    /// running a NetBIOS name service — Samba, a Windows VM's bridged adapter — and a
-    /// node-status reply is unicast back to the source port, so an ephemeral one works.
-    init(interface: NetworkInterface) throws(PlatformError) {
-        let descriptor = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
-        guard descriptor >= 0 else { throw PlatformError.syscall("socket(SOCK_DGRAM, UDP)") }
-        guard setNonBlocking(descriptor) else {
-            _ = Darwin.close(descriptor)
-            throw PlatformError.syscall("fcntl(O_NONBLOCK)")
-        }
-        var local = socketAddress(interface.address, port: 0)
-        let bound = unsafe withUnsafePointer(to: &local) { pointer in
-            unsafe pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { address in
-                unsafe bind(descriptor, address, socklen_t(MemoryLayout<sockaddr_in>.size))
-            }
-        }
-        guard bound == 0 else {
-            let error = PlatformError.syscall("bind(\(interface.address))")
-            _ = Darwin.close(descriptor)
-            throw error
-        }
-        self.fd = descriptor
-    }
-
-    deinit {
-        if let source {
-            source.cancel()               // the cancel handler closes it
-        } else if !sourceOwnsDescriptor {
-            _ = Darwin.close(fd)          // no source was ever armed, so nobody else will
-        }
-    }
-
-    /// Sends one query. Best effort; the caller sends more than one round.
-    func send(_ packet: [UInt8], to address: IPv4Address) {
-        var destination = socketAddress(address, port: NBSTAT.port)
-        // SAFETY: sendto reads `packet.count` bytes from the array's storage and the
-        // sockaddr from storage we own, both only for the duration of the call.
-        _ = unsafe packet.withUnsafeBytes { bytes in
-            unsafe withUnsafePointer(to: &destination) { pointer in
-                unsafe pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { target in
-                    unsafe sendto(fd, bytes.baseAddress, bytes.count, 0,
-                                  target, socklen_t(MemoryLayout<sockaddr_in>.size))
-                }
-            }
-        }
-    }
-
-    /// Starts the reader and returns datagrams as they arrive.
-    func replies() -> AsyncStream<NetBIOSDatagram> {
-        let (stream, continuation) = AsyncStream<NetBIOSDatagram>.makeStream(
-            bufferingPolicy: .bufferingNewest(512)
-        )
-        self.continuation = continuation
-        let descriptor = fd
-        let readSource = DispatchSource.makeReadSource(fileDescriptor: fd, queue: queue)
-        readSource.setEventHandler {
-            while let datagram = NetBIOSSocket.receive(descriptor) {
-                continuation.yield(datagram)
-            }
-        }
-        // The one place this descriptor is closed.
-        readSource.setCancelHandler { [fd] in
-            _ = Darwin.close(fd)
-            continuation.finish()
-        }
-        sourceOwnsDescriptor = true
-        readSource.resume()
-        self.source = readSource
-        return stream
-    }
-
-    /// Stops delivery and closes the descriptor, via the cancel handler.
-    func stop() {
-        guard !stopped else { return }
-        stopped = true
-        if let source {
-            source.cancel()
-            self.source = nil
-            continuation = nil
-        } else {
-            continuation?.finish()
-            continuation = nil
-        }
-    }
-
-    /// Reads one datagram, or nil when the socket is drained.
-    private static func receive(_ fd: Int32) -> NetBIOSDatagram? {
-        // A node-status reply is a header, an echoed name, and up to 255 eighteen-byte
-        // entries plus statistics — comfortably under 1 KB in practice, and the NetBIOS
-        // datagram service caps at 576 bytes anyway.
-        var buffer = [UInt8](repeating: 0, count: 1024)
-        var from = sockaddr_storage()
-        var fromLength = socklen_t(MemoryLayout<sockaddr_storage>.size)
-        // SAFETY: recvfrom writes at most `buffer.count` bytes into storage we own and
-        // a sockaddr into storage we sized. A non-positive return means drained or
-        // failed, and nothing was written.
-        let received = unsafe buffer.withUnsafeMutableBytes { bytes in
-            unsafe withUnsafeMutablePointer(to: &from) { pointer in
-                unsafe pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { address in
-                    unsafe recvfrom(fd, bytes.baseAddress, bytes.count, 0, address, &fromLength)
-                }
-            }
-        }
-        guard received > 0, let source = ipv4(from: from) else { return nil }
-        return NetBIOSDatagram(source: source, payload: Array(buffer[0..<received]))
     }
 }
 

@@ -23,15 +23,17 @@ import ZhenCore
 struct Ports: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "ports",
-        abstract: "Probe TCP ports on hosts you already have.",
+        abstract: "Probe TCP and UDP ports on hosts you already have.",
         discussion: """
             Takes addresses rather than a network: one address, a comma list, a CIDR, \
             or `-` to read them from standard input one per line. Discovery is never \
             run, so a host that answers no ping is still scannable by address.
 
-            TCP only. UDP needs a fourth port state — silence on UDP means open OR \
-            filtered, and those cannot honestly be collapsed — which is a change to the \
-            artifact and is not made here.
+            UDP ports are prefixed `U:` — `zhen ports 10.10.20.1 22,U:53,U:123`. A UDP \
+            port that answers is open, one the host refuses with ICMP is closed, and \
+            silence is `open_filtered`: an open port ignoring a request it did not \
+            understand and a firewall dropping it look the same from here, so the tool \
+            says so rather than guess.
             """
     )
 
@@ -110,26 +112,45 @@ struct Ports: AsyncParsableCommand {
         // large. `PortSpec.commonServices` has carried this instinct in its doc comment
         // since it was written and nothing enforced it.
         let size = ProbeBudget(
-            hosts: addresses.count, ports: spec.ports.count,
+            hosts: addresses.count, ports: spec.probeCount,
             concurrency: scanner.concurrency, perHostDeadline: .milliseconds(600))
         if size.needsConfirmation, !yes {
-            throw .badArgument(size.refusal(hosts: addresses.count, ports: spec.ports.count))
+            throw .badArgument(size.refusal(hosts: addresses.count, ports: spec.probeCount))
         }
         if size.needsConfirmation, !quiet {
-            Out.stderr(size.announcement(hosts: addresses.count, ports: spec.ports.count) + "\n")
+            Out.stderr(size.announcement(hosts: addresses.count, ports: spec.probeCount) + "\n")
         }
         let renderer = PortsRenderer(json: json, quiet: quiet, color: colorOnStdout)
 
         let work = Task { () -> PortScanResult in
-            await scanner.ports.scan(
-                addresses,
-                ports: spec,
-                // The same ceiling `scan --deep` uses. The engine narrows it per host
-                // from that host's own measured round trips.
-                perHostDeadline: .milliseconds(600),
-                deadline: Deadline(after: budget),
-                progress: ProgressSink { _ in }
-            )
+            let deadline = Deadline(after: budget)
+            var result = PortScanResult()
+            if !spec.ports.isEmpty {
+                result = await scanner.ports.scan(
+                    addresses,
+                    ports: spec,
+                    // The same ceiling `scan --deep` uses. The engine narrows it per host
+                    // from that host's own measured round trips.
+                    perHostDeadline: .milliseconds(600),
+                    deadline: deadline,
+                    progress: ProgressSink { _ in }
+                )
+            }
+            // A second engine rather than a second transport inside the first: the TCP
+            // engine is SYN or connect depending on the helper, the UDP engine is always
+            // the same unprivileged one. A full second per probe rather than 600ms,
+            // because silence is a verdict here and the resend at 40% needs room.
+            if !spec.udpPorts.isEmpty, !Task.isCancelled {
+                let udp = await scanner.udpPorts.scan(
+                    addresses,
+                    ports: spec,
+                    perHostDeadline: .seconds(1),
+                    deadline: deadline,
+                    progress: ProgressSink { _ in }
+                )
+                result = spec.ports.isEmpty ? udp : result.combined(with: udp)
+            }
+            return result
         }
         let signals = SignalHandler {
             Out.stderr("\nInterrupted — reporting what has been probed.\n")

@@ -110,7 +110,7 @@ private func pipeline(
 ) -> ScanPipeline {
     ScanPipeline(
         scanner: PlatformScanner(
-            interfaces: FakeInterfaces(), discovery: discovery, ports: FakePorts(),
+            interfaces: FakeInterfaces(), discovery: discovery, ports: FakePorts(), udpPorts: FakePorts(),
             naming: naming,
             descriptorLimit: 92_160, concurrency: 512, notices: []
         ),
@@ -151,7 +151,7 @@ private func pipeline(
 ) -> ScanPipeline {
     ScanPipeline(
         scanner: PlatformScanner(
-            interfaces: FakeInterfaces(), discovery: discovery, ports: FakePorts(),
+            interfaces: FakeInterfaces(), discovery: discovery, ports: FakePorts(), udpPorts: FakePorts(),
             naming: observing,
             descriptorLimit: 92_160, concurrency: 512, notices: []
         ),

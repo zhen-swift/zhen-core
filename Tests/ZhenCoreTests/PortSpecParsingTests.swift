@@ -111,13 +111,25 @@ struct PortSpecRejectionTests {
         #expect(message("443-80")?.contains("80-443") == true)
     }
 
-    @Test("UDP is refused with a reason, not accepted and ignored")
-    func udpIsRefusedNotSwallowed() {
-        // Accepting `U:53` and scanning it over TCP would answer a different question
-        // than the one asked, which is the failure mode this project keeps catching.
-        let udp = message("U:53")
-        #expect(udp?.contains("UDP is not scannable yet") == true)
-        #expect(udp?.contains("fourth port state") == true, "the reason is not given")
+    @Test("UDP goes to the UDP list and is never scanned over TCP")
+    func udpIsSeparateNotSwallowed() throws {
+        // What the old refusal protected: accepting `U:53` and scanning it over TCP would
+        // answer a different question than the one asked. Now that UDP has an engine,
+        // the same property is checked positively — a `U:` port lands in `udpPorts` and
+        // nowhere else.
+        let mixed = try PortSpec.parse("22,U:53,80,U:123-124")
+        #expect(mixed.ports == [22, 80])
+        #expect(mixed.udpPorts == [53, 123, 124])
+        #expect(mixed.probeCount == 5)
+        // A prefix is per piece, not sticky: the 80 after `U:53` is TCP.
+        #expect(try PortSpec.parse("U:53,80").ports == [80])
+        // Exclusions respect the transport.
+        #expect(try PortSpec.parse("U:50-55,!U:53,53").udpPorts == [50, 51, 52, 54, 55])
+        #expect(try PortSpec.parse("U:50-55,!U:53,53").ports == [53])
+        // UDP alone is a whole spec.
+        #expect(try PortSpec.parse("U:53").ports.isEmpty)
+        #expect(message("!U:53")?.contains("nothing to scan") == true)
+        #expect(message("U:53,!U:53")?.contains("excludes every port") == true)
     }
 
     @Test("A spec that excludes everything it includes")
@@ -130,7 +142,7 @@ struct PortSpecRejectionTests {
     func messagesAreSentences() {
         // They are printed straight to stderr after `zhen: `, so a fragment reads as a
         // stack trace escaping.
-        for bad in ["", "nonesuch", "70000", "1-2-3", "443-80", "22,,80", "U:53", "22,!22"] {
+        for bad in ["", "nonesuch", "70000", "1-2-3", "443-80", "22,,80", "U:70000", "22,!22"] {
             let text = message(bad)
             #expect(text != nil, Comment(rawValue: "'\(bad)' was accepted"))
             #expect(text?.hasSuffix(".") == true,
@@ -231,8 +243,12 @@ struct ServiceNameSelectorTests {
         #expect(spec.ports == [22])
         // `PortSpec` is numbers. There is nowhere for a name to be remembered, which is
         // what makes it impossible for a selector to reach the output.
-        #expect(Mirror(reflecting: spec).children.allSatisfy { $0.label == "ports" },
+        // Checked by type rather than by name since C3 added `udpPorts`: every field is
+        // a list of port numbers, so a field that could hold a string fails this however
+        // it is named.
+        #expect(Mirror(reflecting: spec).children.allSatisfy { $0.value is [UInt16] },
                 "PortSpec grew a field that could carry the request's wording")
+        #expect(Mirror(reflecting: spec).children.count == 2)
         // And every way a service can be identified is a wire fact.
         for evidence in ServiceEvidence.allCases {
             #expect(["banner", "tls_certificate", "protocol_handshake"]

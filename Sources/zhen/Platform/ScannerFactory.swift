@@ -26,6 +26,8 @@ nonisolated struct PlatformScanner: Sendable {
     var discovery: any HostDiscovery
     /// Port scanning.
     var ports: any PortScanning
+    /// UDP port scanning, for the `U:` half of a spec.
+    var udpPorts: any PortScanning
     /// Naming: the mDNS, SSDP and NetBIOS cascade behind one stage.
     var naming: any NameResolving
     /// The descriptor soft limit the kernel granted.
@@ -76,6 +78,7 @@ nonisolated struct PlatformScanner: Sendable {
             interfaces: scanner.interfaces,
             discovery: scanner.discovery,
             ports: scanner.ports,
+            udpPorts: scanner.udpPorts,
             naming: scanner.naming,
             descriptorLimit: scanner.descriptorLimit,
             concurrency: scanner.concurrency,
