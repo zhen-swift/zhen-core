@@ -311,7 +311,7 @@ struct NamingStageTests {
             target: target, budget: .seconds(5)
         )
         #expect(completed.report.devices.count == 2)
-        #expect(completed.report.devices.first { $0.ip == silent }?.displayName == "Hue Bridge")
+        #expect(completed.report.devices.first { $0.primaryAddress == .v4(silent) }?.displayName == "Hue Bridge")
     }
 
     @Test("A name for an address outside the target is not smuggled into the report")

@@ -114,7 +114,7 @@ struct LongFormGateTests {
         var fromReport: Set<String> = []
         for device in report.devices {
             for observation in device.ports where observation.state == .open {
-                fromReport.insert("\(device.ip) \(observation.port)/\(observation.proto.rawValue)")
+                fromReport.insert("\(device.primaryAddress) \(observation.port)/\(observation.proto.rawValue)")
             }
         }
         let fromForm = Set(form.rows.map { "\($0.host) \($0.port)" })
@@ -437,8 +437,8 @@ struct PartiallyProbedHostTests {
             PortObservation(port: $0, proto: .tcp, state: .filtered)
         }
         return PortLongForm([
-            (address: IPv4Address("10.10.20.1")!, observations: complete),
-            (address: IPv4Address("10.10.20.2")!, observations: Array(partial)),
+            (address: .v4(IPv4Address("10.10.20.1")!), observations: complete),
+            (address: .v4(IPv4Address("10.10.20.2")!), observations: Array(partial)),
         ])
     }
 
@@ -478,10 +478,10 @@ struct PartiallyProbedHostTests {
         // reached it and ran out. Collapsing them would be the same mistake one level
         // down.
         let form = PortLongForm([
-            (address: IPv4Address("10.10.20.1")!,
+            (address: .v4(IPv4Address("10.10.20.1")!),
              observations: (1...10).map { PortObservation(port: UInt16($0), proto: .tcp,
                                                           state: .filtered) }),
-            (address: IPv4Address("10.10.20.2")!, observations: []),
+            (address: .v4(IPv4Address("10.10.20.2")!), observations: []),
         ])
         #expect(form.counts.hostsNotProbed == 1)
         #expect(form.counts.hostsPartlyProbed == 0,

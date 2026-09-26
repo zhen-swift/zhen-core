@@ -144,13 +144,19 @@ nonisolated struct PortMatrix {
         order.sort { ($0.port, $0.proto.rawValue) < ($1.port, $1.proto.rawValue) }
         self.ports = order.compactMap { seen[$0] }
 
-        self.rows = devices.map { device in
+        // One row per address that was probed, so a port answering on v4 and silent on
+        // v6 shows as two rows rather than one cell holding whichever came first. A
+        // single-address device — every device before IPv6 discovery — is one row, as
+        // it always was.
+        self.rows = devices.flatMap { device in
+            device.portsByAddress.map { host in (device, host.address, host.observations) }
+        }.map { device, address, observations in
             let answers = Dictionary(
-                device.ports.map { (PortKey(port: $0.port, proto: $0.proto), $0) },
+                observations.map { (PortKey(port: $0.port, proto: $0.proto), $0) },
                 uniquingKeysWith: { first, _ in first }
             )
             return Row(
-                address: device.ip.description,
+                address: address.description,
                 name: device.displayName ?? "\u{2014}",
                 // `notProbed` when this host has no answer for this port — which is
                 // every port of a host the stage never reached.

@@ -123,14 +123,15 @@ nonisolated struct ScanPipeline {
         let firstSeen = await history?.firstSeen(
             for: Array(facts.values), in: target.network
         ) ?? [:]
-        let devices = facts.values
+        // Fused, so a host found at a v4 address and at link-local v6 ones is one
+        // device. The rule, and why two v4 records never fuse, is on `Device.fusing`.
+        let devices = Device.fusing(facts.values
             .map {
                 Device(
                     observing: $0, in: target.network,
                     firstSeen: firstSeen[$0.ip] ?? finishedAt, lastSeen: finishedAt
                 )
-            }
-            .sorted { $0.ip < $1.ip }
+            })
 
         let report = ScanReport(
             run: ScanRun(

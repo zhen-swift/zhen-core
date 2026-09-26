@@ -211,7 +211,7 @@ struct HistoryLedgerTests {
             ledger.fold(report([claimant(at: day(21))], at: day(21)))
             // Whichever record absorbed the observation now carries its address, and the
             // first-seen it reports is the one that says which record that was.
-            let moved = ledger.devices().first { $0.device.ip.description == "10.10.20.77" }
+            let moved = ledger.devices().first { $0.device.primaryAddress.description == "10.10.20.77" }
             #expect(moved != nil, "the observation joined nothing at all")
             let facts = HostFacts(
                 ip: IPv4Address("10.10.20.77")!, mac: MACAddress("F2:11:22:33:44:55"),
@@ -275,7 +275,7 @@ struct HistoryLedgerTests {
                 "the merge kept the younger record's history")
         // The newest observation still wins the device, so a join never rolls an
         // address backwards to whatever the older record last saw.
-        #expect(ledger.devices().first?.device.ip.description == "10.10.20.77")
+        #expect(ledger.devices().first?.device.primaryAddress.description == "10.10.20.77")
     }
 
     // ── Reconciliation ──────────────────────────────────────────────────────────
@@ -349,7 +349,7 @@ struct HistoryLedgerTests {
         // on this device rather than minting a third record.
         #expect(survivor?.identifiers.contains(old) == true)
         #expect(survivor?.identifiers.contains(new) == true)
-        #expect(survivor?.device.ip.description == "10.10.20.131",
+        #expect(survivor?.device.primaryAddress.description == "10.10.20.131",
                 "the join rolled the address back to what the older record last saw")
     }
 

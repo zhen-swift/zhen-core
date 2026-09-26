@@ -102,7 +102,7 @@ nonisolated struct PortLongForm {
 
     /// From a scan's devices.
     init(_ devices: [Device]) {
-        self.init(devices.map { (address: $0.ip, observations: $0.ports) })
+        self.init(devices.flatMap(\.portsByAddress))
     }
 
     /// From bare address-and-observation pairs.
@@ -110,7 +110,7 @@ nonisolated struct PortLongForm {
     /// `zhen ports` has no `Device` to hand — it never ran discovery, which is the
     /// entire point of it — so the model takes the two things it actually reads rather
     /// than making the caller manufacture a `Device` with empty naming in it.
-    init(_ hosts: [(address: IPv4Address, observations: [PortObservation])]) {
+    init(_ hosts: [(address: IPAddress, observations: [PortObservation])]) {
         var rows: [Row] = []
         var counts = Counts()
         // The port set is the widest any host was asked about. A host with fewer

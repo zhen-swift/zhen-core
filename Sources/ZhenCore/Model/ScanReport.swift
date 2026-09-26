@@ -202,13 +202,28 @@ public struct ScanReport: Sendable, Hashable, Codable {
     /// measurement and is not rewritten; a run made with this build emits schema 2, so
     /// an analysis spanning the boundary has to know the boundary is there. That is
     /// what the field is for. See `Study/REPRODUCIBILITY.md`.
-    public static let schemaVersion = 2
+    ///
+    /// Bumped to 3 on 2026-09-26, when a device became a set of addresses.
+    ///
+    /// `Device.ip` is gone and `addresses` replaces it; `PortObservation` gained the
+    /// `address` it was made on; `Device.vlan` is reserved. A schema-2 reader handed a
+    /// device with no `ip` fails outright, which is correct: the alternative — keep
+    /// writing `ip` beside `addresses` — keeps old readers working by showing them one
+    /// address of a host that has three, and a reader that believes it has the whole
+    /// device when it has a third of one is the under-reporting this project refuses.
+    ///
+    /// Unlike 1 → 2 this *removed* a field, so reading an older document is a
+    /// migration rather than a tolerance. It lives in `Device.init(from:)`, keyed on the
+    /// record's shape: the history store holds device records with no report around
+    /// them, written by every build there has been, and never rewritten to upgrade them.
+    public static let schemaVersion = 3
 
     /// The oldest schema this build still reads.
     ///
-    /// 1, and it will stay 1 until a change actually removes or re-means a field
-    /// rather than adding to one. Raising it is how the study's 485 archived reports
-    /// stop being readable, so it is a deliberate act with a cost attached.
+    /// 1. Schema 3 did remove a field, and it still stays 1: `Device` reads the removed
+    /// `ip` and migrates it on the way in. Raising it is how the study's 485 archived
+    /// reports and every line in a history store stop being readable, so it is a
+    /// deliberate act with a cost attached.
     public static let minimumReadableSchema = 1
 
     /// The schema this document was written against.
@@ -238,8 +253,10 @@ public struct ScanReport: Sendable, Hashable, Codable {
         // identical scans diff as wholly changed and a real change is invisible in
         // the noise.
         //
-        // Sorted by address, which is also the order a person reads a network in.
-        self.devices = devices.sorted { $0.ip < $1.ip }
+        // Sorted by address, which is also the order a person reads a network in. By the
+        // primary address, so every v4 host keeps the position it had in schema 2 and a
+        // v6-only host follows them.
+        self.devices = devices.sorted { $0.primaryAddress < $1.primaryAddress }
         // Degradations are deliberately NOT sorted. Their order is the order things
         // went wrong in, which is information — "mDNS failed, then the deep scan
         // found nothing" reads differently from the reverse.

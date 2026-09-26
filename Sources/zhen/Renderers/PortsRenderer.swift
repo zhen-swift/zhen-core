@@ -59,7 +59,7 @@ nonisolated struct PortsRenderer {
             return
         }
 
-        let form = PortLongForm(hosts)
+        let form = PortLongForm(hosts.map { (address: IPAddress.v4($0.address), observations: $0.observations) })
         renderTable(form, targets: targets, spec: spec, result: result)
     }
 

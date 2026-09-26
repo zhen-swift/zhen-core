@@ -146,6 +146,19 @@ public struct PortObservation: Sendable, Hashable, Codable {
     /// Round trip for this specific probe, where one was measured. A per-port RTT
     /// is what shows a host that is fast on 443 and slow on 22.
     public var rtt: RTTSample?
+    /// The address the probe was sent to. Schema 3.
+    ///
+    /// A device can hold several addresses, and 22/tcp on its v4 address and 22/tcp on
+    /// its link-local v6 address are two observations that can disagree — a firewall
+    /// written for one family and not the other is the ordinary case. Without this the
+    /// two collapse into one row and the disagreement is unreportable. The family is
+    /// the address's own: `"fe80::1%en0"` says v6 without a second field to drift.
+    ///
+    /// Nil only while an observation is still inside an engine, which knows its target
+    /// implicitly. `Device(observing:)` stamps every port with the host's address, and a
+    /// schema-1 or schema-2 document is stamped with its device's single `ip` on read,
+    /// so every port in a report has one.
+    public var address: IPAddress?
 
     /// Creates a value from its fields. Each one is documented on the property it sets.
     public init(
@@ -153,13 +166,15 @@ public struct PortObservation: Sendable, Hashable, Codable {
         proto: TransportProtocol = .tcp,
         state: PortState,
         service: ServiceIdentity? = nil,
-        rtt: RTTSample? = nil
+        rtt: RTTSample? = nil,
+        address: IPAddress? = nil
     ) {
         self.port = port
         self.proto = proto
         self.state = state
         self.service = service
         self.rtt = rtt
+        self.address = address
     }
 
     /// Wire keys, spelled out. Renaming a Swift property is then a refactor; renaming a
@@ -170,5 +185,20 @@ public struct PortObservation: Sendable, Hashable, Codable {
         case state
         case service
         case rtt
+        case address
+    }
+}
+
+extension PortObservation {
+    /// The order a device's ports are stored and reported in: port, then protocol, then
+    /// address. Total, so the encoded bytes never depend on the order probes answered.
+    public static func canonicalOrder(_ lhs: Self, _ rhs: Self) -> Bool {
+        if lhs.port != rhs.port { return lhs.port < rhs.port }
+        if lhs.proto != rhs.proto { return lhs.proto.rawValue < rhs.proto.rawValue }
+        switch (lhs.address, rhs.address) {
+        case let (left?, right?): return left < right
+        case (nil, _?): return true
+        default: return false
+        }
     }
 }

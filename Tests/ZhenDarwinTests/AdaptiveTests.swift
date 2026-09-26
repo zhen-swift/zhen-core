@@ -440,9 +440,18 @@ struct DescriptorLifetimeTests {
             await withTaskGroup(of: Void.self) { group in
                 for port in UInt16(9)...UInt16(108) {
                     group.addTask {
-                        _ = await TCPConnectScanEngine.probe(
+                        // Bound, not discarded with `_ = await`. The two are the same
+                        // program, and Swift 6.3.3's debug build aborts on the second
+                        // ("freed pointer was not the last allocation", in this closure's
+                        // swift_task_dealloc) once `PortObservation` carries an
+                        // `IPv6Address?`. Reproduced on a clean tree by adding that one
+                        // field; `String?`, `IPv4Address?` and `[IPAddress]` do not trigger
+                        // it, ASan is clean, and production binds its result. See the
+                        // C2 section of Docs/V6-progress.md.
+                        let outcome = await TCPConnectScanEngine.probe(
                             .init(ip: loopback, port: port), budget: .milliseconds(80)
                         )
+                        _ = outcome
                     }
                 }
                 await group.waitForAll()

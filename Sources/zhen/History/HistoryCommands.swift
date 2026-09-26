@@ -182,7 +182,7 @@ struct History: AsyncParsableCommand {
             // would answer a question the user did not ask, and they cannot tell from
             // the output that it happened.
             if matches.count > 1 {
-                let names = matches.map { $0.device.ip.description }.joined(separator: ", ")
+                let names = matches.map { $0.device.primaryAddress.description }.joined(separator: ", ")
                 throw .badArgument("'\(host)' matches \(matches.count) devices: \(names)")
             }
             let log = await store.events()

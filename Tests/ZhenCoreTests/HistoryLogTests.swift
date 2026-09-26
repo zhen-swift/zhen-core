@@ -384,7 +384,7 @@ struct HistoryLogTests {
 
         // Every run that was appended is still in the file.
         let reopened = LogHistoryStore(url: url)
-        let survivors = Set(await reopened.devices().map(\.device.ip.description))
+        let survivors = Set(await reopened.devices().map(\.device.primaryAddress.description))
         var expected: Set<String> = []
         for writer in 0..<2 {
             for index in 0..<runs { expected.insert(address(writer: writer, index: index)) }
@@ -447,7 +447,7 @@ struct HistoryLogTests {
         )
 
         let reopened = LogHistoryStore(url: url)
-        let survivors = Set(await reopened.devices().map(\.device.ip.description))
+        let survivors = Set(await reopened.devices().map(\.device.primaryAddress.description))
         #expect(survivors == ["10.10.20.2", "10.10.20.8"],
                 "compaction wrote a snapshot of a stale ledger over the other store's run")
     }

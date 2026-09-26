@@ -213,7 +213,7 @@ struct PortMatrixReconciliationTests {
         var openFromJSON: Set<String> = []
         for device in report.devices {
             for observation in device.ports where observation.state == .open {
-                openFromJSON.insert("\(device.ip)/\(observation.port)")
+                openFromJSON.insert("\(device.primaryAddress)/\(observation.port)")
             }
         }
 
@@ -326,7 +326,7 @@ struct OpenFilteredTests {
         // Dropping it to the footer would bury the only result a UDP scan usually
         // produces; showing it as open would over-report. It gets a row whose SERVICE
         // cell says what is actually known.
-        let form = PortLongForm([(address: IPv4Address("10.10.20.1")!,
+        let form = PortLongForm([(address: .v4(IPv4Address("10.10.20.1")!),
                                   observations: [PortObservation(port: 53, proto: .udp,
                                                                  state: .openFiltered)])])
         #expect(form.rows.count == 1, "an ambiguous port produced no row")
@@ -339,7 +339,7 @@ struct OpenFilteredTests {
 
     @Test("A TCP-only run never mentions it")
     func tcpRunsAreUnchanged() {
-        let form = PortLongForm([(address: IPv4Address("10.10.20.1")!,
+        let form = PortLongForm([(address: .v4(IPv4Address("10.10.20.1")!),
                                   observations: [PortObservation(port: 80, proto: .tcp,
                                                                  state: .open)])])
         #expect(!form.footer.contains("open or filtered"),

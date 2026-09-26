@@ -153,7 +153,7 @@ extension HostIdentifier {
     ///
     /// Two derivations of one thing will drift. This one cannot.
     static func candidates(
-        ip: IPv4Address,
+        leases: [IPv4Address],
         mac: MACAddress?,
         names: [NameCandidate],
         dhcpHostname: String?,
@@ -167,7 +167,7 @@ extension HostIdentifier {
         if let dhcpHostname, !dhcpHostname.isEmpty {
             keys.append(.dhcpHostname(dhcpHostname))
         }
-        keys.append(.ipLease(ip, in: network))
+        for lease in leases { keys.append(.ipLease(lease, in: network)) }
         // Deduplicate while keeping the strongest-first order: two mDNS service
         // types on the same device routinely offer the same instance name.
         var seen: Set<HostIdentifier> = []
@@ -185,7 +185,7 @@ extension HostIdentifier {
     ///   - network: the network the scan ran over, needed to scope the `ipLease` key.
     public static func candidates(for facts: HostFacts, in network: IPv4Network) -> [HostIdentifier] {
         candidates(
-            ip: facts.ip,
+            leases: [facts.ip],
             mac: facts.mac,
             names: facts.allNames,
             dhcpHostname: facts.dhcpHostname,
@@ -200,8 +200,11 @@ extension HostIdentifier {
     /// to reproduce its own identity keys, or `identityStability` is a number nobody
     /// downstream can check.
     public static func candidates(for device: Device, in network: IPv4Network) -> [HostIdentifier] {
+        // One lease key per v4 address. A v6 address is not a lease: a link-local one is
+        // self-assigned and a global one is scoped by a prefix this key has no room for,
+        // and neither is scoped by the v4 network the store keys leases by.
         candidates(
-            ip: device.ip,
+            leases: device.ipv4Addresses,
             mac: device.mac,
             names: device.names,
             dhcpHostname: device.dhcpHostname,

@@ -87,7 +87,7 @@ public struct ScanEvent: Sendable, Hashable, Codable {
     /// How much it matters.
     public var severity: EventSeverity
     /// The address involved — for `ipMoved`, the new one.
-    public var ip: IPv4Address
+    public var ip: IPAddress
     /// The join key the two observations were matched under, so a reader can see
     /// *why* these were considered the same device. This is the field that makes a
     /// wrong match explicable instead of mysterious.
@@ -106,7 +106,7 @@ public struct ScanEvent: Sendable, Hashable, Codable {
         run: UUID,
         kind: ScanEventKind,
         severity: EventSeverity,
-        ip: IPv4Address,
+        ip: IPAddress,
         identity: HostIdentifier? = nil,
         summary: String,
         details: [String: String] = [:]
@@ -165,7 +165,7 @@ public func deriveEvents(
 ) -> [ScanEvent] {
     func joinKey(_ device: Device) -> HostIdentifier {
         let keys = HostIdentifier.candidates(for: device, in: network)
-        return keys.first { $0.kind != .ipLease } ?? .ipLease(device.ip, in: network)
+        return keys.first { $0.kind != .ipLease } ?? HostIdentifier(kind: .ipLease, value: "\(network)@\(device.primaryAddress)")
     }
 
     // Grouped, not last-write-wins. `before[joinKey(d)] = d` looks right and quietly
@@ -187,7 +187,7 @@ public func deriveEvents(
         _ kind: ScanEventKind,
         _ severity: EventSeverity,
         _ key: HostIdentifier,
-        _ ip: IPv4Address,
+        _ ip: IPAddress,
         _ summary: String,
         _ details: [String: String] = [:]
     ) {
@@ -210,14 +210,14 @@ public func deriveEvents(
             // *changing* is worth a warning: either the device was renamed or the
             // identity join is wrong, and the second is the expensive possibility.
             let severity: EventSeverity = (wasNamed == nil || isNamed == nil) ? .info : .warning
-            emit(.nameChanged, severity, key, now.ip,
-                 "\(then.ip) is now known as \(isNamed ?? "an unnamed device")",
+            emit(.nameChanged, severity, key, now.primaryAddress,
+                 "\(then.primaryAddress) is now known as \(isNamed ?? "an unnamed device")",
                  ["from": wasNamed ?? "", "to": isNamed ?? ""])
         }
 
         if then.vendor != now.vendor {
-            emit(.vendorChanged, .warning, key, now.ip,
-                 "Vendor for \(now.displayName ?? now.ip.description) changed",
+            emit(.vendorChanged, .warning, key, now.primaryAddress,
+                 "Vendor for \(now.displayName ?? now.primaryAddress.description) changed",
                  ["from": then.vendor ?? "", "to": now.vendor ?? ""])
         }
 
@@ -227,13 +227,13 @@ public func deriveEvents(
         let openBefore = Set(then.openPorts.map(\.port))
         let openNow = Set(now.openPorts.map(\.port))
         for port in openNow.subtracting(openBefore).sorted() {
-            emit(.portOpened, .notable, key, now.ip,
-                 "Port \(port) opened on \(now.displayName ?? now.ip.description)",
+            emit(.portOpened, .notable, key, now.primaryAddress,
+                 "Port \(port) opened on \(now.displayName ?? now.primaryAddress.description)",
                  ["port": String(port)])
         }
         for port in openBefore.subtracting(openNow).sorted() {
-            emit(.portClosed, .info, key, now.ip,
-                 "Port \(port) closed on \(now.displayName ?? now.ip.description)",
+            emit(.portClosed, .info, key, now.primaryAddress,
+                 "Port \(port) closed on \(now.displayName ?? now.primaryAddress.description)",
                  ["port": String(port)])
         }
     }
@@ -247,37 +247,37 @@ public func deriveEvents(
         // dragged into the diff by the one that did.
         let thens = before[key] ?? []
         let nows = after[key] ?? []
-        let thenByIP = Dictionary(thens.map { ($0.ip, $0) }, uniquingKeysWith: { first, _ in first })
-        let nowByIP = Dictionary(nows.map { ($0.ip, $0) }, uniquingKeysWith: { first, _ in first })
+        let thenByIP = Dictionary(thens.map { ($0.primaryAddress, $0) }, uniquingKeysWith: { first, _ in first })
+        let nowByIP = Dictionary(nows.map { ($0.primaryAddress, $0) }, uniquingKeysWith: { first, _ in first })
 
         for ip in Set(thenByIP.keys).intersection(nowByIP.keys).sorted() {
             diffFields(key, thenByIP[ip]!, nowByIP[ip]!)
         }
 
-        let strandedThen = thens.filter { nowByIP[$0.ip] == nil }.sorted { $0.ip < $1.ip }
-        let strandedNow = nows.filter { thenByIP[$0.ip] == nil }.sorted { $0.ip < $1.ip }
+        let strandedThen = thens.filter { nowByIP[$0.primaryAddress] == nil }.sorted { $0.primaryAddress < $1.primaryAddress }
+        let strandedNow = nows.filter { thenByIP[$0.primaryAddress] == nil }.sorted { $0.primaryAddress < $1.primaryAddress }
 
         for index in 0..<Swift.min(strandedThen.count, strandedNow.count) {
             let then = strandedThen[index]
             let now = strandedNow[index]
-            emit(.ipMoved, .notable, key, now.ip,
-                 "\(now.displayName ?? now.ip.description) moved from \(then.ip) to \(now.ip)",
-                 ["from": then.ip.description, "to": now.ip.description])
+            emit(.ipMoved, .notable, key, now.primaryAddress,
+                 "\(now.displayName ?? now.primaryAddress.description) moved from \(then.primaryAddress) to \(now.primaryAddress)",
+                 ["from": then.primaryAddress.description, "to": now.primaryAddress.description])
             diffFields(key, then, now)
         }
         for then in strandedThen.dropFirst(strandedNow.count) {
-            emit(.hostDisappeared, .info, key, then.ip,
-                 "\(then.displayName ?? then.ip.description) is no longer answering")
+            emit(.hostDisappeared, .info, key, then.primaryAddress,
+                 "\(then.displayName ?? then.primaryAddress.description) is no longer answering")
         }
         for now in strandedNow.dropFirst(strandedThen.count) {
-            emit(.hostAppeared, .notable, key, now.ip,
-                 "\(now.displayName ?? now.ip.description) appeared")
+            emit(.hostAppeared, .notable, key, now.primaryAddress,
+                 "\(now.displayName ?? now.primaryAddress.description) appeared")
         }
     }
 
     // Deterministic order. Dictionary iteration above is unordered, and a report
     // whose event list reshuffles between identical runs cannot be diffed.
     return events.sorted {
-        ($0.ip.raw, $0.kind.rawValue, $0.summary) < ($1.ip.raw, $1.kind.rawValue, $1.summary)
+        ($0.ip, $0.kind.rawValue, $0.summary) < ($1.ip, $1.kind.rawValue, $1.summary)
     }
 }

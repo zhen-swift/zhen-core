@@ -20,7 +20,7 @@ nonisolated enum HistoryRendering {
     /// costs a clear error rather than a wrong answer.
     static func matches(_ device: Device, query: String) -> Bool {
         let needle = query.lowercased()
-        if device.ip.description == query { return true }
+        if device.addresses.contains(where: { $0.description == query }) { return true }
         if let mac = device.mac, mac.description.lowercased() == needle { return true }
         if let name = device.displayName, name.lowercased().contains(needle) { return true }
         return false
@@ -45,7 +45,7 @@ nonisolated enum HistoryRendering {
     /// passing.
     static func event(_ event: DerivedEvent, concerns device: Device) -> Bool {
         if let name = device.displayName, event.subject == name { return true }
-        return event.detail.contains(device.ip.description)
+        return device.addresses.contains { event.detail.contains($0.description) }
     }
 
     // ── Tables ──────────────────────────────────────────────────────────────────
@@ -57,7 +57,7 @@ nonisolated enum HistoryRendering {
         let rows = devices.map { stored -> [String] in
             [
                 stored.isPresent ? "●" : "○",
-                stored.device.ip.description,
+                stored.device.primaryAddress.description,
                 stored.device.displayName ?? "Unidentified device",
                 stored.device.mac?.description ?? "—",
                 relative(stored.device.lastSeen),
@@ -85,7 +85,11 @@ nonisolated enum HistoryRendering {
         var out = ""
         let device = stored.device
         out += "\(device.displayName ?? "Unidentified device")\n"
-        out += "  address     \(device.ip)\n"
+        if device.addresses.count == 1 {
+            out += "  address     \(device.primaryAddress)\n"
+        } else {
+            out += "  addresses   \(device.addresses.sorted().map(\.description).joined(separator: ", "))\n"
+        }
         out += "  mac         \(device.mac?.description ?? "—")\n"
         out += "  first seen  \(absolute(device.firstSeen))\n"
         out += "  last seen   \(absolute(device.lastSeen)) (\(relative(device.lastSeen)))\n"

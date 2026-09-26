@@ -186,8 +186,22 @@ public enum OSHint: String, Sendable, Hashable, CaseIterable, Codable {
 
 /// One device, fused across everything a run learned about it.
 public struct Device: Sendable, Hashable, Codable {
-    /// The address it was last seen at.
-    public var ip: IPv4Address
+    /// Every address it answered at in the run that produced this record. Schema 3.
+    ///
+    /// A set, because a host is not an address: a laptop has a v4 lease, a link-local
+    /// `fe80::` address it assigned itself, and often a global v6 besides, and those are
+    /// one machine. Schemas 1 and 2 had a single `ip`, and a document of either version
+    /// reads back as a one-element set.
+    ///
+    /// Never empty. Both entry points — the memberwise init and the decoder — refuse an
+    /// empty set, because a device with no address is not something a scan can observe.
+    public var addresses: Set<IPAddress>
+    /// The 802.1Q VLAN the device was seen on. Schema 3, and **always nil today**.
+    ///
+    /// Nothing in this build reads a tag. The field exists so that item 3 of
+    /// `Docs/DIRECTION.md` — report the VLAN per host — is a change to what gets
+    /// *observed* rather than a schema 4. Nil means *not read*, never "untagged".
+    public var vlan: UInt16?
     /// Its hardware address, where one was observed. Absent when the neighbour cache
     /// had no entry — not zero.
     public var mac: MACAddress?
@@ -247,8 +261,10 @@ public struct Device: Sendable, Hashable, Codable {
     public var lastSeen: Timestamp
 
     /// Creates a value from its fields. Each one is documented on the property it sets.
+    ///
+    /// - Precondition: `addresses` is not empty.
     public init(
-        ip: IPv4Address,
+        addresses: Set<IPAddress>,
         mac: MACAddress? = nil,
         names: [NameCandidate] = [],
         vendor: String? = nil,
@@ -262,10 +278,13 @@ public struct Device: Sendable, Hashable, Codable {
         ports: [PortObservation] = [],
         osFingerprint: OSFingerprint? = nil,
         discoveredVia: [DiscoverySource] = [],
+        vlan: UInt16? = nil,
         firstSeen: Timestamp,
         lastSeen: Timestamp
     ) {
-        self.ip = ip
+        precondition(!addresses.isEmpty, "a Device has at least one address")
+        self.addresses = addresses
+        self.vlan = vlan
         self.mac = mac
         // Canonical order on construction. `names` decides `displayName`, and
         // `NameCandidate`'s ordering is total, so the winner cannot depend on the
@@ -280,8 +299,9 @@ public struct Device: Sendable, Hashable, Codable {
         self.ttl = ttl
         self.rtt = rtt
         // Canonical order, so two scans that found the same ports encode to the same
-        // bytes and a real change is what a diff shows.
-        self.ports = ports.sorted { ($0.port, $0.proto.rawValue) < ($1.port, $1.proto.rawValue) }
+        // bytes and a real change is what a diff shows. Address last, so the rows of one
+        // port on two families sit together.
+        self.ports = ports.sorted(by: PortObservation.canonicalOrder)
         self.osFingerprint = osFingerprint
         self.discoveredVia = discoveredVia.sorted()
         self.firstSeen = firstSeen
@@ -291,7 +311,8 @@ public struct Device: Sendable, Hashable, Codable {
     /// Wire keys, spelled out. Renaming a Swift property is then a refactor; renaming a
     /// JSON key is a deliberate breaking change, and the compiler is what tells you so.
     public enum CodingKeys: String, CodingKey {
-        case ip
+        case addresses
+        case vlan
         case mac
         case names
         case vendor
@@ -308,6 +329,11 @@ public struct Device: Sendable, Hashable, Codable {
         case firstSeen = "first_seen"
         case lastSeen = "last_seen"
     }
+
+    /// Keys that only schema 1 and 2 wrote. Read, never written.
+    enum LegacyCodingKeys: String, CodingKey {
+        case ip
+    }
 }
 
 extension Device {
@@ -318,10 +344,36 @@ extension Device {
     /// unsorted `names` or `ports` array. Both entry points into a `Device` — this
     /// and the memberwise init — establish the same canonical order, so the ordering
     /// invariant holds for every value that exists.
+    ///
+    /// **Reads schemas 1, 2 and 3 alike**, by the shape of the record rather than by a
+    /// version number passed down: a device from a history line has no report around it
+    /// to say which schema it was, and the store holds lines written by every build.
+    /// `addresses` present is schema 3. Absent, the single `ip` of schemas 1 and 2 is
+    /// read instead, and every port observation — which in those schemas could only have
+    /// been made on that one address — is stamped with it, so a migrated device is
+    /// indistinguishable from one a schema-3 scan would have produced.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        let addresses: Set<IPAddress>
+        var ports = try container.decodeIfPresent([PortObservation].self, forKey: .ports) ?? []
+        if let written = try container.decodeIfPresent([IPAddress].self, forKey: .addresses) {
+            guard !written.isEmpty else {
+                throw DecodingError.dataCorruptedError(
+                    forKey: .addresses, in: container,
+                    debugDescription: "a device has at least one address"
+                )
+            }
+            addresses = Set(written)
+        } else {
+            let legacy = try decoder.container(keyedBy: LegacyCodingKeys.self)
+            let ip = IPAddress.v4(try legacy.decode(IPv4Address.self, forKey: .ip))
+            addresses = [ip]
+            for index in ports.indices where ports[index].address == nil {
+                ports[index].address = ip
+            }
+        }
         self.init(
-            ip: try container.decode(IPv4Address.self, forKey: .ip),
+            addresses: addresses,
             mac: try container.decodeIfPresent(MACAddress.self, forKey: .mac),
             names: try container.decodeIfPresent([NameCandidate].self, forKey: .names) ?? [],
             vendor: try container.decodeIfPresent(String.self, forKey: .vendor),
@@ -334,12 +386,75 @@ extension Device {
             identityStability: try container.decode(Stability.self, forKey: .identityStability),
             ttl: try container.decodeIfPresent(UInt8.self, forKey: .ttl),
             rtt: try container.decodeIfPresent(RTTSample.self, forKey: .rtt),
-            ports: try container.decodeIfPresent([PortObservation].self, forKey: .ports) ?? [],
+            ports: ports,
             osFingerprint: try container.decodeIfPresent(OSFingerprint.self, forKey: .osFingerprint),
             discoveredVia: try container.decodeIfPresent([DiscoverySource].self, forKey: .discoveredVia) ?? [],
+            vlan: try container.decodeIfPresent(UInt16.self, forKey: .vlan),
             firstSeen: try container.decode(Timestamp.self, forKey: .firstSeen),
             lastSeen: try container.decode(Timestamp.self, forKey: .lastSeen)
         )
+    }
+
+    /// Encodes schema 3.
+    ///
+    /// Hand-written for one reason: `addresses` is a `Set`, and the synthesized encoder
+    /// would emit it in hash order — which differs between processes — so two runs of
+    /// the same scan would produce different bytes. It is written sorted, v4 first.
+    /// `ip` is not written: schema 3 removed it, and a reader that needs one address
+    /// takes the first element, which is `primaryAddress`.
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(addresses.sorted(), forKey: .addresses)
+        try container.encodeIfPresent(vlan, forKey: .vlan)
+        try container.encodeIfPresent(mac, forKey: .mac)
+        try container.encode(names, forKey: .names)
+        try container.encodeIfPresent(vendor, forKey: .vendor)
+        try container.encodeIfPresent(reverseDNS, forKey: .reverseDNS)
+        try container.encodeIfPresent(dhcpHostname, forKey: .dhcpHostname)
+        try container.encode(identification, forKey: .identification)
+        try container.encode(identificationEvidence, forKey: .identificationEvidence)
+        try container.encode(identityStability, forKey: .identityStability)
+        try container.encodeIfPresent(ttl, forKey: .ttl)
+        try container.encodeIfPresent(rtt, forKey: .rtt)
+        try container.encode(ports, forKey: .ports)
+        try container.encodeIfPresent(osFingerprint, forKey: .osFingerprint)
+        try container.encode(discoveredVia, forKey: .discoveredVia)
+        try container.encode(firstSeen, forKey: .firstSeen)
+        try container.encode(lastSeen, forKey: .lastSeen)
+    }
+
+    /// The one address to show when there is room for one.
+    ///
+    /// The lowest in `IPAddress` order, which puts **v4 first**: it is the address a
+    /// person on this network types, the one every schema-1 and schema-2 reader knew
+    /// as `ip`, and the one the history store's lease keys are scoped by. Among v6
+    /// addresses the order is numeric, so a global address sorts before a link-local
+    /// one.
+    public var primaryAddress: IPAddress {
+        guard let first = addresses.min() else {
+            // Unreachable through either initializer; reachable only by assigning an
+            // empty set to `addresses` afterwards, which is a caller's bug and would
+            // otherwise surface as a report row with no address at all.
+            preconditionFailure("a Device has at least one address")
+        }
+        return first
+    }
+
+    /// The v4 addresses, lowest first. What the lease keys and a v4-only renderer read.
+    public var ipv4Addresses: [IPv4Address] { addresses.compactMap(\.v4).sorted() }
+
+    /// Port observations grouped by the address they were made on, lowest address first.
+    ///
+    /// What a renderer iterates when it draws one row per host address: 22/tcp on the
+    /// v4 address and on a v6 one are separate answers and must not share a cell. A
+    /// device with no port observations yields its primary address with none, so it
+    /// still gets a row. An observation with no address — only possible for one built
+    /// by hand — is filed under the primary address, which is the only one it could
+    /// have come from in any schema that wrote no address.
+    public var portsByAddress: [(address: IPAddress, observations: [PortObservation])] {
+        guard !ports.isEmpty else { return [(primaryAddress, [])] }
+        let grouped = Dictionary(grouping: ports) { $0.address ?? primaryAddress }
+        return grouped.keys.sorted().map { ($0, grouped[$0] ?? []) }
     }
 
     /// Projects one scan's observation into a device record, computing both
@@ -365,8 +480,14 @@ extension Device {
     ) {
         let evidence = IdentificationEvidence(facts: facts)
         let keys = HostIdentifier.candidates(for: facts, in: network)
+        let address = IPAddress.v4(facts.ip)
+        // An engine's observation carries its target implicitly; the record says it.
+        var ports = facts.ports
+        for index in ports.indices where ports[index].address == nil {
+            ports[index].address = address
+        }
         self.init(
-            ip: facts.ip,
+            addresses: [address],
             mac: facts.mac,
             names: facts.allNames,
             vendor: facts.vendor,
@@ -377,7 +498,7 @@ extension Device {
             identityStability: Stability(strongestOf: keys),
             ttl: facts.ttl,
             rtt: facts.rtt,
-            ports: facts.ports,
+            ports: ports,
             osFingerprint: facts.osFingerprint,
             discoveredVia: facts.discoveredVia.canonical,
             firstSeen: firstSeen ?? lastSeen,
@@ -415,9 +536,15 @@ extension IdentificationEvidence {
     /// still only `.partial`, because knowing a device calls itself `ER7206` is
     /// knowing the model, not the device.
     public init(facts: HostFacts) {
-        let model = facts.allNames.best?.model
-            ?? facts.allNames.sorted().lazy.compactMap(\.model).first
-        let winner = facts.allNames.best
+        self.init(names: facts.allNames, vendor: facts.vendor, ttl: facts.ttl)
+    }
+
+    /// The same extraction over the fields it actually reads, so a fused `Device` —
+    /// which has no single `HostFacts` behind it — is judged by the same rule.
+    init(names: [NameCandidate], vendor: String?, ttl: UInt8?) {
+        let model = names.best?.model
+            ?? names.sorted().lazy.compactMap(\.model).first
+        let winner = names.best
         let name = winner?.value
         let nameIsJustTheModel: Bool = {
             guard let name, let model else { return false }
@@ -427,9 +554,110 @@ extension IdentificationEvidence {
             hasDistinctName: (name?.isEmpty == false) && !nameIsJustTheModel,
             nameSourceIsSelfSufficient: winner?.source.isSelfSufficient ?? false,
             hasModel: model?.isEmpty == false,
-            hasVendor: facts.vendor?.isEmpty == false,
-            hasOSHint: facts.ttl.flatMap(OSHint.init(ttl:)) != nil,
-            independentSources: facts.allNames.independentSourceCount
+            hasVendor: vendor?.isEmpty == false,
+            hasOSHint: ttl.flatMap(OSHint.init(ttl:)) != nil,
+            independentSources: names.independentSourceCount
         )
     }
+}
+
+// ── Fusion: one host, several addresses ─────────────────────────────────────────────
+
+extension Device {
+    /// Folds the records of one run that are the same host at different addresses.
+    ///
+    /// **The rule is a shared MAC, and two v4 records never fuse.** A v4 lease and a
+    /// link-local v6 address answering from the same hardware address on the same link
+    /// are one interface; that is what a MAC is. Two v4 addresses behind one MAC are
+    /// *not* reliably one host — a router answering proxy ARP for the hosts behind it,
+    /// a sleep proxy standing in for a sleeping Mac — and schemas 1 and 2 kept them
+    /// apart. Fusing them now would silently re-mean every document ever written. So a
+    /// group sharing a MAC fuses only when at most one of its records holds a v4
+    /// address; otherwise it is left exactly as it arrived.
+    ///
+    /// A record with no MAC is never fused: without a link-layer address there is no
+    /// evidence the addresses share an interface, and a guess here is a merge the
+    /// history store would then make permanent.
+    ///
+    /// Within a fused group the record holding the v4 address wins every contested
+    /// single-valued field — it is the one every earlier schema reported — and the
+    /// evidence fields accumulate, as in `HostFacts.merged(with:)`. Both confidences are
+    /// recomputed from the union rather than copied from a part.
+    public static func fusing(_ devices: [Device]) -> [Device] {
+        var groups: [MACAddress: [Device]] = [:]
+        var result: [Device] = []
+        for device in devices {
+            if let mac = device.mac {
+                groups[mac, default: []].append(device)
+            } else {
+                result.append(device)
+            }
+        }
+        for (_, group) in groups {
+            let v4Holders = group.filter { !$0.ipv4Addresses.isEmpty }.count
+            if group.count > 1, v4Holders <= 1 {
+                result.append(fuse(group))
+            } else {
+                result.append(contentsOf: group)
+            }
+        }
+        return result.sorted { $0.primaryAddress < $1.primaryAddress }
+    }
+
+    /// Fuses a non-empty group already known to be one host.
+    private static func fuse(_ group: [Device]) -> Device {
+        // v4 holder first, then by address, so "first non-nil wins" is deterministic.
+        let ordered = group.sorted { $0.primaryAddress < $1.primaryAddress }
+        let lead = ordered[0]
+
+        var names: [NameCandidate] = []
+        var seenNames: Set<NameCandidate> = []
+        var ports: [PortObservation] = []
+        var seenPorts: Set<FusedPort> = []
+        var via: Set<DiscoverySource> = []
+        for part in ordered {
+            for candidate in part.names where seenNames.insert(candidate).inserted {
+                names.append(candidate)
+            }
+            for port in part.ports
+            where seenPorts.insert(FusedPort(port: port.port, proto: port.proto, address: port.address)).inserted {
+                ports.append(port)
+            }
+            via.formUnion(part.discoveredVia)
+        }
+
+        let vendor = ordered.lazy.compactMap(\.vendor).first
+        let ttl = ordered.lazy.compactMap(\.ttl).first
+        let evidence = IdentificationEvidence(names: names, vendor: vendor, ttl: ttl)
+        return Device(
+            addresses: ordered.reduce(into: []) { $0.formUnion($1.addresses) },
+            mac: lead.mac,
+            names: names,
+            vendor: vendor,
+            reverseDNS: ordered.lazy.compactMap(\.reverseDNS).first,
+            dhcpHostname: ordered.lazy.compactMap(\.dhcpHostname).first,
+            identification: Identification(evidence: evidence),
+            identificationEvidence: evidence,
+            // Every part's join keys are a subset of the fused record's, so the fused
+            // record is at least as stable as its most stable part — and no more, since
+            // fusion adds no key kind that none of the parts had.
+            identityStability: ordered.map(\.identityStability).min() ?? lead.identityStability,
+            ttl: ttl,
+            rtt: ordered.lazy.compactMap(\.rtt).first,
+            ports: ports,
+            osFingerprint: ordered.lazy.compactMap(\.osFingerprint).first,
+            discoveredVia: via.canonical,
+            vlan: ordered.lazy.compactMap(\.vlan).first,
+            firstSeen: ordered.map(\.firstSeen).min() ?? lead.firstSeen,
+            lastSeen: ordered.map(\.lastSeen).max() ?? lead.lastSeen
+        )
+    }
+}
+
+/// The identity of a port observation on a fused device: the same port on two
+/// addresses is two observations.
+private struct FusedPort: Hashable {
+    var port: UInt16
+    var proto: TransportProtocol
+    var address: IPAddress?
 }

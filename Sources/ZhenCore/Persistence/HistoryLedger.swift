@@ -160,7 +160,7 @@ public struct HistoryLedger: Sendable {
         return records.values
             .sorted { $0.ordinal < $1.ordinal }
             .map { StoredDevice(device: $0.device, isPresent: $0.lastRunID == currentRun) }
-            .sorted { $0.device.ip < $1.device.ip }
+            .sorted { $0.device.primaryAddress < $1.device.primaryAddress }
     }
 
     /// The event log, newest first.
@@ -237,10 +237,10 @@ public struct HistoryLedger: Sendable {
 
             if let existing = resolve(candidates), var record = records[existing] {
                 let wasPresent = record.lastRunID == latestRun?.id
-                if record.device.ip != device.ip {
+                if record.device.primaryAddress != device.primaryAddress {
                     events.append(DerivedEvent(
                         at: at, kind: .ipChanged, subject: Self.display(device),
-                        detail: "moved \(record.device.ip) → \(device.ip)", runID: report.run.id
+                        detail: "moved \(record.device.primaryAddress) → \(device.primaryAddress)", runID: report.run.id
                     ))
                 }
                 if record.device.displayName != device.displayName, let now = device.displayName {
@@ -254,7 +254,7 @@ public struct HistoryLedger: Sendable {
                 if !wasPresent {
                     events.append(DerivedEvent(
                         at: at, kind: .appeared, subject: Self.display(device),
-                        detail: "answered again at \(device.ip)", runID: report.run.id
+                        detail: "answered again at \(device.primaryAddress)", runID: report.run.id
                     ))
                 }
                 record.device = device
@@ -275,7 +275,7 @@ public struct HistoryLedger: Sendable {
                 if latestRun != nil {
                     events.append(DerivedEvent(
                         at: at, kind: .appeared, subject: Self.display(device),
-                        detail: "joined at \(device.ip)", runID: report.run.id
+                        detail: "joined at \(device.primaryAddress)", runID: report.run.id
                     ))
                 }
             }
@@ -302,7 +302,7 @@ public struct HistoryLedger: Sendable {
             guard let record = records[key] else { continue }
             events.append(DerivedEvent(
                 at: at, kind: .disappeared, subject: Self.display(record.device),
-                detail: "last answered at \(record.device.ip)", runID: report.run.id
+                detail: "last answered at \(record.device.primaryAddress)", runID: report.run.id
             ))
         }
 

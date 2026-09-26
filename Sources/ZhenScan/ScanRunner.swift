@@ -193,7 +193,9 @@ public struct ScanRunner: Sendable {
         // History supplies first-seen. `Device(observing:…)` defaults it to `lastSeen`,
         // which is right on a first-ever run and wrong on every one after it.
         let firstSeen = await store.firstSeen(for: Array(facts.values), in: target.network)
-        let devices = facts.values
+        // Fused, so a host found at a v4 address and at link-local v6 ones is one
+        // device. The rule, and why two v4 records never fuse, is on `Device.fusing`.
+        let devices = Device.fusing(facts.values
             .map {
                 Device(
                     observing: $0,
@@ -201,8 +203,7 @@ public struct ScanRunner: Sendable {
                     firstSeen: firstSeen[$0.ip] ?? finishedAt,
                     lastSeen: finishedAt
                 )
-            }
-            .sorted { $0.ip < $1.ip }
+            })
 
         let report = ScanReport(
             run: ScanRun(

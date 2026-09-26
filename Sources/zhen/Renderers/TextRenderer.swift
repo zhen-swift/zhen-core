@@ -105,7 +105,7 @@ nonisolated struct TextRenderer: Renderer {
         // dimmed em-dash counted as nine columns and pushed everything after it left.
         let rows = devices.map { device -> [String] in
             [
-                device.ip.description,
+                device.primaryAddress.description,
                 device.displayName ?? "\u{2014}",
                 // The model earns a column of its own rather than being folded into the
                 // name. `AppleTV5,3` answers a different question from
