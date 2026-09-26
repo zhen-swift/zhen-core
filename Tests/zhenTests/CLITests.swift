@@ -646,7 +646,7 @@ struct HistoryLocationTests {
 struct HistoryReadbackTests {
     private func store() throws -> (LogHistoryStore, URL) {
         let directory = URL(fileURLWithPath: NSTemporaryDirectory())
-            .appendingPathComponent("zhen-cli-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("zhen-test-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let url = directory.appendingPathComponent("history.ndjson")
         return (LogHistoryStore(url: url), directory)

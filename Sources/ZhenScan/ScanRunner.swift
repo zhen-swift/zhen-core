@@ -15,7 +15,7 @@
 //
 // ── Duplication worth naming ─────────────────────────────────────────────────────
 //
-// This is the second implementation of the same pipeline. `zhen-cli` has one, in
+// This is the second implementation of the same pipeline. the command line has one, in
 // `ScanPipeline.swift`, and it does the same four things in the same order. They cannot
 // be shared today because the CLI's lives in an executable target, which nothing can
 // import, and neither package may be modified from here. Two pipelines that must agree
