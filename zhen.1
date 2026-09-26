@@ -1,0 +1,292 @@
+.\" zhen.1 — the manual page.
+.\"
+.\" Written against the binary rather than against the source: every exit code below
+.\" was produced by running the command in the SYNOPSIS, and every capability name is
+.\" one the artifact actually emits. A manual that documents intentions is how a tool
+.\" comes to claim things it does not do.
+.Dd September 22, 2026
+.Dt ZHEN 1
+.Os
+.Sh NAME
+.Nm zhen
+.Nd fast native network discovery
+.Sh SYNOPSIS
+.Nm
+.Cm scan
+.Op Fl -cidr Ar network
+.Op Fl -iface Ar name
+.Op Fl -deadline Ar duration
+.Op Fl -concurrency Ar n
+.Op Fl -discovery-only
+.Op Fl -deep Op Fl -ports Ar list
+.Op Fl -json | Fl -ndjson
+.Op Fl -quiet
+.Op Fl -no-color
+.Nm
+.Cm hosts
+.Nm
+.Cm events Op Fl -since Ar duration
+.Nm
+.Cm history Ar host
+.Nm
+.Cm export
+.Sh DESCRIPTION
+.Nm
+finds the devices on a local IPv4 segment, identifies them, and remembers
+what it has seen so it can say what changed.
+It opens no subprocesses, bundles no interpreters and depends on no external
+binaries: every protocol it speaks is implemented in the tool.
+.Pp
+It runs fully without privileges, and that is the default rather than a
+fallback.
+Run under
+.Xr sudo 8
+it additionally opens a packet-capture device and adds a layer-2 ARP sweep,
+half-open port scanning and TCP stack fingerprinting.
+.Ss Commands
+.Bl -tag -width "history host"
+.It Cm scan
+Discover hosts on the network, name them, and optionally probe their ports.
+.It Cm hosts
+List every device the history has ever seen, present or absent.
+.It Cm events
+Show what changed between scans, newest first.
+.It Cm history Ar host
+Show one device: what is known about it, and what has happened to it.
+.It Cm export
+Write the whole history to standard output as one JSON document.
+.El
+.Ss Scan options
+.Bl -tag -width "--concurrency n"
+.It Fl -cidr Ar network
+Network to scan, in CIDR form.
+Defaults to the network of the interface the default route uses.
+Anything wider than a
+.Pa /16
+is refused rather than swept, because a sweep that cannot finish reports an
+empty network instead of an unfinished one.
+.It Fl -iface Ar name
+Interface to scan from.
+Defaults to the one the default route uses, which is the only answer that is
+right on a machine with a VPN, a container bridge and a tethered phone all up
+at once.
+.It Fl -deadline Ar duration
+Total budget, for example
+.Ar 5s ,
+.Ar 500ms
+or
+.Ar 2m .
+Defaults to
+.Ar 20s .
+Spending it is not a failure: see
+.Sx EXIT STATUS .
+.It Fl -concurrency Ar n
+Probes in flight.
+Derived from the descriptor limit the kernel actually granted when omitted, and
+clamped rather than rejected when it exceeds what that limit supports.
+.It Fl -discovery-only
+Find hosts and stop.
+No naming, no ports.
+.It Fl -deep
+Also probe TCP ports on the hosts that answered, and ask the open ones what they
+are.
+.It Fl -ports Ar list
+Ports for
+.Fl -deep ,
+comma separated.
+Defaults to a small common set rather than all 65,535, because a deep scan is a
+deliberate act and sixteen million probes across a
+.Pa /24
+is not a default.
+.It Fl -json
+Emit one scan report as JSON on standard output.
+.It Fl -ndjson
+Emit one event per line as JSON on standard output, as they happen.
+.It Fl -quiet
+Suppress the progress display on standard error.
+.It Fl -no-color
+Disable ANSI colour.
+Colour is already disabled automatically when standard output is not a terminal.
+.El
+.Sh PRIVILEGES
+.Nm
+never prompts for a password and never spawns
+.Xr sudo 8 .
+What it does is attempt to open a packet-capture device, and compose the engines
+that attempt succeeds for.
+.Pp
+Selection is by attempt rather than by checking the effective user id, because
+that check is wrong in both directions: root with every
+.Pa /dev/bpf*
+node held by
+.Xr tcpdump 1 ,
+Wireshark or a VPN client has exactly the capability an ordinary user has, and a
+machine running a ChmodBPF-style daemon gives an ordinary user the capability
+root would have.
+.Pp
+Running as root never finds
+.Em fewer
+hosts than running without it.
+The privileged and unprivileged discovery engines are composed and their results
+unioned, because an either/or would lose every host that answers ICMP but not
+ARP.
+.Pp
+The capabilities each run actually exercised are reported in the artifact under
+.Li run.engine.capabilities :
+.Bl -tag -width "neighbor_table" -compact
+.It Li icmp_sweep
+Unprivileged ICMP echo sweep.
+.It Li neighbor_table
+The kernel's neighbour table, read as a discovery source.
+.It Li arp_sweep
+Layer-2 ARP requests this tool put on the wire itself.
+Needs a capture device.
+.It Li connect_scan
+Full TCP connect port scanning.
+.It Li syn_scan
+Half-open port scanning.
+Needs a capture device.
+.It Li banner_probe
+Service identification from a banner, an HTTP
+.Li Server
+header or a TLS certificate subject.
+.It Li os_fingerprint
+TCP stack fingerprinting from a SYN-ACK's options.
+Needs a capture device.
+.El
+.Pp
+A capability appears there only when it was
+.Em used ,
+never merely because the engine offers it.
+.Pp
+Each device in the artifact also carries
+.Li discovered_via ,
+which says how that host was found rather than only that it was:
+.Bl -tag -width "neighbor_table" -compact
+.It Li probe_reply
+It answered an ICMP echo request.
+.It Li arp_reply
+It answered an ARP request this tool put on the wire.
+.It Li neighbor_table
+The kernel's neighbour table listed it and it did not answer in time.
+A host whose reply arrives after the sweep has given up is found this way, so
+a run with several of these is also saying its per-host budgets are tight.
+A host that ignores ICMP is found this way and is genuinely present, but
+.Em no frame from it will appear in a packet capture ,
+which is the difference this field exists to record.
+.It Li local_interface
+This machine's own address.
+A probe a host sends to itself is answered inside the kernel and never
+reaches the wire, so a capture cannot show it either.
+.El
+.Pp
+Reconciling a scan against
+.Xr tcpdump 1
+means comparing the wire only against the hosts marked
+.Li probe_reply
+or
+.Li arp_reply .
+The other two are expected to be missing from it.
+.Sh ENVIRONMENT
+.Bl -tag -width "ZHEN_HISTORY"
+.It Ev ZHEN_HISTORY
+Path to the history file, honoured exactly: no directory is appended and no
+extension is assumed.
+Set it to keep a scan out of the real history, or to compare two histories
+side by side.
+.El
+.Sh FILES
+.Bl -tag -width "~/Library/Application Support/zhen/"
+.It Pa ~/Library/Application Support/zhen/history.ndjson
+The append-only history every scan is recorded into.
+.Pp
+Under
+.Xr sudo 8
+this is still the invoking user's path, not
+.Pa /var/root .
+A privileged scan that wrote somewhere only root can read would give the same
+machine two histories that never meet, and the one the user could see would have
+holes in it exactly where the interesting scans were.
+.El
+.Sh EXIT STATUS
+Every status below was produced by running the command beside it.
+.Bl -tag -width "69"
+.It 0
+The scan ran.
+This includes a partial result from an expired deadline: whether a run was
+exhaustive is the
+.Li run.outcome
+field in the artifact, not the exit status, and a job that treated a busy
+network as a failure would go red every time somebody streamed a film.
+.It 64
+Usage error.
+An unparseable
+.Fl -cidr ,
+a network too wide to sweep, an unknown subcommand.
+.It 69
+A required capability was unavailable: no such interface, no usable interface,
+or a platform with no scanning engine.
+Also returned when a scan completed but recorded a degradation it could not
+recover from: a denied Local Network permission, most often, which returns zero
+results rather than an error and would otherwise be indistinguishable from an
+empty network.
+.It 75
+A temporary failure: a syscall failed for a reason that may not recur.
+.It 130
+Interrupted.
+The first
+.Dv SIGINT
+commits what has been gathered and exits; the results are partial and real.
+.El
+.Sh EXAMPLES
+Discover what is on this network and print a table:
+.Pp
+.Dl $ zhen scan
+.Pp
+A machine-readable report, with no progress display:
+.Pp
+.Dl $ zhen scan --json --quiet > report.json
+.Pp
+Fail a CI job when the Local Network permission is denied, but not when the
+network is merely busy:
+.Bd -literal -offset indent
+zhen scan --discovery-only --quiet --json > report.json
+case $? in
+  0)  echo "scanned" ;;
+  69) echo "permission or interface problem"; exit 1 ;;
+  *)  echo "usage or transient failure"; exit 1 ;;
+esac
+.Ed
+.Pp
+Everything the privileged path adds, with the ports that matter on this segment:
+.Pp
+.Dl $ sudo zhen scan --deep --ports 22,80,443 --json
+.Pp
+Watch hosts appear as they answer, one JSON object per line:
+.Pp
+.Dl $ zhen scan --ndjson | jq -c 'select(.event == "host_found")'
+.Sh SEE ALSO
+.Xr tcpdump 1 ,
+.Xr arp 8 ,
+.Xr ifconfig 8
+.Sh CAVEATS
+Local Network permission on current macOS is denied
+.Em silently :
+a denied process gets zero results rather than an error, and a bare command-line
+binary has no bundle, so the grant attaches to the terminal rather than
+appearing under this tool's own name in System Settings.
+.Nm
+detects the signature of a denial, which is probes hearing nothing while the
+neighbour table is populated, and reports it as a degradation.
+It cannot query the grant, so that detection is a heuristic and says so where it
+appears.
+.Pp
+Stack fingerprinting matches against a deliberately small table of stack
+lineages and names a family rather than a version.
+A host it cannot place reports the features it observed with no name attached.
+That is the honest outcome, and the one that lets a signature be written later
+against reports already collected.
+.Pp
+IPv6, routed topologies and networks wider than a
+.Pa /16
+are out of scope.

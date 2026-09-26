@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Embedded into the __TEXT,__info_plist section at link time, not shipped as a file.
+
+  A bare SPM executable has no bundle, so without this the Local Network permission
+  attaches to whichever terminal launched it. The grant then never appears under this
+  tool's own name in System Settings, a user cannot find it to fix it, and — because a
+  denial returns zero results rather than an error — the scanner silently reports an
+  empty network.
+
+  NSBonjourServices is listed ahead of the discovery layer that will browse those types
+  in phase three. A type that is browsed but not declared here returns nothing, silently,
+  which is the same failure one level down.
+-->
+<plist version="1.0">
+<dict>
+    <key>CFBundleIdentifier</key>
+    <string>com.jctec.zhen</string>
+    <key>CFBundleName</key>
+    <string>zhen</string>
+    <key>CFBundleShortVersionString</key>
+    <string>0.5.0</string>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>zhen scans your local network to list the devices on it.</string>
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_googlecast._tcp</string>
+        <string>_companion-link._tcp</string>
+        <string>_airplay._tcp</string>
+        <string>_raop._tcp</string>
+        <string>_homekit._tcp</string>
+        <string>_device-info._tcp</string>
+        <string>_spotify-connect._tcp</string>
+        <string>_sonos._tcp</string>
+        <string>_esphomelib._tcp</string>
+        <string>_androidtvremote2._tcp</string>
+        <string>_workstation._tcp</string>
+        <string>_smb._tcp</string>
+        <string>_ssh._tcp</string>
+        <string>_ipp._tcp</string>
+        <string>_printer._tcp</string>
+        <string>_hue._tcp</string>
+        <string>_sleep-proxy._udp</string>
+    </array>
+</dict>
+</plist>

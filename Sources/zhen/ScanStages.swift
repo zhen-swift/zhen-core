@@ -1,0 +1,270 @@
+// ScanStages.swift — the seven jobs `ScanPipeline.run` was doing in one function body.
+//
+// `IPV6-plan.md`'s code-quality section names this as the single responsibility
+// violation in the codebase, and the reason it matters is not tidiness:
+//
+//     every capability on the roadmap adds another branch to it. IPv6 adds two,
+//     Linux adds one, VLAN adds one. Fix it before, not after.
+//
+// ── Why stages RETURN a context rather than mutate one ────────────────────────
+//
+// `inout` across an `await` is legal and is a trap waiting for the first stage that
+// wants to run concurrently with another. Returning a value keeps each stage a pure
+// function of what came before it, which is also what makes a stage testable without
+// standing up the whole pipeline.
+//
+// ── What this deliberately does NOT do ────────────────────────────────────────
+//
+// It does not reorder anything, skip anything, or tidy a guard. B1's gate is that the
+// artifact is byte-identical before and after, and the fastest way to fail it is to
+// improve something on the way past. The local-hardware patch in particular stays
+// INSIDE the naming stage rather than becoming the eighth stage the plan's seven-job
+// count implies: its guard is naming's guard, and naming can set `outcome` to
+// `.cancelled`, so a separate stage re-evaluating that condition would run in cases the
+// original did not.
+
+import Foundation
+import ZhenCore
+
+/// Everything a stage reads and everything it may change.
+///
+/// The target and the deadline are fixed for the run; everything else accumulates.
+nonisolated struct ScanContext: Sendable {
+    let target: ScanTarget
+    let deadline: Deadline
+
+    var facts: [IPv4Address: HostFacts] = [:]
+    var stages: [StageTiming] = []
+    var degradations: [Degradation] = []
+    var outcome: Outcome = .complete
+    /// Carried from the engines rather than restated. Peak concurrency is the one number
+    /// in the artifact that describes the SCANNER rather than the network, and it is only
+    /// worth anything if it is measured.
+    var peakConcurrency: Int = 0
+    /// Every capability any stage actually exercised, not only discovery's.
+    var exercised: EngineCapabilities = []
+
+    /// The hosts, in the order every stage iterates them.
+    var sortedAddresses: [IPv4Address] { facts.keys.sorted() }
+}
+
+/// One job in a scan.
+nonisolated protocol ScanStage: Sendable {
+    func run(_ context: ScanContext) async -> ScanContext
+}
+
+// MARK: - The stages
+
+/// What the engines said at construction, before anything ran.
+nonisolated struct EngineNoticesStage: ScanStage {
+    let notices: [Degradation]
+    let renderer: any Renderer
+
+    func run(_ context: ScanContext) async -> ScanContext {
+        var context = context
+        for notice in notices {
+            context.degradations.append(notice)
+            renderer.handle(.degraded(notice))
+        }
+        return context
+    }
+}
+
+/// The sweep.
+nonisolated struct DiscoveryStage: ScanStage {
+    let engine: any HostDiscovery
+    let renderer: any Renderer
+
+    func run(_ context: ScanContext) async -> ScanContext {
+        // The display is fed by a lossy stream; the artifact comes back as a value.
+        let (events, sink, finish) = ProbeStream.sinking(buffering: .progress)
+        let target = context.target
+        let deadline = context.deadline
+        let renderer = renderer
+        let engine = engine
+        let discovery = await withTaskGroup(of: DiscoveryResult?.self) { group in
+            group.addTask {
+                // Display only. Every event here is allowed to be dropped, which is
+                // precisely why the artifact does not come from here.
+                for await event in events { renderer.handle(event) }
+                return nil
+            }
+            group.addTask {
+                let result = await engine.discover(target, deadline: deadline, progress: sink)
+                finish()
+                return result
+            }
+            var found: DiscoveryResult?
+            for await value in group where value != nil { found = value }
+            return found ?? DiscoveryResult()
+        }
+
+        var context = context
+        context.degradations.append(contentsOf: discovery.degradations)
+        // Assigned, not merged: discovery is the first stage to produce any of these.
+        context.facts = Dictionary(uniqueKeysWithValues: discovery.hosts.map { ($0.ip, $0) })
+        context.stages = discovery.timing.stages
+        context.outcome = discovery.outcome
+        context.peakConcurrency = discovery.timing.peakConcurrency
+        context.exercised = discovery.usedCapabilities
+        return context
+    }
+}
+
+/// Names, the hosts only a name source heard from, and this machine's own hardware.
+///
+/// Between discovery and the deep scan, and unconditional: a device list without names is
+/// a list of addresses, which is the thing this tool exists not to produce. It takes its
+/// own slice of what is left and never the whole of it, so `--deep` still has a budget.
+///
+/// Under `--discovery-only` the stage is not started, so nothing is appended to `stages`
+/// and the naming entry is ABSENT from the artifact rather than present and zeroed. A
+/// stage that ran and found nothing is a different fact from a stage that never ran.
+nonisolated struct NamingStage: ScanStage {
+    let engine: any NameResolving
+    let renderer: any Renderer
+    let discoveryOnly: Bool
+
+    func run(_ context: ScanContext) async -> ScanContext {
+        guard !discoveryOnly, !context.facts.isEmpty,
+              context.outcome == .complete, !context.deadline.isExpired
+        else { return context }
+
+        let resolution = await engine.resolveNames(
+            for: context.sortedAddresses,
+            on: context.target,
+            deadline: context.deadline,
+            progress: ProgressSink { renderer.handle($0) }
+        )
+
+        var context = context
+        for (ip, candidates) in resolution.names {
+            if var host = context.facts[ip] {
+                // Every candidate, winners and losers. The "Known by" panel is built
+                // entirely out of the losers, and the cascade picks the winner at read
+                // time — so appending them all is not laziness, it is the feature.
+                host.allNames = (host.allNames + candidates).sorted()
+                context.facts[ip] = host
+                renderer.handle(.hostUpdated(host))
+            } else if context.target.network.contains(ip) {
+                // A host the sweep never heard from, that a name source did. It is real
+                // — a Bonjour address record and an SSDP or NBSTAT datagram are all
+                // positive evidence — and dropping it would report the network as
+                // emptier than it is for the sake of tidy stage boundaries.
+                let host = HostFacts(ip: ip, allNames: Array(candidates))
+                context.facts[ip] = host
+                renderer.handle(.hostFound(host))
+            }
+        }
+        for (ip, mac) in resolution.hardware where context.facts[ip]?.mac == nil {
+            context.facts[ip]?.mac = mac
+        }
+        // This machine's own hardware address, for the row the loopback remap created.
+        // Bonjour resolves the local host to 127.0.0.1 and the ledger remaps it onto the
+        // scanning interface's address — but the sweep deliberately leaves its own
+        // address out of the neighbour-derived hosts, so without this the one device we
+        // know the most about is the one row with no MAC in it.
+        //
+        // Inside this stage on purpose. See the file header: its guard is this stage's
+        // guard, and naming can set `outcome`, so a separate stage would re-evaluate a
+        // condition that has already moved.
+        if context.facts[context.target.interface.address]?.mac == nil,
+           let hardware = context.target.interface.hardwareAddress {
+            context.facts[context.target.interface.address]?.mac = hardware
+        }
+        context.stages.append(resolution.timing)
+        context.degradations.append(contentsOf: resolution.degradations)
+        if resolution.outcome == .cancelled { context.outcome = .cancelled }
+        return context
+    }
+}
+
+/// Says so when `--deep` was asked for and the port stage will not run.
+///
+/// This guard used to be silent. A partial discovery skipped port scanning entirely — no
+/// degradation, no stage entry, nothing in the artifact saying the stage had been asked
+/// for and declined — and the port matrix made the silence visible for the first time:
+/// every cell became a dash with nothing explaining why.
+nonisolated struct DeepScanRefusalStage: ScanStage {
+    let deep: Bool
+    let renderer: any Renderer
+
+    func run(_ context: ScanContext) async -> ScanContext {
+        guard deep, !context.facts.isEmpty,
+              !(context.outcome == .complete && !context.deadline.isExpired)
+        else { return context }
+
+        let cause = context.deadline.isExpired
+            ? "the scan's budget was spent before it could start"
+            : "discovery did not finish (\(context.outcome.rawValue))"
+        let skipped = Degradation(
+            stage: .deepScan,
+            reason: "Ports were not scanned: \(cause). "
+                + "The hosts are reported from discovery alone, so nothing here says "
+                + "whether a port is open, closed or filtered — that is absent because "
+                + "it was not attempted, not because nothing answered.",
+            recoverable: true)
+        var context = context
+        context.degradations.append(skipped)
+        // Appended AND handed to the renderer. Without the second half it reaches the
+        // artifact and never the terminal, and a person running `--deep` sees a device
+        // table with no ports and nothing saying why.
+        renderer.handle(.degraded(skipped))
+        return context
+    }
+}
+
+/// The port scan.
+nonisolated struct PortScanStage: ScanStage {
+    let engine: any PortScanning
+    let renderer: any Renderer
+    let deep: Bool
+    let ports: PortSpec
+
+    func run(_ context: ScanContext) async -> ScanContext {
+        guard deep, !context.facts.isEmpty,
+              context.outcome == .complete, !context.deadline.isExpired
+        else { return context }
+
+        let (portEvents, portSink, portFinish) = ProbeStream.sinking(buffering: .progress)
+        let targets = context.sortedAddresses
+        let deadline = context.deadline
+        let renderer = renderer
+        let engine = engine
+        let ports = ports
+        let result = await withTaskGroup(of: PortScanResult?.self) { group in
+            group.addTask {
+                for await event in portEvents { renderer.handle(event) }
+                return nil
+            }
+            group.addTask {
+                let scanned = await engine.scan(
+                    targets,
+                    ports: ports,
+                    // A ceiling, not a fixed wait: the engine narrows it per host from
+                    // that host's own measured round trips.
+                    perHostDeadline: .milliseconds(600),
+                    deadline: deadline,
+                    progress: portSink
+                )
+                portFinish()
+                return scanned
+            }
+            var found: PortScanResult?
+            for await value in group where value != nil { found = value }
+            return found ?? PortScanResult()
+        }
+
+        var context = context
+        for (ip, observations) in result.ports { context.facts[ip]?.ports = observations }
+        for (ip, fingerprint) in result.fingerprints {
+            context.facts[ip]?.osFingerprint = fingerprint
+        }
+        context.exercised.formUnion(result.usedCapabilities)
+        context.stages.append(contentsOf: result.timing.stages)
+        context.degradations.append(contentsOf: result.degradations)
+        if result.outcome != .complete { context.outcome = result.outcome }
+        context.peakConcurrency = max(context.peakConcurrency, result.timing.peakConcurrency)
+        return context
+    }
+}
