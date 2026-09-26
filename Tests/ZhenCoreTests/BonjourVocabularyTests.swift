@@ -315,11 +315,11 @@ struct ServiceTypeTableTests {
             .deletingLastPathComponent()   // Tests
             .deletingLastPathComponent()   // zhen
             .appendingPathComponent("Sources/zhen/Info.plist")
-        guard let data = try? Data(contentsOf: plist) else {
-            // The CLI is a separate package and may not be checked out beside this one.
-            // Skipping is honest; asserting against a file that is not there is not.
-            return
-        }
+        // Required, not skipped. This used to return early because the CLI was a separate
+        // package that might not be checked out beside this one; since the reorganisation
+        // it is the same package, so a missing file can only mean the path is wrong — and
+        // a wrong path skipping is a test that passes while reading nothing.
+        let data = try Data(contentsOf: plist)
         let declared = try #require(
             (try PropertyListSerialization.propertyList(from: data, format: nil)
                 as? [String: Any])?["NSBonjourServices"] as? [String]

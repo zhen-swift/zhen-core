@@ -286,10 +286,10 @@ struct CheckFlagTests {
     /// completed and found nothing is a working scan. If this ever inverts, every
     /// existing script that runs `zhen ports` without `--check` starts seeing failures.
     @Test("Without the flag, a quiet host is still a successful scan")
-    func quietIsSuccessByDefault() {
+    func quietIsSuccessByDefault() throws {
         // Asserted at the level the decision is made: `noneOpen` is only ever returned
         // from the `check` branch, so the default path cannot produce it.
-        let source = try! String(
+        let source = try String(
             contentsOf: URL(fileURLWithPath: #filePath)
                 .deletingLastPathComponent().deletingLastPathComponent()
                 .deletingLastPathComponent()

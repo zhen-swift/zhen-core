@@ -142,4 +142,7 @@ nonisolated extension Duration {
 
 /// `PortScanType` lives in `ZhenCore`, which has no business importing ArgumentParser.
 /// The conformance that makes it a command-line value belongs here instead.
-extension PortScanType: @retroactive ExpressibleByArgument {}
+///
+/// Not `@retroactive`: that marked a conformance across a *package* boundary, and since
+/// the reorganisation `ZhenCore` is in this package, where the compiler rejects it.
+extension PortScanType: ExpressibleByArgument {}
