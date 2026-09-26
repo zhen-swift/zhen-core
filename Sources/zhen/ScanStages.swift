@@ -34,6 +34,10 @@ nonisolated struct ScanContext: Sendable {
     let deadline: Deadline
 
     var facts: [IPv4Address: HostFacts] = [:]
+    /// IPv6 neighbours from the kernel's cache, on the scanned interface. Kept apart from
+    /// `facts` because `HostFacts` is one v4 address; these meet the v4 hosts at report
+    /// assembly, through `Device.fusing`.
+    var ipv6Neighbors: [IPv6NeighborEntry] = []
     var stages: [StageTiming] = []
     var degradations: [Degradation] = []
     var outcome: Outcome = .complete
@@ -54,6 +58,34 @@ nonisolated protocol ScanStage: Sendable {
 }
 
 // MARK: - The stages
+
+/// Reads the IPv6 neighbour cache for the scanned interface.
+///
+/// No `StageTiming`: it sends nothing and takes a sysctl's worth of time, and a stage in
+/// the artifact's `stages` is a claim that probing happened. A failure to read the cache
+/// is a degradation, not an error — the scan is complete without it, as it was before.
+nonisolated struct IPv6NeighborStage: ScanStage {
+    let cache: any IPv6NeighborCache
+
+    func run(_ context: ScanContext) async -> ScanContext {
+        var context = context
+        let interface = context.target.interface.name
+        do {
+            context.ipv6Neighbors = try await cache.ipv6Entries().filter {
+                // This machine's own addresses are permanent entries; they are not
+                // neighbours, and reporting them would add this Mac to its own scan.
+                !$0.isPermanent && $0.address.zone == interface
+            }
+        } catch {
+            context.degradations.append(Degradation(
+                stage: .discovery,
+                reason: "The IPv6 neighbour cache could not be read (\(error)), so hosts known only over IPv6 are missing and no device carries a v6 address.",
+                recoverable: true
+            ))
+        }
+        return context
+    }
+}
 
 /// What the engines said at construction, before anything ran.
 nonisolated struct EngineNoticesStage: ScanStage {

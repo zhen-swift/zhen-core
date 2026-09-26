@@ -101,6 +101,28 @@ public protocol NeighborCache: Sendable {
     func entries() async throws(PlatformError) -> [NeighborEntry]
 }
 
+/// One entry in the IPv6 neighbour cache — NDP's counterpart of an ARP entry.
+public struct IPv6NeighborEntry: Sendable, Hashable {
+    /// The neighbour's address, with the zone of the interface it was learned on.
+    public var address: IPv6Address
+    /// Its link-layer address.
+    public var mac: MACAddress
+    /// A permanent entry is one of this machine's own addresses, not a neighbour.
+    public var isPermanent: Bool
+
+    public init(address: IPv6Address, mac: MACAddress, isPermanent: Bool) {
+        self.address = address
+        self.mac = mac
+        self.isPermanent = isPermanent
+    }
+}
+
+/// The IPv6 neighbour cache. Read, never written; needs no privilege on any platform
+/// this project targets.
+public protocol IPv6NeighborCache: Sendable {
+    func ipv6Entries() async throws(PlatformError) -> [IPv6NeighborEntry]
+}
+
 /// One sighting of one service instance on one host.
 public struct ServiceSighting: Sendable, Hashable, Codable {
     /// The address it resolved to.

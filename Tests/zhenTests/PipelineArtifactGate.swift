@@ -78,7 +78,7 @@ func canonicalArtifact(deep: Bool, discoveryOnly: Bool = false) async -> String 
 
     let pipeline = ScanPipeline(
         scanner: PlatformScanner(
-            interfaces: FakeInterfaces(), discovery: discovery, ports: ports, udpPorts: ports,
+            interfaces: FakeInterfaces(), discovery: discovery, ports: ports, udpPorts: ports, ipv6Neighbors: NoIPv6Neighbors(),
             naming: naming,
             descriptorLimit: 92_160, concurrency: 512, notices: []),
         renderer: SilentGateRenderer(),

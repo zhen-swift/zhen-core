@@ -81,6 +81,7 @@ nonisolated struct ScanPipeline {
         let pipeline: [any ScanStage] = [
             EngineNoticesStage(notices: scanner.notices, renderer: renderer),
             DiscoveryStage(engine: scanner.discovery, renderer: renderer),
+            IPv6NeighborStage(cache: scanner.ipv6Neighbors),
             NamingStage(engine: scanner.naming, renderer: renderer,
                         discoveryOnly: discoveryOnly),
             DeepScanRefusalStage(deep: deep, renderer: renderer),
@@ -92,6 +93,7 @@ nonisolated struct ScanPipeline {
         for stage in pipeline { context = await stage.run(context) }
 
         let facts = context.facts
+        let ipv6Neighbors = context.ipv6Neighbors
         var stages = context.stages
         let degradations = context.degradations
         let outcome = context.outcome
@@ -125,13 +127,16 @@ nonisolated struct ScanPipeline {
         ) ?? [:]
         // Fused, so a host found at a v4 address and at link-local v6 ones is one
         // device. The rule, and why two v4 records never fuse, is on `Device.fusing`.
+        // The IPv6 cache's entries join here: an address whose MAC also answered on v4
+        // becomes one more address of that device; one whose MAC did not is a device of
+        // its own, reported with the cache as its only source.
         let devices = Device.fusing(facts.values
             .map {
                 Device(
                     observing: $0, in: target.network,
                     firstSeen: firstSeen[$0.ip] ?? finishedAt, lastSeen: finishedAt
                 )
-            })
+            } + ipv6Neighbors.map { Device(neighbor: $0, seen: finishedAt) })
 
         let report = ScanReport(
             run: ScanRun(

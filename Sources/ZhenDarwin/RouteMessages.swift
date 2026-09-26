@@ -26,6 +26,7 @@
 //     sockaddr_dl (>=20)     len@0:u8  family@1:u8  index@2:u16
 //                            nlen@5:u8 alen@6:u8    data@8
 //     sockaddr_in (16)       len@0:u8  family@1:u8  addr@4:u32be
+//     sockaddr_in6 (28)      len@0:u8  family@1:u8  addr@8..<24  scope_id@24:u32
 #if canImport(Darwin)
 
 import Darwin
@@ -41,6 +42,9 @@ struct RouteMessage {
     var flags: Int32
     /// The IPv4 destination, when `RTA_DST` was present and AF_INET.
     var destination: IPv4Address?
+    /// The IPv6 destination, when `RTA_DST` was present and AF_INET6. No zone: the
+    /// caller names it from `interfaceIndex`.
+    var destination6: IPv6Address?
     /// The IPv4 gateway, when `RTA_GATEWAY` was present and AF_INET.
     var gateway: IPv4Address?
     /// The link-layer address, when `RTA_GATEWAY` was present and AF_LINK. In an ARP
@@ -97,7 +101,7 @@ enum RouteMessageParser {
             type: u8(bytes, base + 3),
             interfaceIndex: u16(bytes, base + 4),
             flags: i32(bytes, base + 8),
-            destination: nil, gateway: nil, linkAddress: nil, netmask: nil
+            destination: nil, destination6: nil, gateway: nil, linkAddress: nil, netmask: nil
         )
         let present = i32(bytes, base + 12)
         var cursor = base + headerSize
@@ -118,6 +122,18 @@ enum RouteMessageParser {
                 // A default route's destination is emitted as a truncated sockaddr —
                 // sa_len 0 or 4, no address bytes at all — which means 0.0.0.0.
                 message.destination = IPv4Address(raw: 0)
+            case (RTA_DST, AF_INET6) where saLen >= 24:
+                var raw: [UInt8] = []
+                raw.reserveCapacity(16)
+                for index in 0..<16 { raw.append(u8(bytes, cursor + 8 + index)) }
+                // The KAME stack embeds a link-local address's scope in bytes 2-3 inside
+                // the kernel, and routing messages leak it: `fe80:e::…` for en0. It is
+                // not part of the address. Cleared here, as `ndp` itself does.
+                if raw[0] == 0xFE, raw[1] & 0xC0 == 0x80 {
+                    raw[2] = 0
+                    raw[3] = 0
+                }
+                message.destination6 = IPv6Address(bytes: raw)
             case (RTA_GATEWAY, AF_INET) where saLen >= 8:
                 message.gateway = IPv4Address(raw: u32be(bytes, cursor + 4))
             case (RTA_GATEWAY, AF_LINK):

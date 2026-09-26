@@ -110,7 +110,7 @@ private func pipeline(
 ) -> ScanPipeline {
     ScanPipeline(
         scanner: PlatformScanner(
-            interfaces: FakeInterfaces(), discovery: discovery, ports: FakePorts(), udpPorts: FakePorts(),
+            interfaces: FakeInterfaces(), discovery: discovery, ports: FakePorts(), udpPorts: FakePorts(), ipv6Neighbors: NoIPv6Neighbors(),
             naming: naming,
             descriptorLimit: 92_160, concurrency: 512, notices: []
         ),
@@ -151,7 +151,7 @@ private func pipeline(
 ) -> ScanPipeline {
     ScanPipeline(
         scanner: PlatformScanner(
-            interfaces: FakeInterfaces(), discovery: discovery, ports: FakePorts(), udpPorts: FakePorts(),
+            interfaces: FakeInterfaces(), discovery: discovery, ports: FakePorts(), udpPorts: FakePorts(), ipv6Neighbors: NoIPv6Neighbors(),
             naming: observing,
             descriptorLimit: 92_160, concurrency: 512, notices: []
         ),
@@ -558,4 +558,70 @@ struct SkippedDeepScanTests {
 private struct SilentRenderer: Renderer {
     func handle(_ event: ProbeEvent) {}
     func finish(_ report: ScanReport) {}
+}
+
+/// An IPv6 neighbour cache with nothing in it — every pipeline test that predates D3.
+struct NoIPv6Neighbors: IPv6NeighborCache {
+    func ipv6Entries() async throws(PlatformError) -> [IPv6NeighborEntry] { [] }
+}
+
+/// A fixed IPv6 neighbour cache.
+struct FixedIPv6Neighbors: IPv6NeighborCache {
+    var entries: [IPv6NeighborEntry]
+    func ipv6Entries() async throws(PlatformError) -> [IPv6NeighborEntry] { entries }
+}
+
+@Suite("D3: the IPv6 neighbour cache is a discovery source, and says so")
+struct IPv6NeighborStageTests {
+    private func entry(_ address: String, _ mac: String, permanent: Bool = false) -> IPv6NeighborEntry {
+        IPv6NeighborEntry(address: IPv6Address(address)!, mac: MACAddress(mac)!, isPermanent: permanent)
+    }
+
+    private func scan(_ cache: FixedIPv6Neighbors) async -> ScanReport? {
+        var discovery = FakeDiscovery()
+        // One v4 host that answered. Nothing else answered anything.
+        discovery.hosts = [HostFacts(ip: IPv4Address("10.10.20.1")!, mac: MACAddress("78:20:51:74:CB:28"),
+                                     discoveredVia: [.probeReply])]
+        let renderer = RecordingRenderer()
+        let scan = ScanPipeline(
+            scanner: PlatformScanner(
+                interfaces: FakeInterfaces(), discovery: discovery, ports: FakePorts(),
+                udpPorts: FakePorts(), ipv6Neighbors: cache, naming: FakeNaming(),
+                descriptorLimit: 92_160, concurrency: 512, notices: []),
+            renderer: renderer, discoveryOnly: true, deep: false, ports: .commonServices)
+        let done = await scan.run(target: ScanTarget(scanning: FakeInterfaces.en0), budget: .seconds(5))
+        return done.report
+    }
+
+    @Test("A host only the cache knows is reported, with the cache as its only source")
+    func cacheOnlyHostIsReported() async throws {
+        let report = try #require(await scan(FixedIPv6Neighbors(entries: [
+            entry("fe80::4d0:baf6:1770:5849%en0", "9E:BA:51:6A:82:9B"),
+        ])))
+        let silent = try #require(report.devices.first { $0.mac == MACAddress("9E:BA:51:6A:82:9B") })
+        #expect(silent.addresses == [IPAddress("fe80::4d0:baf6:1770:5849%en0")!])
+        #expect(silent.discoveredVia == [.neighborTable])
+        #expect(silent.identification == .minimal)
+        #expect(report.devices.count == 2)
+    }
+
+    @Test("A cache entry sharing a MAC with a v4 host becomes that host's second address")
+    func sameMACFuses() async throws {
+        let report = try #require(await scan(FixedIPv6Neighbors(entries: [
+            entry("fe80::7a20:51ff:fe74:cb28%en0", "78:20:51:74:CB:28"),
+        ])))
+        #expect(report.devices.count == 1)
+        let gateway = try #require(report.devices.first)
+        #expect(gateway.addresses == [IPAddress("10.10.20.1")!, IPAddress("fe80::7a20:51ff:fe74:cb28%en0")!])
+        #expect(gateway.discoveredVia == [.probeReply, .neighborTable])
+    }
+
+    @Test("This machine's own addresses and other interfaces' neighbours are not reported")
+    func ownAndForeignAreExcluded() async throws {
+        let report = try #require(await scan(FixedIPv6Neighbors(entries: [
+            entry("fe80::10fe:8abd:76f3:5a11%en0", "D6:0A:97:FE:72:9C", permanent: true),
+            entry("fe80::8c97:23ff:fe36:6cec%awdl0", "8E:97:23:36:6C:EC"),
+        ])))
+        #expect(report.devices.count == 1, "only the v4 host")
+    }
 }

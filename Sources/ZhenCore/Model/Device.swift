@@ -661,3 +661,32 @@ private struct FusedPort: Hashable {
     var proto: TransportProtocol
     var address: IPAddress?
 }
+
+// ── A host known only to the neighbour cache ────────────────────────────────────────
+
+extension Device {
+    /// A device from one IPv6 neighbour-cache entry, and nothing else.
+    ///
+    /// The weakest evidence a report carries, and labelled as exactly that:
+    /// `discovered_via` is `neighbor_table` alone, identification is whatever a bare
+    /// MAC supports, and nothing here claims the host answered anything. A cache entry
+    /// says the kernel exchanged traffic with this address recently, which is why it is
+    /// reported at all — a host that ignores every probe is still on the network — and
+    /// why it is never reported as more.
+    ///
+    /// When the same MAC also answered on v4, `Device.fusing` folds this into that
+    /// device as one more address, and the cache stays in its `discovered_via`.
+    public init(neighbor entry: IPv6NeighborEntry, seen: Timestamp) {
+        let evidence = IdentificationEvidence(names: [], vendor: nil, ttl: nil)
+        self.init(
+            addresses: [.v6(entry.address)],
+            mac: entry.mac,
+            identification: Identification(evidence: evidence),
+            identificationEvidence: evidence,
+            identityStability: Stability(strongestOf: [HostIdentifier.fromMAC(entry.mac)]),
+            discoveredVia: [.neighborTable],
+            firstSeen: seen,
+            lastSeen: seen
+        )
+    }
+}

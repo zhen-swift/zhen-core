@@ -73,4 +73,46 @@ public struct DarwinNeighborCache: NeighborCache {
     }
 }
 
+
+// ── IPv6: the NDP neighbour cache ──────────────────────────────────────────────────
+//
+// The same sysctl with AF_INET6 — the table `ndp -an` prints, readable without privilege
+// for the same reason the ARP one is.
+extension DarwinNeighborCache: IPv6NeighborCache {
+    public func ipv6Entries() async throws(PlatformError) -> [IPv6NeighborEntry] {
+        let bytes = try RouteSysctl.fetch(
+            [CTL_NET, PF_ROUTE, 0, AF_INET6, NET_RT_FLAGS, RTF_LLINFO]
+        )
+        return unsafe Self.decodeIPv6(bytes.span.bytes) { ICMPv6Socket.interfaceName(UInt32($0)) }
+    }
+
+    /// Decodes an AF_INET6 neighbour dump. `interfaceName` turns the message's interface
+    /// index into the zone every address carries — a link-local address without one is
+    /// ambiguous on a machine with more than one link.
+    ///
+    /// Kept: complete entries (a MAC is present) for unicast addresses. Dropped: the
+    /// incomplete ones, which say a solicitation went unanswered, and multicast. The
+    /// permanent ones — this machine's own addresses — are kept and marked, and the caller
+    /// decides; reporting this machine as its own neighbour is the caller's mistake to
+    /// avoid, not the parser's to hide.
+    public static func decodeIPv6(
+        _ bytes: RawSpan, interfaceName: (UInt16) -> String?
+    ) -> [IPv6NeighborEntry] {
+        var seen: Set<IPv6Address> = []
+        var entries: [IPv6NeighborEntry] = []
+        for message in RouteMessageParser.parse(bytes) {
+            guard let bare = message.destination6, !bare.isMulticast,
+                  let mac = message.linkAddress, !mac.isMulticast, mac.raw != 0
+            else { continue }
+            let address = IPv6Address(high: bare.high, low: bare.low,
+                                      zone: interfaceName(message.interfaceIndex))
+            guard seen.insert(address).inserted else { continue }
+            entries.append(IPv6NeighborEntry(
+                address: address, mac: mac,
+                isPermanent: message.flags & RTF_STATIC != 0
+            ))
+        }
+        return entries.sorted { $0.address < $1.address }
+    }
+}
 #endif
