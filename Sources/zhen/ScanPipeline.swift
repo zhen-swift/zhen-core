@@ -80,8 +80,9 @@ nonisolated struct ScanPipeline {
         // artifact, which is what the B1 gate catches.
         let pipeline: [any ScanStage] = [
             EngineNoticesStage(notices: scanner.notices, renderer: renderer),
+            IPv6SolicitationStage(echo: scanner.ipv6Multicast),
             DiscoveryStage(engine: scanner.discovery, renderer: renderer),
-            IPv6NeighborStage(cache: scanner.ipv6Neighbors),
+            IPv6NeighborStage(cache: scanner.ipv6Neighbors, echo: scanner.ipv6Multicast),
             NamingStage(engine: scanner.naming, renderer: renderer,
                         discoveryOnly: discoveryOnly),
             DeepScanRefusalStage(deep: deep, renderer: renderer),
@@ -94,6 +95,7 @@ nonisolated struct ScanPipeline {
 
         let facts = context.facts
         let ipv6Neighbors = context.ipv6Neighbors
+        let ipv6Responders = context.ipv6Responders
         var stages = context.stages
         let degradations = context.degradations
         let outcome = context.outcome
@@ -136,7 +138,10 @@ nonisolated struct ScanPipeline {
                     observing: $0, in: target.network,
                     firstSeen: firstSeen[$0.ip] ?? finishedAt, lastSeen: finishedAt
                 )
-            } + ipv6Neighbors.map { Device(neighbor: $0, seen: finishedAt) })
+            } + ipv6Neighbors.map {
+                Device(neighbor: $0, seen: finishedAt,
+                       answeredEcho: ipv6Responders.contains($0.address))
+            })
 
         let report = ScanReport(
             run: ScanRun(

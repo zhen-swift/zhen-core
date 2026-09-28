@@ -676,7 +676,10 @@ extension Device {
     ///
     /// When the same MAC also answered on v4, `Device.fusing` folds this into that
     /// device as one more address, and the cache stays in its `discovered_via`.
-    public init(neighbor entry: IPv6NeighborEntry, seen: Timestamp) {
+    /// - Parameter answeredEcho: whether this address answered an echo this scan sent —
+    ///   the `ff02::1` solicitation or its unicast follow-up. Then the cache is only how
+    ///   its MAC was learned; the evidence is the reply, and `probe_reply` says so.
+    public init(neighbor entry: IPv6NeighborEntry, seen: Timestamp, answeredEcho: Bool = false) {
         let evidence = IdentificationEvidence(names: [], vendor: nil, ttl: nil)
         self.init(
             addresses: [.v6(entry.address)],
@@ -684,7 +687,7 @@ extension Device {
             identification: Identification(evidence: evidence),
             identificationEvidence: evidence,
             identityStability: Stability(strongestOf: [HostIdentifier.fromMAC(entry.mac)]),
-            discoveredVia: [.neighborTable],
+            discoveredVia: [answeredEcho ? .probeReply : .neighborTable],
             firstSeen: seen,
             lastSeen: seen
         )

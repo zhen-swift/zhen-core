@@ -38,6 +38,11 @@ nonisolated struct ScanContext: Sendable {
     /// `facts` because `HostFacts` is one v4 address; these meet the v4 hosts at report
     /// assembly, through `Device.fusing`.
     var ipv6Neighbors: [IPv6NeighborEntry] = []
+    /// The `ff02::1` solicitation, started beside the v4 sweep and collected after it.
+    var solicitation: Task<IPv6Solicitation, Never>?
+    /// Every v6 address that answered an echo this scan sent. Their devices are reported
+    /// as `probe_reply` rather than `neighbor_table`: the cache only supplied the MAC.
+    var ipv6Responders: Set<IPv6Address> = []
     var stages: [StageTiming] = []
     var degradations: [Degradation] = []
     var outcome: Outcome = .complete
@@ -64,18 +69,78 @@ nonisolated protocol ScanStage: Sendable {
 /// No `StageTiming`: it sends nothing and takes a sysctl's worth of time, and a stage in
 /// the artifact's `stages` is a claim that probing happened. A failure to read the cache
 /// is a degradation, not an error — the scan is complete without it, as it was before.
+/// D2′: one echo to `ff02::1`, started before the v4 sweep so its window runs inside the
+/// sweep's rather than after it. Collected by `IPv6NeighborStage`.
+nonisolated struct IPv6SolicitationStage: ScanStage {
+    let echo: any IPv6MulticastEcho
+    /// Long enough for a sleeping phone's radio (replies of 200 ms were seen in P2), short
+    /// enough to finish inside a sweep that takes seconds.
+    static let window: Duration = .seconds(2)
+
+    func run(_ context: ScanContext) async -> ScanContext {
+        var context = context
+        let echo = echo
+        let interface = context.target.interface.name
+        let window = min(Self.window, context.deadline.remaining)
+        context.solicitation = Task { await echo.solicitAllNodes(on: interface, within: window) }
+        return context
+    }
+}
+
 nonisolated struct IPv6NeighborStage: ScanStage {
     let cache: any IPv6NeighborCache
+    var echo: any IPv6MulticastEcho = NoIPv6MulticastEcho()
 
     func run(_ context: ScanContext) async -> ScanContext {
         var context = context
         let interface = context.target.interface.name
+        let solicitation = await context.solicitation?.value ?? IPv6Solicitation()
+        if let failure = solicitation.failure {
+            context.degradations.append(Degradation(
+                stage: .discovery,
+                reason: "The IPv6 all-nodes echo could not be sent (\(failure)), so hosts that only IPv6 reaches were not asked.",
+                recoverable: true
+            ))
+        }
+        let responders = solicitation.responders
+        var followedUp = 0, followUpReplies = 0
+
         do {
-            context.ipv6Neighbors = try await cache.ipv6Entries().filter {
-                // This machine's own addresses are permanent entries; they are not
-                // neighbours, and reporting them would add this Mac to its own scan.
-                !$0.isPermanent && $0.address.zone == interface
+            var entries = try await neighbours(on: interface)
+            // A responder the cache has no MAC for cannot be joined to its v4 device, and
+            // reporting it alone risks the one failure Q2's gate names: a host counted
+            // twice. A unicast echo makes the kernel resolve it; then read again.
+            let known = Set(entries.map(\.address))
+            let unknown = responders.filter { !known.contains($0) }
+            if !unknown.isEmpty, !context.deadline.isExpired {
+                let budget = min(Duration.seconds(1), context.deadline.remaining)
+                let echo = echo
+                followUpReplies = await withTaskGroup(of: Bool.self) { group in
+                    for address in unknown {
+                        group.addTask { await echo.echo(address, on: interface, within: budget) }
+                    }
+                    var count = 0
+                    for await replied in group where replied { count += 1 }
+                    return count
+                }
+                followedUp = unknown.count
+                entries = try await neighbours(on: interface)
             }
+            let learned = Set(entries.map(\.address))
+            let unmatched = responders.filter { !learned.contains($0) }
+            if !unmatched.isEmpty {
+                let one = unmatched.count == 1
+                context.degradations.append(Degradation(
+                    stage: .discovery,
+                    reason: "\(unmatched.count) host\(one ? "" : "s") answered over IPv6 but "
+                        + "the neighbour cache never learned \(one ? "its" : "their") hardware "
+                        + "address, so \(one ? "it" : "they") cannot be matched to a v4 device "
+                        + "and \(one ? "is" : "are") not reported: "
+                        + unmatched.map(\.description).joined(separator: ", ") + ".",
+                    recoverable: true
+                ))
+            }
+            context.ipv6Neighbors = entries
         } catch {
             context.degradations.append(Degradation(
                 stage: .discovery,
@@ -83,7 +148,24 @@ nonisolated struct IPv6NeighborStage: ScanStage {
                 recoverable: true
             ))
         }
+        context.ipv6Responders = Set(responders)
+
+        // The packets are discovery's, so they are counted in its stage rather than in a
+        // stage of their own that every schema-3 reader would have to learn the name of.
+        let sent = solicitation.sent + followedUp
+        if sent > 0, let index = context.stages.firstIndex(where: { $0.stage == .discovery }) {
+            context.stages[index].probesSent += sent
+            context.stages[index].repliesSeen += responders.count + followUpReplies
+        }
         return context
+    }
+
+    private func neighbours(on interface: String) async throws(PlatformError) -> [IPv6NeighborEntry] {
+        try await cache.ipv6Entries().filter {
+            // This machine's own addresses are permanent entries; they are not
+            // neighbours, and reporting them would add this Mac to its own scan.
+            !$0.isPermanent && $0.address.zone == interface
+        }
     }
 }
 

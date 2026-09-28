@@ -30,6 +30,9 @@ nonisolated struct PlatformScanner: Sendable {
     var udpPorts: any PortScanning
     /// The IPv6 neighbour cache, read as a discovery source.
     var ipv6Neighbors: any IPv6NeighborCache
+    /// One echo to `ff02::1`, beside the v4 sweep. Defaults to none, which is what every
+    /// fixture and every platform without an engine for it gets.
+    var ipv6Multicast: any IPv6MulticastEcho = NoIPv6MulticastEcho()
     /// Naming: the mDNS, SSDP and NetBIOS cascade behind one stage.
     var naming: any NameResolving
     /// The descriptor soft limit the kernel granted.
@@ -82,6 +85,7 @@ nonisolated struct PlatformScanner: Sendable {
             ports: scanner.ports,
             udpPorts: scanner.udpPorts,
             ipv6Neighbors: DarwinNeighborCache(),
+            ipv6Multicast: DarwinMulticastEcho(),
             naming: scanner.naming,
             descriptorLimit: scanner.descriptorLimit,
             concurrency: scanner.concurrency,

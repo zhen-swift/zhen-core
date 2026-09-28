@@ -625,3 +625,138 @@ struct IPv6NeighborStageTests {
         #expect(report.devices.count == 1, "only the v4 host")
     }
 }
+
+/// An all-nodes echo whose answer is dictated. `echo` records who was followed up and
+/// tells the cache to learn them, as the kernel does when it resolves a unicast reply.
+final class FakeMulticast: IPv6MulticastEcho, @unchecked Sendable {
+    let responders: [IPv6Address]
+    let cache: LearningIPv6Neighbors?
+    private(set) var followedUp: [IPv6Address] = []
+    init(_ responders: [String], cache: LearningIPv6Neighbors? = nil) {
+        self.responders = responders.map { IPv6Address($0)! }
+        self.cache = cache
+    }
+    func solicitAllNodes(on interface: String, within window: Duration) async -> IPv6Solicitation {
+        IPv6Solicitation(responders: responders, sent: 1)
+    }
+    func echo(_ address: IPv6Address, on interface: String, within budget: Duration) async -> Bool {
+        followedUp.append(address)
+        cache?.learn(address)
+        return cache?.canLearn(address) ?? false
+    }
+}
+
+/// A cache that starts with `entries` and gains a pending entry once it is echoed.
+final class LearningIPv6Neighbors: IPv6NeighborCache, @unchecked Sendable {
+    private var entries: [IPv6NeighborEntry]
+    private let pending: [IPv6NeighborEntry]
+    init(_ entries: [IPv6NeighborEntry], learnable pending: [IPv6NeighborEntry] = []) {
+        self.entries = entries
+        self.pending = pending
+    }
+    func canLearn(_ address: IPv6Address) -> Bool { pending.contains { $0.address == address } }
+    func learn(_ address: IPv6Address) {
+        entries += pending.filter { $0.address == address && !entries.contains($0) }
+    }
+    func ipv6Entries() async throws(PlatformError) -> [IPv6NeighborEntry] { entries }
+}
+
+// D2′ (Q2): `ff02::1` as a complement. The gate, as written in V6-questions.md: the union
+// finds at least what v4 finds, plus every host only the multicast reached; a v6 address
+// lands on the right v4 device; a v6-only responder is a device of its own, not a
+// duplicate. Both failures are contrived here — two v4 hosts for the address to land on
+// wrongly, and a v6-only host for the duplicate to appear on.
+@Suite("D2′: one all-nodes echo complements the v4 sweep")
+struct IPv6SolicitationTests {
+    private let gatewayMAC = "78:20:51:74:CB:28", tvMAC = "C8:69:CD:7F:33:E1", onlyV6MAC = "58:D8:12:0A:BF:6E"
+    private let gatewayV6 = "fe80::7a20:51ff:fe74:cb28%en0", tvV6 = "fe80::82f:e557:372d:c208%en0"
+    private let onlyV6 = "fe80::5ad8:12ff:fe0a:bf6e%en0"
+
+    private func entry(_ address: String, _ mac: String) -> IPv6NeighborEntry {
+        IPv6NeighborEntry(address: IPv6Address(address)!, mac: MACAddress(mac)!, isPermanent: false)
+    }
+
+    private func scan(_ cache: any IPv6NeighborCache, _ multicast: any IPv6MulticastEcho) async -> ScanReport? {
+        var discovery = FakeDiscovery()
+        discovery.hosts = [
+            HostFacts(ip: IPv4Address("10.10.20.1")!, mac: MACAddress(gatewayMAC), discoveredVia: [.probeReply]),
+            HostFacts(ip: IPv4Address("10.10.20.5")!, mac: MACAddress(tvMAC), discoveredVia: [.probeReply]),
+        ]
+        let scan = ScanPipeline(
+            scanner: PlatformScanner(
+                interfaces: FakeInterfaces(), discovery: discovery, ports: FakePorts(),
+                udpPorts: FakePorts(), ipv6Neighbors: cache, ipv6Multicast: multicast,
+                naming: FakeNaming(), descriptorLimit: 92_160, concurrency: 512, notices: []),
+            renderer: RecordingRenderer(), discoveryOnly: true, deep: false, ports: .commonServices)
+        return await scan.run(target: ScanTarget(scanning: FakeInterfaces.en0), budget: .seconds(5)).report
+    }
+
+    private func device(_ report: ScanReport, _ mac: String) -> Device? {
+        report.devices.first { $0.mac == MACAddress(mac) }
+    }
+
+    private func probes(_ report: ScanReport) -> Int {
+        report.run.timing.stages.first { $0.stage == .discovery }?.probesSent ?? -1
+    }
+
+    @Test("A responder's address lands on the v4 device with its MAC, and not on another")
+    func landsOnTheRightDevice() async throws {
+        let cache = FixedIPv6Neighbors(entries: [entry(tvV6, tvMAC)])
+        let report = try #require(await scan(cache, FakeMulticast([tvV6])))
+        let tv = try #require(device(report, tvMAC))
+        let gateway = try #require(device(report, gatewayMAC))
+        #expect(tv.addresses == [IPAddress("10.10.20.5")!, IPAddress(tvV6)!])
+        #expect(gateway.addresses == [IPAddress("10.10.20.1")!], "the v6 address fused onto the wrong device")
+        // It answered, so the cache is only where its MAC came from.
+        #expect(tv.discoveredVia == [.probeReply])
+        #expect(report.devices.count == 2)
+    }
+
+    @Test("A v6-only responder is a device of its own, not a duplicate of a v4 one")
+    func v6OnlyIsItsOwnDevice() async throws {
+        let cache = FixedIPv6Neighbors(entries: [entry(tvV6, tvMAC), entry(onlyV6, onlyV6MAC)])
+        let report = try #require(await scan(cache, FakeMulticast([tvV6, onlyV6])))
+        #expect(report.devices.count == 3, "two v4 hosts and one v6-only host")
+        let alone = try #require(device(report, onlyV6MAC))
+        #expect(alone.addresses == [IPAddress(onlyV6)!])
+        #expect(alone.discoveredVia == [.probeReply])
+        // The union is at least what v4 found.
+        for v4 in ["10.10.20.1", "10.10.20.5"] {
+            #expect(report.devices.contains { $0.addresses.contains(IPAddress(v4)!) })
+        }
+    }
+
+    @Test("One packet: the discovery stage counts exactly one more probe")
+    func onePacket() async throws {
+        let cache = FixedIPv6Neighbors(entries: [entry(tvV6, tvMAC), entry(onlyV6, onlyV6MAC)])
+        let without = try #require(await scan(cache, NoIPv6MulticastEcho()))
+        let with = try #require(await scan(cache, FakeMulticast([tvV6, onlyV6])))
+        #expect(probes(with) == probes(without) + 1)
+    }
+
+    @Test("A responder the cache lacks is echoed once, learned, and then reported")
+    func followUpLearnsTheMAC() async throws {
+        let cache = LearningIPv6Neighbors([entry(tvV6, tvMAC)], learnable: [entry(onlyV6, onlyV6MAC)])
+        let multicast = FakeMulticast([tvV6, onlyV6], cache: cache)
+        let report = try #require(await scan(cache, multicast))
+        #expect(multicast.followedUp == [IPv6Address(onlyV6)!], "only the unknown one is followed up")
+        #expect(device(report, onlyV6MAC)?.addresses == [IPAddress(onlyV6)!])
+        let without = try #require(await scan(FixedIPv6Neighbors(entries: []), NoIPv6MulticastEcho()))
+        #expect(probes(report) == probes(without) + 2, "one multicast and one follow-up")
+    }
+
+    @Test("A responder whose MAC is never learned is named, and not reported as a device")
+    func unmatchedIsNamedNotGuessed() async throws {
+        let cache = LearningIPv6Neighbors([entry(tvV6, tvMAC)])
+        let report = try #require(await scan(cache, FakeMulticast([tvV6, onlyV6], cache: cache)))
+        #expect(report.devices.count == 2, "a MAC-less responder must not become a possible duplicate")
+        #expect(report.degradations.contains { $0.reason.contains(onlyV6) })
+    }
+
+    @Test("Without the multicast, nothing changes: the D3 behaviour exactly")
+    func absentIsInert() async throws {
+        let cache = FixedIPv6Neighbors(entries: [entry(onlyV6, onlyV6MAC)])
+        let report = try #require(await scan(cache, NoIPv6MulticastEcho()))
+        #expect(device(report, onlyV6MAC)?.discoveredVia == [.neighborTable])
+    }
+}

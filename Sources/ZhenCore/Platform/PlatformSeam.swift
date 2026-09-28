@@ -123,6 +123,52 @@ public protocol IPv6NeighborCache: Sendable {
     func ipv6Entries() async throws(PlatformError) -> [IPv6NeighborEntry]
 }
 
+/// One ICMPv6 echo to the all-nodes group, and the unicast echo that lets the neighbour
+/// cache learn a responder's hardware address. Unprivileged on macOS (D1).
+///
+/// A **complement** to the v4 sweep, not a replacement (Q2): on the network it was
+/// measured on, one packet reached 6–7 of 10 hosts, and once a host the sweep never found.
+/// Its value is that second kind of host, for the price of one packet.
+public protocol IPv6MulticastEcho: Sendable {
+    /// Sends one echo request to `ff02::1` on `interface` and collects who answers
+    /// within `window`. Each responder once, with its zone.
+    func solicitAllNodes(on interface: String, within window: Duration) async -> IPv6Solicitation
+
+    /// One unicast echo. True if it answered. Sent only to a responder the cache has no
+    /// hardware address for: the exchange makes the kernel resolve it, and without a MAC
+    /// the responder cannot be joined to its v4 device.
+    func echo(_ address: IPv6Address, on interface: String, within budget: Duration) async -> Bool
+}
+
+/// What one all-nodes solicitation found.
+public struct IPv6Solicitation: Sendable, Hashable {
+    /// Every address that answered, once each.
+    public var responders: [IPv6Address]
+    /// Packets sent: 1, or 0 when the socket could not be opened.
+    public var sent: Int
+    /// Why nothing could be sent, when nothing was.
+    public var failure: String?
+
+    /// Creates a value from its fields. Each one is documented on the property it sets.
+    public init(responders: [IPv6Address] = [], sent: Int = 0, failure: String? = nil) {
+        self.responders = responders
+        self.sent = sent
+        self.failure = failure
+    }
+}
+
+/// No IPv6 multicast: sends nothing, finds nothing. The default wherever there is no
+/// engine for it, and in every fixture — so an artifact baseline is unchanged by it.
+public struct NoIPv6MulticastEcho: IPv6MulticastEcho {
+    public init() {}
+    public func solicitAllNodes(on interface: String, within window: Duration) async -> IPv6Solicitation {
+        IPv6Solicitation()
+    }
+    public func echo(_ address: IPv6Address, on interface: String, within budget: Duration) async -> Bool {
+        false
+    }
+}
+
 /// One sighting of one service instance on one host.
 public struct ServiceSighting: Sendable, Hashable, Codable {
     /// The address it resolved to.

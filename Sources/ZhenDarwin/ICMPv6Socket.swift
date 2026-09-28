@@ -217,6 +217,52 @@ final class ICMPv6Socket: @unchecked Sendable {
     }
 }
 
+/// Stage D2′: one echo to `ff02::1`, and unicast echoes for the cache to learn from.
+public struct DarwinMulticastEcho: IPv6MulticastEcho {
+    public init() {}
+
+    public func solicitAllNodes(on interface: String, within window: Duration) async -> IPv6Solicitation {
+        let socket: ICMPv6Socket
+        do { socket = try ICMPv6Socket(interface: interface) }
+        catch { return IPv6Solicitation(failure: "\(error)") }
+        let token = UInt32.random(in: 1...UInt32.max)
+        let replies = socket.replies()
+        let allNodes = IPv6Address(high: 0xFF02_0000_0000_0000, low: 1, zone: interface)
+        guard socket.send(to: allNodes, sequence: 1, token: token) != nil else {
+            socket.stop()
+            return IPv6Solicitation(failure: "sendto(ff02::1%\(interface)) failed")
+        }
+        let own = socket.local
+        let heard = await withTaskGroup(of: [IPv6Address]?.self) { group in
+            group.addTask {
+                var seen: [IPv6Address] = []
+                // Every host answers once; a host answering twice is still one host.
+                for await reply in replies where reply.token == token {
+                    if reply.source != own, !seen.contains(reply.source) { seen.append(reply.source) }
+                }
+                return seen
+            }
+            group.addTask {
+                try? await Task.sleep(for: window)
+                return nil
+            }
+            // The timer ends the window; stopping the socket then finishes the reader,
+            // which returns what it heard.
+            // Whichever finishes first, the reader's list is the answer: collect it
+            // from the first value or from the rest, never drop it.
+            var result = await group.next() ?? nil
+            socket.stop()
+            for await value in group { if let value { result = value } }
+            return result ?? []
+        }
+        return IPv6Solicitation(responders: heard, sent: 1)
+    }
+
+    public func echo(_ address: IPv6Address, on interface: String, within budget: Duration) async -> Bool {
+        await ICMPv6Ping.echo(address, interface: interface, within: budget) != nil
+    }
+}
+
 /// One echo to one address, and the round trip if it answered.
 enum ICMPv6Ping {
     static func echo(_ address: IPv6Address, interface: String, within budget: Duration) async -> Duration? {
