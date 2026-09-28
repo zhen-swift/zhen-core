@@ -131,6 +131,32 @@ public actor LogHistoryStore: HistoryStore {
     private var lineCount: Int
     private var retention: RetentionPolicy
 
+    /// Lines this build could not decode, kept verbatim so compaction cannot destroy
+    /// them.
+    ///
+    /// ── Why this exists, which is a failure that already nearly happened ──────────
+    ///
+    /// `reload` skips a line it cannot decode and `compact` rewrites the file from the
+    /// ledger, so before this existed an undecodable line was dropped on read and then
+    /// deleted from disk on the next rewrite. That is fine for a corrupt line and it is
+    /// not fine for a line written by a NEWER build: schema 3 added `addresses` to a
+    /// device record, and any binary older than it reads a store the current CLI wrote,
+    /// silently drops every schema-3 device, and erases them the first time it compacts.
+    ///
+    /// The fault is in the old reader, so nothing here can fix the schema-3 case — that
+    /// one is a warning in `Docs/V6-questions.md`. This is the fix for the NEXT one, and
+    /// it has to ship before the schema that needs it, which is the whole reason it is
+    /// here now rather than then.
+    ///
+    /// Refusing to compact was the other option and it is wrong: `compact` is also how a
+    /// retention deletion and a record merge become durable, so refusing would trade a
+    /// data loss for a correctness loss. Carrying the bytes through costs a copy of the
+    /// lines nobody can read, which on any real store is none of them.
+    ///
+    /// The cost worth knowing: a preserved line is retained forever, because retention
+    /// is applied to records and a line we cannot parse has none.
+    private var unreadable: [Data] = []
+
     /// Where "now" comes from when retention is applied on load.
     ///
     /// Injected rather than read from the clock directly, because a store that prunes
@@ -335,14 +361,17 @@ public actor LogHistoryStore: HistoryStore {
     /// not. What that buys is the property the shared file exists for — a scan run in a
     /// terminal is in the app's next read, rather than after its next relaunch.
     ///
-    /// A malformed line is skipped rather than fatal, and the count of them is not
-    /// reported anywhere — which is a deliberate limit on this design. The alternative,
-    /// refusing to open, loses all of the history to protect one line of it, and the
-    /// thing that goes wrong when a device's record is dropped is that it reappears as
-    /// new. That is bad and it is survivable; an unopenable store is neither.
+    /// A malformed line is skipped rather than fatal. The alternative, refusing to open,
+    /// loses all of the history to protect one line of it, and the thing that goes wrong
+    /// when a device's record is dropped is that it reappears as new. That is bad and it
+    /// is survivable; an unopenable store is neither.
+    ///
+    /// Skipped is not discarded. The bytes go into `unreadable` and are written back by
+    /// `compact`, because a line this build cannot decode may be one a later build can.
     private func reload() {
         ledger = HistoryLedger(retention: retention)
         lineCount = 0
+        unreadable = []
         guard let data = try? Data(contentsOf: url) else { return }
 
         var records: [HostIdentifier: HistoryLedger.Record] = [:]
@@ -353,7 +382,11 @@ public actor LogHistoryStore: HistoryStore {
         for line in data.split(separator: UInt8(ascii: "\n")) where !line.isEmpty {
             lines += 1
             guard let entry = try? Self.decoder.decode(Line.self, from: Data(line))
-            else { continue }
+            else {
+                // Not understood, therefore not ours to delete. See `unreadable`.
+                unreadable.append(Data(line))
+                continue
+            }
             switch entry.payload {
             case .device(let stored):
                 guard let key = stored.key.identifier else { continue }
@@ -464,7 +497,16 @@ public actor LogHistoryStore: HistoryStore {
         }
         if let run = ledger.latestRun { lines.append(Line(payload: .run(run))) }
 
-        guard let encoded = Self.encode(lines) else { return }
+        guard var encoded = Self.encode(lines) else { return }
+        // Verbatim, and last. Last because `reload` resolves a repeated stored key by
+        // letting the final line win, and a line this build could not read is more
+        // likely to be newer than older — it is the shape of a record a later schema
+        // writes. Putting them after the regenerated snapshot means a build that DOES
+        // understand them folds them on top rather than under.
+        for line in unreadable {
+            encoded.append(line)
+            encoded.append(UInt8(ascii: "\n"))
+        }
         try? FileManager.default.createDirectory(
             at: url.deletingLastPathComponent(), withIntermediateDirectories: true
         )
@@ -476,7 +518,7 @@ public actor LogHistoryStore: HistoryStore {
         // passed on macOS and failed on Linux with "the file doesn't exist". This store
         // is the portable one, so that was the least affordable place to assume.
         if (try? encoded.write(to: url, options: .atomic)) != nil {
-            lineCount = lines.count
+            lineCount = lines.count + unreadable.count
         }
     }
 

@@ -307,6 +307,65 @@ struct HistoryLogTests {
         #expect(await reopened.latestRun() != nil)
     }
 
+    // ── The failure this prevents has a name and it nearly happened ────────────────
+    //
+    // `reload` skips a line it cannot decode; `compact` rewrites the file from the
+    // ledger. Together, before the store kept them, that DELETED any line this build did
+    // not understand — and the line a build does not understand is usually one a newer
+    // build wrote. Schema 3 added `addresses` to a device record, so an older binary
+    // reading a current store drops every schema-3 device and erases them on its next
+    // compaction.
+    //
+    // This is the guard for the next schema rather than that one, since the old reader is
+    // where the fault was. What would make it fail: dropping the line, which is exactly
+    // what the code did before `unreadable` existed, and which the `originalSurvives`
+    // expectation below catches. The device count alone would NOT catch it — the two
+    // real devices come back either way, which is why that assertion is not the point.
+    @Test("A line from a newer schema survives compaction instead of being erased")
+    func unknownLineSurvivesCompaction() async throws {
+        let directory = try temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("history.ndjson")
+
+        // Well-formed JSON, one object on one line, and undecodable as a `Line`: a
+        // version this build has never heard of. Not corrupt — the point is that it is
+        // somebody else's valid record.
+        let fromTheFuture =
+            #"{"v":99,"type":"device","payload":{"unheard_of":true,"note":"schema 4"}}"#
+
+        do {
+            let store = LogHistoryStore(url: url, compactionThreshold: 12)
+            let first = Timestamp(millisecondsSinceEpoch: 1_000_000)
+            _ = await store.record(report([
+                device(ip: "10.10.20.2", mac: "C8:69:CD:7F:33:E1", at: first),
+            ], at: first))
+            let text = try String(contentsOf: url, encoding: .utf8)
+            try (text + fromTheFuture + "\n").write(to: url, atomically: true, encoding: .utf8)
+
+            // Past the threshold, so compaction certainly runs and rewrites from the
+            // ledger — the moment the line used to disappear at.
+            let reopened = LogHistoryStore(url: url, compactionThreshold: 12)
+            for index in 1..<14 {
+                let at = Timestamp(millisecondsSinceEpoch: Int64(1_000_000 + index * 1_000))
+                _ = await reopened.record(report([
+                    device(ip: "10.10.20.2", mac: "C8:69:CD:7F:33:E1", at: at),
+                    device(ip: "10.10.20.8", mac: "52:A1:8A:E0:7A:8A", at: at),
+                ], at: at))
+            }
+        }
+
+        let after = try String(contentsOf: url, encoding: .utf8)
+        #expect(after.contains(fromTheFuture),
+                "compaction erased a line written by a newer schema")
+        let lines = try lineCount(of: url)
+        #expect(lines < 30, "the file was never compacted, so this proves nothing")
+
+        // And the store still works around it.
+        let finally = LogHistoryStore(url: url)
+        #expect(await finally.devices().count == 2, "the preserved line broke the reload")
+        #expect(await finally.latestRun() != nil)
+    }
+
     @Test("The file is one JSON object per line, greppable and line-truncatable")
     func formatIsLineOriented() async throws {
         let directory = try temporaryDirectory()

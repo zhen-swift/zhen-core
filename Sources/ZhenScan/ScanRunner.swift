@@ -22,6 +22,15 @@
 // about what a scan IS will drift; the fix is for this to live in `ZhenCore`
 // alongside the engines it drives.
 
+// Guarded like every file in `ZhenDarwin`, which this imports. The guard is per file
+// rather than in the manifest because SPM can conditionalise a target's DEPENDENCIES and
+// not its existence — a target always compiles, so a target that cannot compile
+// everywhere has to say so here. On Linux this module is empty, which is correct: it is
+// the app's adapter and the app is macOS.
+//
+// It was not guarded until the reorganisation moved this target into a package whose CI
+// builds on Linux. It has always been Apple-only; only the check is new.
+#if canImport(Darwin)
 import Foundation
 import ZhenCore
 import ZhenDarwin
@@ -258,3 +267,5 @@ extension CapturePolicy {
             ? .directOnly : .helperThenDirect
     }
 }
+
+#endif

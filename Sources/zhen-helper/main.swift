@@ -30,6 +30,17 @@
 // Mach service and can be killed at any moment without losing anything, because it holds
 // nothing between calls. That is deliberate: a root process with no state cannot have
 // its state corrupted.
+// Everything below is Apple-only: an `NSXPCListener` on a Mach service, `/dev/bpf`, and
+// a code-signing requirement. There is no portable version of this daemon and there is
+// not meant to be — `SMAppService` has no counterpart, and the Linux plan replaces the
+// mechanism entirely with `CAP_NET_RAW` on the `zhen` binary and no helper at all.
+//
+// An executable target always compiles, so this cannot be dropped from the manifest, and
+// `main.swift` must produce top-level code or the link fails with no entry point. Hence
+// the `#else` at the bottom: on Linux this builds to a binary that says what it is and
+// exits 69, the same `EX_UNAVAILABLE` the command line uses when the platform has no
+// engine for it.
+#if canImport(Darwin)
 import Darwin
 import Foundation
 import ZhenPrivilege
@@ -121,3 +132,23 @@ listener.resume()
 // Never returns. `launchd` starts this on demand and stops it when it is idle; there is
 // no state to write out on the way down.
 RunLoop.main.run()
+
+#else
+
+import Foundation
+
+// Not an error path worth a type: this binary has exactly one thing to say.
+let explanation = """
+zhen-helper: this daemon is Apple-only, and there is no portable equivalent.
+
+It exists to open /dev/bpf as root and hand the descriptor back over XPC, registered
+through SMAppService. On Linux the privileged path is CAP_NET_RAW on the zhen binary
+itself, so there is no helper to install and nothing for this process to do.
+
+See Docs/DIRECTION.md, the section on portability.
+"""
+
+FileHandle.standardError.write(Data(explanation.utf8))
+exit(69)  // EX_UNAVAILABLE
+
+#endif
