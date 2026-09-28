@@ -101,7 +101,7 @@ struct Ports: AsyncParsableCommand {
     }
 
     private func execute() async throws(ScanSetupError) -> ExitStatus {
-        let addresses = try parsedTargets()
+        let addresses = try parsedTargets().map(IPAddress.v4)
         let spec = try parsedPortSpec()
         let budget = try parsedDeadline()
 

@@ -523,7 +523,7 @@ struct ConcurrencyAccountingTests {
         let window = 8
         let engine = TCPConnectScanEngine(concurrency: window)
         let result = await engine.scan(
-            (1...12).map { IPv4Address(raw: 0x7F00_0000 | UInt32($0)) },
+            (1...12).map { .v4(IPv4Address(raw: 0x7F00_0000 | UInt32($0))) },
             ports: PortSpec([9, 19, 79]),
             perHostDeadline: .milliseconds(80),
             deadline: Deadline(after: .seconds(10))

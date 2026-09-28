@@ -259,7 +259,7 @@ nonisolated struct PortScanStage: ScanStage {
         else { return context }
 
         let (portEvents, portSink, portFinish) = ProbeStream.sinking(buffering: .progress)
-        let targets = context.sortedAddresses
+        let targets = context.sortedAddresses.map(IPAddress.v4)
         let deadline = context.deadline
         let renderer = renderer
         let engine = engine
@@ -288,7 +288,7 @@ nonisolated struct PortScanStage: ScanStage {
         }
 
         var context = context
-        for (ip, observations) in result.ports { context.facts[ip]?.ports = observations }
+        for (ip, observations) in result.ipv4Hosts { context.facts[ip]?.ports = observations }
         for (ip, fingerprint) in result.fingerprints {
             context.facts[ip]?.osFingerprint = fingerprint
         }

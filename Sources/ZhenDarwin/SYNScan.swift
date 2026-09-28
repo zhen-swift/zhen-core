@@ -94,7 +94,7 @@ public struct SYNScanEngine: PortScanning {
 
     /// Terminal form, with an optional observer.
     public func scan(
-        _ targets: [IPv4Address],
+        _ requested: [IPAddress],
         ports: PortSpec,
         perHostDeadline: Duration,
         deadline: Deadline,
@@ -107,8 +107,10 @@ public struct SYNScanEngine: PortScanning {
         var used: EngineCapabilities = []
 
         func finished(
-            _ observations: [IPv4Address: [PortObservation]], _ outcome: Outcome
+            _ byIPv4: [IPv4Address: [PortObservation]], _ outcome: Outcome
         ) -> PortScanResult {
+            let observations = Dictionary(
+                uniqueKeysWithValues: byIPv4.map { (IPAddress.v4($0.key), $0.value) })
             let snapshot = counters.snapshot()
             let stage = StageTiming(
                 stage: .deepScan,
@@ -128,6 +130,13 @@ public struct SYNScanEngine: PortScanning {
             degradations.append(degradation)
             progress(.degraded(degradation))
         }
+
+        // Half-open over IPv6 needs its own capture filter and pseudo-header, and is not
+        // built. A v6 target is named as unscanned rather than dropped; `zhen ports`
+        // refuses `--scan-type syn` with one before it gets here.
+        let family = IPv4OnlyTargets(requested, engine: "The SYN scan")
+        family.degradations.forEach(degrade)
+        let targets = family.probed
 
         guard !targets.isEmpty, !ports.ports.isEmpty else { return finished([:], .complete) }
 
@@ -335,7 +344,7 @@ public struct SYNScanEngine: PortScanning {
     /// and may drop, so an artifact assembled from it would report `.complete` over a
     /// port list with holes in it.
     public func stream(
-        _ targets: [IPv4Address],
+        _ targets: [IPAddress],
         ports: PortSpec,
         perHostDeadline: Duration,
         deadline: Deadline
@@ -345,7 +354,7 @@ public struct SYNScanEngine: PortScanning {
             let result = await scan(targets, ports: ports,
                                     perHostDeadline: perHostDeadline, deadline: deadline,
                                     progress: sink)
-            for (ip, observations) in result.ports.sorted(by: { $0.key < $1.key }) {
+            for (ip, observations) in result.ipv4Hosts {
                 sink(.hostUpdated(HostFacts(ip: ip, ports: observations)))
             }
             finish()

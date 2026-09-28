@@ -36,7 +36,7 @@ nonisolated struct PortsRenderer {
     var quiet: Bool
     var color: Bool
 
-    func finish(_ result: PortScanResult, targets: [IPv4Address], spec: PortSpec) {
+    func finish(_ result: PortScanResult, targets: [IPAddress], spec: PortSpec) {
         // Ordered by the address the user gave, not by whatever the dictionary yields.
         // A run whose output reorders itself between invocations cannot be diffed.
         let hosts = targets.map { (address: $0, observations: result.ports[$0] ?? []) }
@@ -59,12 +59,12 @@ nonisolated struct PortsRenderer {
             return
         }
 
-        let form = PortLongForm(hosts.map { (address: IPAddress.v4($0.address), observations: $0.observations) })
+        let form = PortLongForm(hosts)
         renderTable(form, targets: targets, spec: spec, result: result)
     }
 
     private func renderTable(
-        _ form: PortLongForm, targets: [IPv4Address], spec: PortSpec, result: PortScanResult
+        _ form: PortLongForm, targets: [IPAddress], spec: PortSpec, result: PortScanResult
     ) {
         let headings = PortLongForm.headings
         var lastHost = ""

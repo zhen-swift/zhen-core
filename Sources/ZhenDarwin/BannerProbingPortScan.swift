@@ -61,7 +61,7 @@ public struct BannerProbingPortScan: PortScanning {
 
     /// Terminal form, with an optional observer.
     public func scan(
-        _ targets: [IPv4Address],
+        _ targets: [IPAddress],
         ports: PortSpec,
         perHostDeadline: Duration,
         deadline: Deadline,
@@ -75,7 +75,7 @@ public struct BannerProbingPortScan: PortScanning {
         // Only the open ones. A closed port has already told us everything it will —
         // the host is there and said no — and a filtered one has told us nothing, so
         // connecting to either would spend the budget learning what we know.
-        let open = result.ports.flatMap { ip, observations in
+        let open = result.ipv4Hosts.flatMap { ip, observations in
             observations.filter { $0.state == .open }.map { (ip: ip, port: $0.port) }
         }
         guard !open.isEmpty else { return result }
@@ -113,19 +113,19 @@ public struct BannerProbingPortScan: PortScanning {
 
         var named = 0
         for (target, identity) in identities.results {
-            guard var observations = result.ports[target.ip] else { continue }
+            guard var observations = result.ports[.v4(target.ip)] else { continue }
             guard let index = observations.firstIndex(where: { $0.port == target.port }) else {
                 continue
             }
             observations[index].service = identity
-            result.ports[target.ip] = observations
+            result.ports[.v4(target.ip)] = observations
             named += 1
         }
 
         if named > 0 { result.usedCapabilities.insert(.bannerProbe) }
         // Emitted so a live display shows the names filling in, and so the streaming
         // form has something to yield. The artifact comes from the returned value.
-        for (ip, observations) in result.ports.sorted(by: { $0.key < $1.key }) {
+        for (ip, observations) in result.ipv4Hosts {
             progress(.hostUpdated(HostFacts(ip: ip, ports: observations)))
         }
         return result
@@ -133,7 +133,7 @@ public struct BannerProbingPortScan: PortScanning {
 
     /// Streaming form: the base engine's events, then the identities.
     public func stream(
-        _ targets: [IPv4Address],
+        _ targets: [IPAddress],
         ports: PortSpec,
         perHostDeadline: Duration,
         deadline: Deadline

@@ -315,7 +315,7 @@ public struct PortScanResult: Sendable, Hashable {
     /// Observations by host. A host with an entry whose states are all `.filtered`
     /// is different from a host with no entry at all, and both are different from a
     /// host whose ports are `.closed`.
-    public var ports: [IPv4Address: [PortObservation]]
+    public var ports: [IPAddress: [PortObservation]]
     /// Stack fingerprints, for the hosts a fingerprint probe reached.
     ///
     /// Here rather than on `PortObservation` because a fingerprint describes the HOST,
@@ -334,7 +334,7 @@ public struct PortScanResult: Sendable, Hashable {
 
     /// Creates a value from its fields. Each one is documented on the property it sets.
     public init(
-        ports: [IPv4Address: [PortObservation]] = [:],
+        ports: [IPAddress: [PortObservation]] = [:],
         fingerprints: [IPv4Address: OSFingerprint] = [:],
         degradations: [Degradation] = [],
         usedCapabilities: EngineCapabilities = [],
@@ -347,6 +347,49 @@ public struct PortScanResult: Sendable, Hashable {
         self.usedCapabilities = usedCapabilities
         self.outcome = outcome
         self.timing = timing
+    }
+}
+
+extension PortScanResult {
+    /// The hosts with a `HostFacts` shape — the v4 ones — in address order, for the
+    /// progress events an engine emits. `HostFacts` is keyed by an IPv4 address; a v6
+    /// host's observations are in `ports` and reach the artifact from there.
+    public var ipv4Hosts: [(ip: IPv4Address, observations: [PortObservation])] {
+        ports.compactMap { address, observations in
+            address.v4.map { (ip: $0, observations: observations) }
+        }
+        .sorted { $0.ip < $1.ip }
+    }
+}
+
+/// Targets split by whether an IPv4-only engine can probe them.
+///
+/// An engine given a target it cannot probe must say so. Leaving it out of `ports`
+/// without a word is indistinguishable from a host that answered nothing, and doing
+/// something other than what was asked without saying so is the one thing a scanner may
+/// not do. So the unprobed targets become a degradation naming them, and with no v6
+/// target in the list there is no degradation at all — a v4 run is unchanged.
+public struct IPv4OnlyTargets: Sendable {
+    /// The targets the engine will probe.
+    public let probed: [IPv4Address]
+    /// What the artifact says about the rest. Empty when there is no rest.
+    public let degradations: [Degradation]
+
+    /// - Parameters:
+    ///   - targets: what the engine was asked to probe.
+    ///   - engine: the engine's name as a person would say it, e.g. "the SYN scan".
+    public init(_ targets: [IPAddress], engine: String) {
+        probed = targets.compactMap(\.v4)
+        let skipped = targets.filter { $0.v4 == nil }
+        degradations = skipped.isEmpty ? [] : [Degradation(
+            stage: .deepScan,
+            reason: """
+                \(engine) probes IPv4 only, so \(skipped.count) IPv6 \
+                target\(skipped.count == 1 ? " was" : "s were") not scanned: \
+                \(skipped.map(\.description).joined(separator: ", ")).
+                """,
+            recoverable: false
+        )]
     }
 }
 
@@ -468,7 +511,7 @@ public protocol PortScanning: Sendable {
     /// - Returns: an envelope. Never throws; an expired budget is a normal return
     ///   carrying whatever was observed.
     func scan(
-        _ targets: [IPv4Address],
+        _ targets: [IPAddress],
         ports: PortSpec,
         perHostDeadline: Duration,
         deadline: Deadline
@@ -477,7 +520,7 @@ public protocol PortScanning: Sendable {
     /// Terminal form that also reports progress. See `HostDiscovery` for why both
     /// exist as one call rather than as two the caller composes.
     func scan(
-        _ targets: [IPv4Address],
+        _ targets: [IPAddress],
         ports: PortSpec,
         perHostDeadline: Duration,
         deadline: Deadline,
@@ -493,7 +536,7 @@ public protocol PortScanning: Sendable {
     ///   - deadline: the budget for the whole stage.
     /// - Returns: a stream that never fails. Degradations arrive as `.degraded` events.
     func stream(
-        _ targets: [IPv4Address],
+        _ targets: [IPAddress],
         ports: PortSpec,
         perHostDeadline: Duration,
         deadline: Deadline
@@ -503,7 +546,7 @@ public protocol PortScanning: Sendable {
 extension PortScanning {
     /// Scans with no observer.
     public func scan(
-        _ targets: [IPv4Address],
+        _ targets: [IPAddress],
         ports: PortSpec,
         perHostDeadline: Duration,
         deadline: Deadline

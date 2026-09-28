@@ -176,7 +176,7 @@ public struct ScanRunner: Sendable {
         // ── Deep scan, only when asked ───────────────────────────────────────────
         if deepScan, !facts.isEmpty, outcome == .complete, !deadline.isExpired {
             let result = await scanner.ports.scan(
-                facts.keys.sorted(),
+                facts.keys.sorted().map(IPAddress.v4),
                 ports: .commonServices,
                 // A ceiling, not a fixed wait: the engine narrows it per host from that
                 // host's own measured round trips.
@@ -184,7 +184,7 @@ public struct ScanRunner: Sendable {
                 deadline: deadline,
                 progress: progress
             )
-            for (ip, observations) in result.ports { facts[ip]?.ports = observations }
+            for (ip, observations) in result.ipv4Hosts { facts[ip]?.ports = observations }
             for (ip, fingerprint) in result.fingerprints { facts[ip]?.osFingerprint = fingerprint }
             exercised.formUnion(result.usedCapabilities)
             stages.append(contentsOf: result.timing.stages)

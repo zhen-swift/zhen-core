@@ -146,13 +146,13 @@ struct UDPOutcomeTests {
         defer { answering.close(); silent.close() }
         let vacant = try vacantPort()
         let result = await DarwinUDPPortScan().scan(
-            [loopback],
+            [.v4(loopback)],
             ports: PortSpec([22], udp: [answering.port, silent.port, vacant]),
             perHostDeadline: .milliseconds(300),
             deadline: Deadline(after: .seconds(5)),
             progress: ProgressSink { _ in }
         )
-        let byPort = Dictionary(uniqueKeysWithValues: (result.ports[loopback] ?? []).map { ($0.port, $0) })
+        let byPort = Dictionary(uniqueKeysWithValues: (result.ports[.v4(loopback)] ?? []).map { ($0.port, $0) })
         #expect(byPort.count == 3, "the TCP port in the spec is not this engine's")
         #expect(byPort[answering.port]?.state == .open)
         #expect(byPort[silent.port]?.state == .openFiltered)
@@ -220,7 +220,7 @@ struct UDPPayloadTests {
 struct CombinedResultTests {
     @Test("The worse outcome wins and observations join per host")
     func combine() {
-        let host = loopback
+        let host = IPAddress.v4(loopback)
         let tcp = PortScanResult(ports: [host: [PortObservation(port: 22, state: .open)]],
                                  usedCapabilities: [.connectScan], outcome: .complete)
         let udp = PortScanResult(ports: [host: [PortObservation(port: 53, proto: .udp, state: .openFiltered)]],

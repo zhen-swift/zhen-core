@@ -48,11 +48,11 @@ nonisolated struct FakePorts: PortScanning {
     /// What the fake reports. Empty by default, as it always was; the artifact gate
     /// dictates one so `--deep` has something to put in the report.
     var result = PortScanResult()
-    func scan(_ targets: [IPv4Address], ports: PortSpec, perHostDeadline: Duration,
+    func scan(_ targets: [IPAddress], ports: PortSpec, perHostDeadline: Duration,
               deadline: Deadline, progress: ProgressSink) async -> PortScanResult {
         result
     }
-    func stream(_ targets: [IPv4Address], ports: PortSpec, perHostDeadline: Duration,
+    func stream(_ targets: [IPAddress], ports: PortSpec, perHostDeadline: Duration,
                 deadline: Deadline) -> AsyncStream<ProbeEvent> {
         AsyncStream { $0.finish() }
     }

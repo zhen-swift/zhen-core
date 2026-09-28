@@ -53,7 +53,7 @@ public struct TCPConnectScanEngine: PortScanning {
     ///   - deadline: the budget for the whole stage.
     ///   - progress: display only. Everything load-bearing is in the return value.
     public func scan(
-        _ targets: [IPv4Address],
+        _ targets: [IPAddress],
         ports: PortSpec,
         perHostDeadline: Duration,
         deadline: Deadline,
@@ -73,7 +73,8 @@ public struct TCPConnectScanEngine: PortScanning {
         // one of the structural reasons a conventional scanner is slow: with the whole
         // cross product in one pool, a host that is entirely filtered costs the same
         // wall clock as one port on it, instead of costing its port count.
-        let probes = targets.flatMap { ip in ports.ports.map { Probe(ip: ip, port: $0) } }
+        let family = IPv4OnlyTargets(targets, engine: "The connect scan")
+        let probes = family.probed.flatMap { ip in ports.ports.map { Probe(ip: ip, port: $0) } }
 
         let run = await boundedPool(
             over: probes,
@@ -98,9 +99,9 @@ public struct TCPConnectScanEngine: PortScanning {
             }
         }
 
-        var byHost: [IPv4Address: [PortObservation]] = [:]
+        var byHost: [IPAddress: [PortObservation]] = [:]
         for (probe, observation) in run.results {
-            byHost[probe.ip, default: []].append(observation)
+            byHost[.v4(probe.ip), default: []].append(observation)
         }
         for ip in byHost.keys {
             byHost[ip]?.sort { ($0.port, $0.proto.rawValue) < ($1.port, $1.proto.rawValue) }
@@ -115,7 +116,7 @@ public struct TCPConnectScanEngine: PortScanning {
         progress(.stageFinished(stage))
         return PortScanResult(
             ports: byHost,
-            degradations: [],
+            degradations: family.degradations,
             usedCapabilities: descriptor.capabilities,
             // The pool knows why it stopped; the artifact should say the same thing.
             outcome: run.termination.outcome,
@@ -125,7 +126,7 @@ public struct TCPConnectScanEngine: PortScanning {
 
     /// Streaming form.
     public func stream(
-        _ targets: [IPv4Address],
+        _ targets: [IPAddress],
         ports: PortSpec,
         perHostDeadline: Duration,
         deadline: Deadline
@@ -136,7 +137,7 @@ public struct TCPConnectScanEngine: PortScanning {
             let result = await scan(targets, ports: ports,
                                     perHostDeadline: perHostDeadline, deadline: deadline,
                                     progress: sink)
-            for (ip, observations) in result.ports.sorted(by: { $0.key < $1.key }) {
+            for (ip, observations) in result.ipv4Hosts {
                 sink(.hostUpdated(HostFacts(ip: ip, ports: observations)))
             }
             for stage in result.timing.stages { sink(.stageFinished(stage)) }

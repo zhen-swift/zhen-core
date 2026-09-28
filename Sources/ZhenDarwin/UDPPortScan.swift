@@ -51,7 +51,7 @@ public struct DarwinUDPPortScan: PortScanning {
 
     /// Probes `ports.udpPorts`. `ports.ports`, the TCP list, is not this engine's.
     public func scan(
-        _ targets: [IPv4Address],
+        _ targets: [IPAddress],
         ports: PortSpec,
         perHostDeadline: Duration,
         deadline: Deadline,
@@ -60,7 +60,8 @@ public struct DarwinUDPPortScan: PortScanning {
         let watch = Stopwatch()
         let counters = ProbeCounters()
         progress(.stageStarted(.deepScan))
-        let probes = targets.flatMap { ip in ports.udpPorts.map { Probe(ip: ip, port: $0) } }
+        let family = IPv4OnlyTargets(targets, engine: "The UDP scan")
+        let probes = family.probed.flatMap { ip in ports.udpPorts.map { Probe(ip: ip, port: $0) } }
         let run = await boundedPool(
             over: probes,
             concurrency: concurrency,
@@ -74,9 +75,9 @@ public struct DarwinUDPPortScan: PortScanning {
             return .observed(observation)
         }
 
-        var byHost: [IPv4Address: [PortObservation]] = [:]
+        var byHost: [IPAddress: [PortObservation]] = [:]
         for (probe, observation) in run.results {
-            byHost[probe.ip, default: []].append(observation)
+            byHost[.v4(probe.ip), default: []].append(observation)
         }
         for ip in byHost.keys { byHost[ip]?.sort(by: PortObservation.canonicalOrder) }
 
@@ -90,6 +91,7 @@ public struct DarwinUDPPortScan: PortScanning {
         progress(.stageFinished(stage))
         return PortScanResult(
             ports: byHost,
+            degradations: family.degradations,
             usedCapabilities: descriptor.capabilities,
             outcome: run.termination.outcome,
             timing: Timing(stages: [stage], counters: snapshot)
@@ -97,7 +99,7 @@ public struct DarwinUDPPortScan: PortScanning {
     }
 
     public func stream(
-        _ targets: [IPv4Address],
+        _ targets: [IPAddress],
         ports: PortSpec,
         perHostDeadline: Duration,
         deadline: Deadline
@@ -106,7 +108,7 @@ public struct DarwinUDPPortScan: PortScanning {
         let work = Task { [self] in
             let result = await scan(targets, ports: ports, perHostDeadline: perHostDeadline,
                                     deadline: deadline, progress: sink)
-            for (ip, observations) in result.ports.sorted(by: { $0.key < $1.key }) {
+            for (ip, observations) in result.ipv4Hosts {
                 sink(.hostUpdated(HostFacts(ip: ip, ports: observations)))
             }
             finish()

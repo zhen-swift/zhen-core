@@ -42,7 +42,7 @@ public struct FingerprintingPortScan: PortScanning {
 
     /// Terminal form, with an optional observer.
     public func scan(
-        _ targets: [IPv4Address],
+        _ targets: [IPAddress],
         ports: PortSpec,
         perHostDeadline: Duration,
         deadline: Deadline,
@@ -58,7 +58,7 @@ public struct FingerprintingPortScan: PortScanning {
         // the choice does not affect the answer — taking the lowest only makes two runs
         // of an unchanged network probe the same port and produce comparable captures.
         var openPort: [IPv4Address: UInt16] = [:]
-        for (ip, observations) in result.ports {
+        for (ip, observations) in result.ipv4Hosts {
             if let lowest = observations.filter({ $0.state == .open }).map(\.port).min() {
                 openPort[ip] = lowest
             }
@@ -74,7 +74,7 @@ public struct FingerprintingPortScan: PortScanning {
 
     /// Streaming form.
     public func stream(
-        _ targets: [IPv4Address],
+        _ targets: [IPAddress],
         ports: PortSpec,
         perHostDeadline: Duration,
         deadline: Deadline

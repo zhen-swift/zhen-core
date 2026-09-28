@@ -111,11 +111,11 @@ struct PortsSpecTests {
 struct PortsRendererTests {
     private func render(_ hosts: [(IPv4Address, [PortObservation])], spec: PortSpec) -> String {
         var result = PortScanResult()
-        for (address, observations) in hosts { result.ports[address] = observations }
+        for (address, observations) in hosts { result.ports[.v4(address)] = observations }
         result.outcome = .complete
         return Out.capturing {
             PortsRenderer(json: false, quiet: true, color: false)
-                .finish(result, targets: hosts.map(\.0), spec: spec)
+                .finish(result, targets: hosts.map { .v4($0.0) }, spec: spec)
         }.out
     }
 

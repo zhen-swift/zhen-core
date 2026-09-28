@@ -37,9 +37,9 @@ private func fixtureHosts() -> [HostFacts] {
 }
 
 /// Ports the fake scanner reports, so `--deep` has something to put in the artifact.
-private func fixturePorts() -> [IPv4Address: [PortObservation]] {
+private func fixturePorts() -> [IPAddress: [PortObservation]] {
     [
-        IPv4Address("10.10.20.1")!: [
+        .v4(IPv4Address("10.10.20.1")!): [
             PortObservation(port: 22, proto: .tcp, state: .filtered),
             PortObservation(port: 80, proto: .tcp, state: .open,
                             service: ServiceIdentity(name: "http", product: "nginx",
@@ -47,7 +47,7 @@ private func fixturePorts() -> [IPv4Address: [PortObservation]] {
                             rtt: RTTSample(measured: .microseconds(4_210))),
             PortObservation(port: 443, proto: .tcp, state: .closed),
         ],
-        IPv4Address("10.10.20.103")!: [
+        .v4(IPv4Address("10.10.20.103")!): [
             PortObservation(port: 22, proto: .tcp, state: .closed),
             PortObservation(port: 80, proto: .tcp, state: .filtered),
             PortObservation(port: 443, proto: .tcp, state: .filtered),
