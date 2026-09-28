@@ -885,7 +885,6 @@ struct BudgetSplitTests {
     }
 }
 
-#endif
 
 @Suite("What the artifact says about a privileged engine that did not run")
 struct PrivilegedNoticeTests {
@@ -911,3 +910,5 @@ struct PrivilegedNoticeTests {
         #expect(DarwinScanner.notice(for: .notEthernet(dataLinkType: 12)) != nil)
     }
 }
+
+#endif

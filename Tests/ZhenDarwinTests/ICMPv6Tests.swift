@@ -1,3 +1,6 @@
+// Apple-only, like the target it tests — see AdaptiveTests.swift for why.
+#if canImport(Darwin)
+
 import Foundation
 import Testing
 @testable import ZhenCore
@@ -40,3 +43,5 @@ struct ICMPv6EchoSocketTests {
         print("live: \(target) answered in \(rtt)")
     }
 }
+
+#endif

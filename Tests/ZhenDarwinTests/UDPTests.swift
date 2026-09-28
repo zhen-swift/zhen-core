@@ -1,3 +1,6 @@
+// Apple-only, like the target it tests — see AdaptiveTests.swift for why.
+#if canImport(Darwin)
+
 import Darwin
 import Foundation
 import Testing
@@ -14,6 +17,12 @@ private final class LoopbackListener: @unchecked Sendable {
     let port: UInt16
     private let fd: Int32
     private let thread: Thread
+    // `close()` must not release the descriptor while the reader can still use it. The
+    // number is recycled at once, and the next socket to get it in a parallel test — the
+    // probe's own, typically — would have its reply read and dropped by this thread,
+    // which reports an open port as `open_filtered`. That was a ~5% flake in the suite.
+    private let closing = ClosingFlag()
+    private let finished = DispatchSemaphore(value: 0)
 
     init(reply: [UInt8]?) throws {
         let descriptor = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
@@ -34,11 +43,19 @@ private final class LoopbackListener: @unchecked Sendable {
         }
         fd = descriptor
         port = UInt16(bigEndian: actual.sin_port)
+        let finished = self.finished, closing = self.closing
         thread = Thread {
+            defer { finished.signal() }
             var buffer = [UInt8](repeating: 0, count: 2048)
             var from = sockaddr_storage()
             var fromLength = socklen_t(MemoryLayout<sockaddr_storage>.size)
             while true {
+                // Poll rather than block: on Darwin, `shutdown` does not wake a UDP
+                // `recvfrom` already waiting, so a blocked reader could never be joined.
+                var ready = pollfd(fd: descriptor, events: Int16(POLLIN), revents: 0)
+                let polled = unsafe poll(&ready, 1, 20)
+                if closing.isSet { return }
+                if polled <= 0 { continue }
                 let received = unsafe buffer.withUnsafeMutableBytes { bytes in
                     unsafe withUnsafeMutablePointer(to: &from) { pointer in
                         unsafe pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) {
@@ -46,7 +63,7 @@ private final class LoopbackListener: @unchecked Sendable {
                         }
                     }
                 }
-                guard received >= 0 else { return }   // closed underneath us
+                if received < 0 { return }
                 guard let reply else { continue }
                 _ = unsafe reply.withUnsafeBytes { bytes in
                     unsafe withUnsafePointer(to: &from) { pointer in
@@ -60,7 +77,18 @@ private final class LoopbackListener: @unchecked Sendable {
         thread.start()
     }
 
-    func close() { shutdown(fd, SHUT_RDWR); _ = Darwin.close(fd) }
+    func close() {
+        closing.set()
+        finished.wait()
+        _ = Darwin.close(fd)
+    }
+}
+
+private final class ClosingFlag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = false
+    var isSet: Bool { lock.withLock { value } }
+    func set() { lock.withLock { value = true } }
 }
 
 /// A loopback port nobody is listening on: bound for a moment to get a free number, then
@@ -203,3 +231,5 @@ struct CombinedResultTests {
         #expect(both.usedCapabilities == [.connectScan, .udpScan])
     }
 }
+
+#endif
