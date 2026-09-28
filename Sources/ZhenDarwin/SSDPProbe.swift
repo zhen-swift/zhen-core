@@ -112,13 +112,14 @@ public struct DarwinSSDPDiscovery: SSDPDiscovery {
                 var found: [IPv4Address: SSDPResponse] = [:]
                 for await event in replies {
                     guard case .datagram(let reply) = event,
+                          let source = reply.source.v4,
                           let parsed = SSDPResponse.parse(
-                            String(decoding: reply.payload, as: UTF8.self), from: reply.source)
+                            String(decoding: reply.payload, as: UTF8.self), from: source)
                     else { continue }
                     // First response per address wins. A device answering `ssdp:all`
                     // sends one datagram per service it hosts — a television will send
                     // six — and every one of them carries the same LOCATION.
-                    if found[reply.source] == nil { found[reply.source] = parsed }
+                    if found[source] == nil { found[source] = parsed }
                 }
                 return found
             }

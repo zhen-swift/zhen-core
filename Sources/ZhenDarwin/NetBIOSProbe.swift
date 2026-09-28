@@ -120,9 +120,10 @@ public struct DarwinNetBIOSQuery: NetBIOSQuerying {
                 for await event in replies {
                     guard case .datagram(let datagram) = event else { continue }
                     // Not an address this scan asked about. Nothing it says is an answer.
-                    guard let expected = transactions[datagram.source] else { continue }
+                    guard let source = datagram.source.v4,
+                          let expected = transactions[source] else { continue }
                     guard let sighting = NBSTAT.decode(
-                        datagram.payload.span, from: datagram.source, expecting: expected
+                        datagram.payload.span, from: source, expecting: expected
                     ) else { continue }
                     answered.insert(sighting.ip)
                     continuation.yield(sighting)

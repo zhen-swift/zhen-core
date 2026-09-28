@@ -30,8 +30,10 @@ import ZhenCore
 /// One datagram received.
 struct UDPDatagram: Sendable {
     /// Who sent it. The source address of the datagram, which a device cannot misreport
-    /// without also not receiving our request.
-    var source: IPv4Address
+    /// without also not receiving our request. Either family: a connected v6 socket's
+    /// answer is exactly as much an answer, and dropping it would report an open port
+    /// as `open_filtered`.
+    var source: IPAddress
     /// Its bytes.
     var payload: [UInt8]
 }
@@ -81,7 +83,7 @@ final class UDPProbe: @unchecked Sendable {
         queue: DispatchQueue,
         configure: (Int32) -> String? = { _ in nil }
     ) throws(PlatformError) {
-        let descriptor = try Self.open()
+        let descriptor = try Self.open(AF_INET)
         var local = socketAddress(interface.address, port: 0)
         // SAFETY: bind reads one sockaddr_in from storage we own and sized.
         let bound = unsafe withUnsafePointer(to: &local) { pointer in
@@ -99,14 +101,12 @@ final class UDPProbe: @unchecked Sendable {
     ///
     /// Connecting a UDP socket sends nothing. It fixes the peer, which filters incoming
     /// datagrams to that peer's and makes the kernel deliver ICMP errors for it.
-    init(connectingTo address: IPv4Address, port: UInt16, queue: DispatchQueue) throws(PlatformError) {
-        let descriptor = try Self.open()
-        var peer = socketAddress(address, port: port)
-        // SAFETY: connect reads one sockaddr_in from storage we own and sized.
-        let connected = unsafe withUnsafePointer(to: &peer) { pointer in
-            unsafe pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { address in
-                unsafe connect(descriptor, address, socklen_t(MemoryLayout<sockaddr_in>.size))
-            }
+    /// Either family; a link-local v6 peer is reached through its zone (see
+    /// `withSocketAddress`).
+    init(connectingTo address: IPAddress, port: UInt16, queue: DispatchQueue) throws(PlatformError) {
+        let descriptor = try Self.open(socketFamily(address))
+        let connected = withSocketAddress(address, port: port) { peer, length in
+            unsafe connect(descriptor, peer, length)
         }
         guard connected == 0 else { throw Self.fail(descriptor, "connect(\(address):\(port))") }
         self.fd = descriptor
@@ -121,8 +121,8 @@ final class UDPProbe: @unchecked Sendable {
         }
     }
 
-    private static func open() throws(PlatformError) -> Int32 {
-        let descriptor = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
+    private static func open(_ family: Int32) throws(PlatformError) -> Int32 {
+        let descriptor = socket(family, SOCK_DGRAM, IPPROTO_UDP)
         guard descriptor >= 0 else { throw PlatformError.syscall("socket(SOCK_DGRAM, UDP)") }
         guard setNonBlocking(descriptor) else { throw fail(descriptor, "fcntl(O_NONBLOCK)") }
         return descriptor
@@ -240,7 +240,7 @@ final class UDPProbe: @unchecked Sendable {
         }
         // A zero-length datagram is still a datagram, and from a connected peer it is
         // still an answer.
-        guard let source = ipv4(from: from) else { return nil }
+        guard let source = ipAddress(from: from) else { return nil }
         return .datagram(UDPDatagram(source: source, payload: Array(buffer[0..<received])))
     }
 }

@@ -24,25 +24,23 @@ private final class LoopbackListener: @unchecked Sendable {
     private let closing = ClosingFlag()
     private let finished = DispatchSemaphore(value: 0)
 
-    init(reply: [UInt8]?) throws {
-        let descriptor = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
+    init(reply: [UInt8]?, on address: IPAddress = .v4(IPv4Address("127.0.0.1")!)) throws {
+        let descriptor = socket(socketFamily(address), SOCK_DGRAM, IPPROTO_UDP)
         try #require(descriptor >= 0)
-        var address = socketAddress(IPv4Address("127.0.0.1")!, port: 0)
-        let bound = unsafe withUnsafePointer(to: &address) { pointer in
-            unsafe pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                unsafe bind(descriptor, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
-            }
-        }
-        try #require(bound == 0)
-        var actual = sockaddr_in()
-        var length = socklen_t(MemoryLayout<sockaddr_in>.size)
+        let bound = withSocketAddress(address, port: 0) { unsafe bind(descriptor, $0, $1) }
+        try #require(bound == 0, "bind(\(address)) failed: errno \(errno)")
+        var actual = sockaddr_storage()
+        var length = socklen_t(MemoryLayout<sockaddr_storage>.size)
         _ = unsafe withUnsafeMutablePointer(to: &actual) { pointer in
             unsafe pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) {
                 unsafe getsockname(descriptor, $0, &length)
             }
         }
         fd = descriptor
-        port = UInt16(bigEndian: actual.sin_port)
+        // sin_port and sin6_port sit at the same offset, 2, in both layouts.
+        port = unsafe withUnsafeBytes(of: actual) { raw in
+            UInt16(bigEndian: unsafe raw.loadUnaligned(fromByteOffset: 2, as: UInt16.self))
+        }
         let finished = self.finished, closing = self.closing
         thread = Thread {
             defer { finished.signal() }
@@ -93,8 +91,8 @@ private final class ClosingFlag: @unchecked Sendable {
 
 /// A loopback port nobody is listening on: bound for a moment to get a free number, then
 /// closed, so the kernel answers a datagram to it with port-unreachable.
-private func vacantPort() throws -> UInt16 {
-    let listener = try LoopbackListener(reply: nil)
+private func vacantPort(on address: IPAddress = .v4(IPv4Address("127.0.0.1")!)) throws -> UInt16 {
+    let listener = try LoopbackListener(reply: nil, on: address)
     let port = listener.port
     listener.close()
     return port
@@ -108,7 +106,7 @@ struct UDPOutcomeTests {
     func answerIsOpen() async throws {
         let listener = try LoopbackListener(reply: [0x01, 0x02])
         defer { listener.close() }
-        let observed = await DarwinUDPPortScan.probe(.init(ip: loopback, port: listener.port),
+        let observed = await DarwinUDPPortScan.probe(.init(ip: .v4(loopback), port: listener.port),
                                                     budget: .milliseconds(500))
         let observation = try #require(observed)
         #expect(observation.state == .open)
@@ -120,7 +118,7 @@ struct UDPOutcomeTests {
 
     @Test("ICMP port-unreachable is closed")
     func refusalIsClosed() async throws {
-        let observed = await DarwinUDPPortScan.probe(.init(ip: loopback, port: try vacantPort()),
+        let observed = await DarwinUDPPortScan.probe(.init(ip: .v4(loopback), port: try vacantPort()),
                                                     budget: .milliseconds(500))
         let observation = try #require(observed)
         #expect(observation.state == .closed)
@@ -131,7 +129,7 @@ struct UDPOutcomeTests {
     func silenceIsOpenFiltered() async throws {
         let listener = try LoopbackListener(reply: nil)
         defer { listener.close() }
-        let observed = await DarwinUDPPortScan.probe(.init(ip: loopback, port: listener.port),
+        let observed = await DarwinUDPPortScan.probe(.init(ip: .v4(loopback), port: listener.port),
                                                     budget: .milliseconds(300))
         let observation = try #require(observed)
         #expect(observation.state == .openFiltered)
@@ -229,6 +227,83 @@ struct CombinedResultTests {
         #expect(both.outcome == .deadlineExpired)
         #expect(both.ports[host]?.count == 2)
         #expect(both.usedCapabilities == [.connectScan, .udpScan])
+    }
+}
+
+private let loopback6 = IPAddress("::1")!
+private let linkLocal6 = IPAddress("fe80::1%lo0")!
+
+// P3: the same three outcomes over IPv6, on `::1` and on `fe80::1%lo0` — the second
+// because a link-local peer is only reachable through its zone, so it is what tests
+// `sin6_scope_id` on the connected UDP socket. The live half, a real host on the LAN,
+// is `udpLiveV6` below and the P3 section of Docs/V6-progress.md.
+@Suite("UDP over IPv6: the same three outcomes")
+struct UDPv6OutcomeTests {
+    private func probe(_ address: IPAddress, _ port: UInt16) async throws -> PortObservation {
+        let observed = await DarwinUDPPortScan.probe(.init(ip: address, port: port),
+                                                    budget: .milliseconds(500))
+        return try #require(observed)
+    }
+
+    // `::1` only. With the application firewall set to block all incoming — this Mac's
+    // setting — an inbound datagram to `fe80::1%lo0` is dropped for every process, Python
+    // included, while `::1` is exempt. The zone is covered by the refusal case below: a
+    // refusal from a link-local peer only comes back if the zone got the datagram there.
+    @Test("A datagram back is open", arguments: [loopback6])
+    func answerIsOpen(_ address: IPAddress) async throws {
+        let listener = try LoopbackListener(reply: [0x01, 0x02], on: address)
+        defer { listener.close() }
+        #expect(try await probe(address, listener.port).state == .open)
+    }
+
+    @Test("A refusal is closed", arguments: [loopback6, linkLocal6])
+    func refusalIsClosed(_ address: IPAddress) async throws {
+        let observation = try await probe(address, try vacantPort(on: address))
+        #expect(observation.state == .closed)
+        #expect(observation.rtt != nil, "a refusal is a round trip")
+    }
+
+    // The link-local case here passes for the firewall's reason as much as the engine's,
+    // so it proves only that silence is not misread — which is the claim.
+    @Test("Silence is open_filtered, and never filtered", arguments: [loopback6, linkLocal6])
+    func silenceIsOpenFiltered(_ address: IPAddress) async throws {
+        let listener = try LoopbackListener(reply: nil, on: address)
+        defer { listener.close() }
+        #expect(try await probe(address, listener.port).state == .openFiltered)
+    }
+
+    @Test("A v6 answer's source is read, not discarded")
+    func sourceIsParsed() {
+        var storage = sockaddr_storage()
+        let bytes = withSocketAddress(linkLocal6, port: 53) { addr, length in
+            unsafe Array(UnsafeRawBufferPointer(start: addr, count: Int(length)))
+        }
+        unsafe withUnsafeMutableBytes(of: &storage) { raw in
+            for (index, byte) in bytes.enumerated() { unsafe raw[index] = byte }
+        }
+        #expect(ipAddress(from: storage) == linkLocal6)
+    }
+}
+
+/// Live, by hand: `ZHEN_LIVE_V6_UDP='fe80::…%en0 5353,53 [budget-ms]' swift test --filter udpLiveV6`.
+/// Prints what the engine reports; asserts nothing about somebody else's network.
+@Suite("UDP over IPv6, live")
+struct UDPv6LiveTests {
+    @Test("live", .enabled(if: ProcessInfo.processInfo.environment["ZHEN_LIVE_V6_UDP"] != nil))
+    func udpLiveV6() async throws {
+        let spec = try #require(ProcessInfo.processInfo.environment["ZHEN_LIVE_V6_UDP"])
+        let parts = spec.split(separator: " ")
+        let address = try #require(IPAddress(String(parts[0])))
+        let ports = parts[1].split(separator: ",").compactMap { UInt16($0) }
+        let result = await DarwinUDPPortScan().scan(
+            [address], ports: PortSpec([], udp: ports),
+            perHostDeadline: .milliseconds(parts.count > 2 ? Int(parts[2]) ?? 1_000 : 1_000),
+            deadline: Deadline(after: .seconds(15)))
+        for observation in result.ports[address] ?? [] {
+            print("LIVE \(address) \(observation.port)/udp \(observation.state.rawValue)"
+                  + " service=\(observation.service?.name ?? "-")")
+        }
+        print("LIVE degradations=\(result.degradations.count) outcome=\(result.outcome.rawValue)")
     }
 }
 

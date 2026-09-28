@@ -60,8 +60,7 @@ public struct DarwinUDPPortScan: PortScanning {
         let watch = Stopwatch()
         let counters = ProbeCounters()
         progress(.stageStarted(.deepScan))
-        let family = IPv4OnlyTargets(targets, engine: "The UDP scan")
-        let probes = family.probed.flatMap { ip in ports.udpPorts.map { Probe(ip: ip, port: $0) } }
+        let probes = targets.flatMap { ip in ports.udpPorts.map { Probe(ip: ip, port: $0) } }
         let run = await boundedPool(
             over: probes,
             concurrency: concurrency,
@@ -77,7 +76,7 @@ public struct DarwinUDPPortScan: PortScanning {
 
         var byHost: [IPAddress: [PortObservation]] = [:]
         for (probe, observation) in run.results {
-            byHost[.v4(probe.ip), default: []].append(observation)
+            byHost[probe.ip, default: []].append(observation)
         }
         for ip in byHost.keys { byHost[ip]?.sort(by: PortObservation.canonicalOrder) }
 
@@ -91,7 +90,6 @@ public struct DarwinUDPPortScan: PortScanning {
         progress(.stageFinished(stage))
         return PortScanResult(
             ports: byHost,
-            degradations: family.degradations,
             usedCapabilities: descriptor.capabilities,
             outcome: run.termination.outcome,
             timing: Timing(stages: [stage], counters: snapshot)
@@ -123,7 +121,7 @@ public struct DarwinUDPPortScan: PortScanning {
     }
 
     struct Probe: Sendable, Hashable {
-        var ip: IPv4Address
+        var ip: IPAddress
         var port: UInt16
     }
 

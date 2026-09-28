@@ -193,6 +193,18 @@ func withSocketAddress<T>(
     }
 }
 
+/// Reads the address out of a `sockaddr_storage` of either family, or nil for any other.
+func ipAddress(from storage: sockaddr_storage) -> IPAddress? {
+    if let v4 = ipv4(from: storage) { return .v4(v4) }
+    guard storage.ss_family == sa_family_t(AF_INET6) else { return nil }
+    // SAFETY: the same reinterpretation `ipv4(from:)` justifies, for the sockaddr_in6
+    // the storage declares itself to be.
+    let v6 = unsafe withUnsafeBytes(of: storage) { raw in
+        unsafe raw.loadUnaligned(as: sockaddr_in6.self)
+    }
+    return ICMPv6Socket.address(v6).map(IPAddress.v6)
+}
+
 /// Reads a `sockaddr_in`'s address, or nil if it is not AF_INET.
 func ipv4(from storage: sockaddr_storage) -> IPv4Address? {
     guard storage.ss_family == sa_family_t(AF_INET) else { return nil }
