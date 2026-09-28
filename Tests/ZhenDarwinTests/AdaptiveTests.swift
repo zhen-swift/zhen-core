@@ -449,7 +449,7 @@ struct DescriptorLifetimeTests {
                         // it, ASan is clean, and production binds its result. See the
                         // C2 section of Docs/V6-progress.md.
                         let outcome = await TCPConnectScanEngine.probe(
-                            .init(ip: loopback, port: port), budget: .milliseconds(80)
+                            .init(ip: .v4(loopback), port: port), budget: .milliseconds(80)
                         )
                         _ = outcome
                     }
@@ -473,7 +473,7 @@ struct DescriptorLifetimeTests {
         // firing on a reissued descriptor would read SO_ERROR of 0 and report the port
         // open with a sub-millisecond round trip.
         let loopback = IPv4Address("127.0.0.1")!
-        let probes = (0..<300).map { _ in TCPConnectScanEngine.Probe(ip: loopback, port: 9) }
+        let probes = (0..<300).map { _ in TCPConnectScanEngine.Probe(ip: .v4(loopback), port: 9) }
         var openCount = 0
         await withTaskGroup(of: Bool.self) { group in
             for probe in probes {
@@ -498,7 +498,7 @@ struct DescriptorLifetimeTests {
         let task = Task {
             await TCPConnectScanEngine.probe(
                 // A routable-but-silent address, so the probe waits rather than resolving.
-                .init(ip: IPv4Address("10.255.255.1")!, port: 65_000),
+                .init(ip: .v4(IPv4Address("10.255.255.1")!), port: 65_000),
                 budget: .seconds(30)
             )
         }

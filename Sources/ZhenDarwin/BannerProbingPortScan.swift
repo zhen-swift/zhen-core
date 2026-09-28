@@ -75,6 +75,24 @@ public struct BannerProbingPortScan: PortScanning {
         // Only the open ones. A closed port has already told us everything it will —
         // the host is there and said no — and a filtered one has told us nothing, so
         // connecting to either would spend the budget learning what we know.
+        // Identification is v4-only: the TLS half goes through Network.framework, where a
+        // scoped v6 endpoint needs an `NWInterface`, and that is not built. An absent
+        // service means "not observed", and these were not even asked, so say so.
+        let unasked = result.ports.filter { $0.key.v6 != nil }
+            .flatMap(\.value).filter { $0.state == .open }.count
+        if unasked > 0 {
+            result.degradations.append(Degradation(
+                stage: .deepScan,
+                reason: """
+                    \(unasked) open port\(unasked == 1 ? "" : "s") on IPv6 \
+                    \(unasked == 1 ? "was" : "were") not asked what \
+                    \(unasked == 1 ? "it is" : "they are"): service identification \
+                    speaks IPv4 only. The port states are complete.
+                    """,
+                recoverable: false
+            ))
+        }
+
         let open = result.ipv4Hosts.flatMap { ip, observations in
             observations.filter { $0.state == .open }.map { (ip: ip, port: $0.port) }
         }

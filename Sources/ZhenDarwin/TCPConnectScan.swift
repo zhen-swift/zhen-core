@@ -73,8 +73,7 @@ public struct TCPConnectScanEngine: PortScanning {
         // one of the structural reasons a conventional scanner is slow: with the whole
         // cross product in one pool, a host that is entirely filtered costs the same
         // wall clock as one port on it, instead of costing its port count.
-        let family = IPv4OnlyTargets(targets, engine: "The connect scan")
-        let probes = family.probed.flatMap { ip in ports.ports.map { Probe(ip: ip, port: $0) } }
+        let probes = targets.flatMap { ip in ports.ports.map { Probe(ip: ip, port: $0) } }
 
         let run = await boundedPool(
             over: probes,
@@ -101,7 +100,7 @@ public struct TCPConnectScanEngine: PortScanning {
 
         var byHost: [IPAddress: [PortObservation]] = [:]
         for (probe, observation) in run.results {
-            byHost[.v4(probe.ip), default: []].append(observation)
+            byHost[probe.ip, default: []].append(observation)
         }
         for ip in byHost.keys {
             byHost[ip]?.sort { ($0.port, $0.proto.rawValue) < ($1.port, $1.proto.rawValue) }
@@ -116,7 +115,7 @@ public struct TCPConnectScanEngine: PortScanning {
         progress(.stageFinished(stage))
         return PortScanResult(
             ports: byHost,
-            degradations: family.degradations,
+            degradations: [],
             usedCapabilities: descriptor.capabilities,
             // The pool knows why it stopped; the artifact should say the same thing.
             outcome: run.termination.outcome,
@@ -154,7 +153,7 @@ public struct TCPConnectScanEngine: PortScanning {
 
     /// One address and port to probe.
     struct Probe: Sendable, Hashable {
-        var ip: IPv4Address
+        var ip: IPAddress
         var port: UInt16
     }
 
@@ -174,7 +173,7 @@ public struct TCPConnectScanEngine: PortScanning {
     /// than merely wasting memory. `consuming close()` makes a second close a compile
     /// error on every one of those paths.
     static func probe(_ probe: Probe, budget: Duration) async -> Probed {
-        let raw = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
+        let raw = socket(socketFamily(probe.ip), SOCK_STREAM, IPPROTO_TCP)
         guard raw >= 0 else {
             // Out of descriptors, almost certainly. Reported as filtered rather than
             // invented as closed: we learned nothing about the port.
@@ -191,11 +190,8 @@ public struct TCPConnectScanEngine: PortScanning {
                               socklen_t(MemoryLayout<linger>.size))
 
         let watch = Stopwatch()
-        var destination = socketAddress(probe.ip, port: probe.port)
-        let started = unsafe withUnsafePointer(to: &destination) { pointer in
-            unsafe pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { addr in
-                unsafe connect(raw, addr, socklen_t(MemoryLayout<sockaddr_in>.size))
-            }
+        let started = withSocketAddress(probe.ip, port: probe.port) { addr, length in
+            unsafe connect(raw, addr, length)
         }
 
         if started == 0 {
@@ -270,7 +266,7 @@ public struct TCPConnectScanEngine: PortScanning {
 /// us what it costs to talk to, and ports 80 and 443 should not each be given six
 /// hundred milliseconds to say the same thing.
 actor HostEstimators {
-    private var estimators: [IPv4Address: RTTEstimator] = [:]
+    private var estimators: [IPAddress: RTTEstimator] = [:]
     private let ceiling: Duration
 
     init(ceiling: Duration) {
@@ -281,7 +277,7 @@ actor HostEstimators {
     ///
     /// `perHostDeadline` acts as the ceiling and as the opening guess. Once a host has
     /// answered anything — open or refused — its own estimate takes over.
-    func budget(for address: IPv4Address) -> Duration {
+    func budget(for address: IPAddress) -> Duration {
         guard let estimator = estimators[address], estimator.acceptedSamples > 0 else {
             return ceiling
         }
@@ -293,7 +289,7 @@ actor HostEstimators {
     /// Only conclusive probes are recorded. A timeout is not a round-trip sample — it
     /// is the absence of one — and feeding it in would teach the estimator that this
     /// host is exactly as slow as the budget we happened to give it.
-    func record(_ sample: Duration, for address: IPv4Address) {
+    func record(_ sample: Duration, for address: IPAddress) {
         var estimator = estimators[address] ?? RTTEstimator()
         estimator.record(sample)
         estimators[address] = estimator

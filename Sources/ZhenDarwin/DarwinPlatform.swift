@@ -152,6 +152,47 @@ func socketAddress(_ address: IPv4Address, port: UInt16 = 0) -> sockaddr_in {
     return addr
 }
 
+/// The socket family an address is reached over.
+func socketFamily(_ address: IPAddress) -> Int32 {
+    switch address {
+    case .v4: AF_INET
+    case .v6: AF_INET6
+    }
+}
+
+/// Calls `body` with a socket address for either family, and its length.
+///
+/// The v6 half is `ICMPv6Socket.socketAddress` plus a port, deliberately: that is the one
+/// place this target already builds a `sockaddr_in6`, zone included, and was checked
+/// against a captured packet (D1). The zone is the part that bites — a link-local
+/// destination without `sin6_scope_id` is unroutable on a machine with more than one
+/// link, and the connect fails or leaves by the wrong interface.
+func withSocketAddress<T>(
+    _ address: IPAddress, port: UInt16,
+    _ body: (UnsafePointer<sockaddr>, socklen_t) -> T
+) -> T {
+    switch address {
+    case .v4(let v4):
+        var storage = socketAddress(v4, port: port)
+        // SAFETY: a sockaddr_in this scope owns, viewed as the sockaddr it begins with,
+        // for the duration of the call only.
+        return unsafe withUnsafePointer(to: &storage) { pointer in
+            unsafe pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                unsafe body($0, socklen_t(MemoryLayout<sockaddr_in>.size))
+            }
+        }
+    case .v6(let v6):
+        var storage = ICMPv6Socket.socketAddress(v6)
+        storage.sin6_port = port.bigEndian
+        // SAFETY: as above, for a sockaddr_in6.
+        return unsafe withUnsafePointer(to: &storage) { pointer in
+            unsafe pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                unsafe body($0, socklen_t(MemoryLayout<sockaddr_in6>.size))
+            }
+        }
+    }
+}
+
 /// Reads a `sockaddr_in`'s address, or nil if it is not AF_INET.
 func ipv4(from storage: sockaddr_storage) -> IPv4Address? {
     guard storage.ss_family == sa_family_t(AF_INET) else { return nil }
