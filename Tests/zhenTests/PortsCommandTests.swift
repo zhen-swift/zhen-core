@@ -15,7 +15,7 @@ struct PortsTargetTests {
     /// rather than a failure and it takes the whole suite with it. This suite used to
     /// do exactly that, and adding the port-spec positional is what set it off.
     private func addresses(_ text: String) throws -> [IPv4Address] {
-        try Ports.parse([text]).parsedTargets()
+        try Ports.parse([text]).parsedTargets().compactMap(\.v4)
     }
 
     private func rejection(_ text: String) -> String? {
@@ -54,7 +54,7 @@ struct PortsTargetTests {
 
     @Test("What is refused, and what it says")
     func rejections() {
-        #expect(rejection("not-an-address")?.contains("not an IPv4 address") == true)
+        #expect(rejection("not-an-address")?.contains("not an IPv4 or IPv6 address") == true)
         #expect(rejection("10.10.20.0/99")?.contains("not a network") == true)
         #expect(rejection("")?.contains("No addresses") == true)
         #expect(rejection(",,")?.contains("No addresses") == true)
@@ -63,12 +63,78 @@ struct PortsTargetTests {
     @Test("Every refusal is a whole sentence")
     func messagesAreSentences() {
         // Printed straight after `zhen: `, so a fragment reads as something escaping.
-        for bad in ["not-an-address", "10.10.20.0/99", "", "10.10.0.0/16"] {
+        for bad in ["not-an-address", "10.10.20.0/99", "", "10.10.0.0/16", "fe80::1", "fe80::/64"] {
             let text = rejection(bad)
             #expect(text != nil, Comment(rawValue: "'\(bad)' was accepted"))
             #expect(text?.hasSuffix(".") == true,
                     Comment(rawValue: "'\(bad)' gave \(text ?? "nil")"))
         }
+    }
+}
+
+// P4: IPv6 targets, and the one mechanism that cannot take them.
+@Suite("zhen ports takes IPv6, and --scan-type syn refuses it by name")
+struct PortsV6TargetTests {
+    /// This machine's loopback, which is the interface every machine has — `lo0` on
+    /// Darwin, `lo` on Linux. A zone must name a real interface or it is refused.
+    #if canImport(Darwin)
+    private static let lo = "lo0"
+    #else
+    private static let lo = "lo"
+    #endif
+    private let zoned = "fe80::1%" + Self.lo
+
+    private func parsed(_ arguments: [String]) throws -> [IPAddress] {
+        try Ports.parse(arguments).parsedTargets()
+    }
+
+    private func refusal(_ arguments: [String]) -> String? {
+        do {
+            _ = try Ports.parse(arguments).scannableTargets()
+            return nil
+        } catch let error as ScanSetupError { return error.message }
+        catch { return "\(error)" }
+    }
+
+    @Test("v6 alone, and mixed with v4 in the order given")
+    func mixed() throws {
+        #expect(try parsed([zoned, "22"]) == [IPAddress(zoned)!])
+        #expect(try parsed(["10.10.20.1,\(zoned),::1", "22"]).map(\.description)
+                == ["10.10.20.1", zoned, "::1"])
+        // The same address on two links is two targets.
+        #expect(try parsed(["\(zoned),fe80::1%en0", "22"]).count == 2)
+    }
+
+    @Test("A link-local address without its interface is refused, and says how to fix it")
+    func linkLocalNeedsZone() throws {
+        let message = try #require(refusal(["fe80::1", "22"]))
+        #expect(message.contains("link-local"))
+        #expect(message.contains("fe80::1%en0"))
+    }
+
+    @Test("An IPv6 prefix is refused rather than enumerated")
+    func noV6CIDR() throws {
+        #expect(try #require(refusal(["fe80::/64", "22"])).contains("IPv6 prefix"))
+    }
+
+    @Test("A zone naming no interface is refused before anything is sent")
+    func unknownZone() throws {
+        #expect(try #require(refusal(["fe80::1%nosuch0", "22"])).contains("nosuch0"))
+    }
+
+    @Test("--scan-type syn with a v6 target is refused, naming the family and the address")
+    func synRefusesV6() throws {
+        let message = try #require(refusal(["10.10.20.1,\(zoned)", "22", "--scan-type", "syn"]))
+        #expect(message.contains("--scan-type syn scans IPv4 only"))
+        #expect(message.contains("\(zoned) is an IPv6 address"))
+        #expect(message.contains("Nothing was scanned"))
+    }
+
+    @Test("--scan-type syn with v4 only, and connect or auto with v6, are not refused here")
+    func onlySynWithV6IsRefused() {
+        #expect(refusal(["10.10.20.1", "22", "--scan-type", "syn"]) == nil)
+        #expect(refusal([zoned, "22", "--scan-type", "connect"]) == nil)
+        #expect(refusal([zoned, "22"]) == nil)
     }
 }
 
@@ -224,7 +290,7 @@ struct PositionalPortSpecTests {
             _ = try Ports.parse(["22"]).parsedTargets()
         } catch let error as ScanSetupError { message = error.message }
         catch { message = "\(error)" }
-        #expect(message?.contains("not an IPv4 address") == true,
+        #expect(message?.contains("not an IPv4 or IPv6 address") == true,
                 Comment(rawValue: "got: \(message ?? "accepted, which is worse")"))
     }
 }

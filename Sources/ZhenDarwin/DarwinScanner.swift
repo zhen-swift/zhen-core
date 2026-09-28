@@ -154,9 +154,16 @@ public struct DarwinScanner: Sendable {
         // which is the defect this whole sequence of work started from.
         // Follows `useSYN`, not the capture device's availability: stack fingerprinting
         // writes its own SYN, so a run forced to `connect` must not sprout one.
-        let ports: any PortScanning = useSYN
+        let chosen: any PortScanning = useSYN
             ? FingerprintingPortScan(base: named, probe: OSFingerprintProbe(capture: source))
             : named
+        // Half-open is IPv4 only. Under `auto`, v6 targets go to connect instead of
+        // being named as unscanned; under `syn`, `zhen ports` has already refused them.
+        let ports: any PortScanning = useSYN && portScanType == .auto
+            ? FamilyRoutedPortScan(
+                v4: chosen,
+                v6: BannerProbingPortScan(base: TCPConnectScanEngine(concurrency: effective)))
+            : chosen
 
         let discovery: any HostDiscovery = refusal == nil
             // Composed, not substituted. An either/or branch here would make `sudo`

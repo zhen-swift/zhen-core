@@ -19,6 +19,11 @@
 import ArgumentParser
 import Foundation
 import ZhenCore
+#if canImport(Darwin)
+import Darwin
+#elseif canImport(Glibc)
+import Glibc
+#endif
 
 struct Ports: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
@@ -29,6 +34,12 @@ struct Ports: AsyncParsableCommand {
             or `-` to read them from standard input one per line. Discovery is never \
             run, so a host that answers no ping is still scannable by address.
 
+            IPv4 and IPv6 mix freely — `zhen ports 10.10.20.1,fe80::1%en0 22`. A \
+            link-local IPv6 address needs its interface after `%`, because the same \
+            address can exist on every link. IPv6 is scanned by connect and UDP; \
+            `--scan-type syn` is IPv4 only and refuses an IPv6 target rather than \
+            quietly scanning it some other way.
+
             UDP ports are prefixed `U:` — `zhen ports 10.10.20.1 22,U:53,U:123`. A UDP \
             port that answers is open, one the host refuses with ICMP is closed, and \
             silence is `open_filtered`: an open port ignoring a request it did not \
@@ -37,7 +48,7 @@ struct Ports: AsyncParsableCommand {
             """
     )
 
-    @Argument(help: "Addresses, a comma list, a CIDR, or - to read from stdin.")
+    @Argument(help: "IPv4 or IPv6 addresses, a comma list, an IPv4 CIDR, or - to read from stdin.")
     var targets: String
 
     /// The port spec, as the second thing a person types.
@@ -48,7 +59,7 @@ struct Ports: AsyncParsableCommand {
     /// **Ambiguity is not a problem in practice.** The first positional is targets, so
     /// `zhen ports 22` resolves targets to "22", fails to parse as an address, and says
     /// so. A person who meant a port on an unstated host gets a sentence about "22" not
-    /// being an IPv4 address rather than a scan of something unexpected.
+    /// being an address rather than a scan of something unexpected.
     @Argument(help: "Ports: 22, 22,80,443, 1-1024, common, iana. Defaults to common.")
     var portSpec: String?
 
@@ -101,7 +112,7 @@ struct Ports: AsyncParsableCommand {
     }
 
     private func execute() async throws(ScanSetupError) -> ExitStatus {
-        let addresses = try parsedTargets().map(IPAddress.v4)
+        let addresses = try scannableTargets()
         let spec = try parsedPortSpec()
         let budget = try parsedDeadline()
 
@@ -194,7 +205,7 @@ struct Ports: AsyncParsableCommand {
     /// Addresses from argv, from a CIDR, or from stdin.
     /// Internal rather than private so the grammar and its rejections can be tested
     /// without a network — the same line `ScanCommand.parseBudgets` draws.
-    func parsedTargets() throws(ScanSetupError) -> [IPv4Address] {
+    func parsedTargets() throws(ScanSetupError) -> [IPAddress] {
         let text: String
         if targets == "-" {
             var lines: [String] = []
@@ -207,12 +218,17 @@ struct Ports: AsyncParsableCommand {
             text = targets
         }
 
-        var addresses: [IPv4Address] = []
-        var seen: Set<IPv4Address> = []
+        var addresses: [IPAddress] = []
+        var seen: Set<IPAddress> = []
         for rawPiece in text.split(separator: ",", omittingEmptySubsequences: false) {
             let piece = rawPiece.trimmingCharacters(in: .whitespaces)
             if piece.isEmpty { continue }
             if piece.contains("/") {
+                if piece.contains(":") {
+                    throw .badArgument(
+                        "'\(piece)' is an IPv6 prefix. A /64 is 18 quintillion addresses, "
+                        + "so `zhen ports` takes IPv6 hosts one address at a time.")
+                }
                 guard let network = IPv4Network(piece) else {
                     throw .badArgument("'\(piece)' is not a network in CIDR form.")
                 }
@@ -225,10 +241,16 @@ struct Ports: AsyncParsableCommand {
                         + "hosts you already have; use `zhen scan --deep` to find them first."
                     )
                 }
-                addresses.append(contentsOf: network.hosts.filter { seen.insert($0).inserted })
+                addresses.append(contentsOf: network.hosts.map(IPAddress.v4)
+                    .filter { seen.insert($0).inserted })
             } else {
-                guard let address = IPv4Address(piece) else {
-                    throw .badArgument("'\(piece)' is not an IPv4 address.")
+                guard let address = IPAddress(piece) else {
+                    throw .badArgument("'\(piece)' is not an IPv4 or IPv6 address.")
+                }
+                if let v6 = address.v6, v6.isLinkLocal, v6.zone == nil {
+                    throw .badArgument(
+                        "'\(piece)' is link-local, and link-local addresses exist once per "
+                        + "link, so it needs its interface: '\(piece)%en0', for example.")
                 }
                 if seen.insert(address).inserted { addresses.append(address) }
             }
@@ -237,6 +259,42 @@ struct Ports: AsyncParsableCommand {
             throw .badArgument("No addresses to scan.")
         }
         return addresses
+    }
+
+    /// The targets `execute` scans: parsed, then checked against the mechanism. The only
+    /// route from argv to the scanner, so the refusal below cannot be skipped by a caller
+    /// — and the tests call this, not its halves, for the same reason.
+    func scannableTargets() throws(ScanSetupError) -> [IPAddress] {
+        let addresses = try parsedTargets()
+        try refuseUnscannableFamilies(addresses)
+        return addresses
+    }
+
+    /// Refuses, before anything is sent, a target the chosen mechanism cannot scan.
+    ///
+    /// **`--scan-type syn` with an IPv6 target** is refused by name. Half-open over IPv6
+    /// needs its own capture filter and pseudo-header, and is not built; quietly scanning
+    /// the v6 targets by connect instead would report a measurement of a mechanism the
+    /// person explicitly declined, which is the defect `--scan-type` exists to prevent.
+    /// `auto` routes v6 to connect, because choosing is what `auto` means.
+    ///
+    /// **A zone that names no interface** is refused too: the address would go out on no
+    /// link, and the scan would report every port `filtered` — a confident, wrong answer.
+    private func refuseUnscannableFamilies(_ addresses: [IPAddress]) throws(ScanSetupError) {
+        let v6 = addresses.filter { $0.v6 != nil }
+        if scanType == .syn, !v6.isEmpty {
+            throw .badArgument(
+                "--scan-type syn scans IPv4 only, and "
+                + (v6.count == 1 ? "\(v6[0]) is an IPv6 address" : "\(v6.count) targets are IPv6 "
+                   + "(\(v6.map(\.description).joined(separator: ", ")))")
+                + ". Nothing was scanned. Use --scan-type connect, or auto, for IPv6.")
+        }
+        for address in v6 {
+            guard let zone = address.v6?.zone else { continue }
+            if if_nametoindex(zone) == 0 {
+                throw .badArgument("'\(address)' names interface '\(zone)', which this machine does not have.")
+            }
+        }
     }
 
     /// Internal for the same reason as `parsedTargets`.
