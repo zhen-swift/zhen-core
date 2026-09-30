@@ -3,7 +3,7 @@ import Testing
 @testable import ZhenCore
 @testable import zhen
 
-// The port matrix, stage 2 of `Docs/PORTS-rendering.md`.
+// The port matrix, stage 2 of `Docs/plans/PORTS-rendering.md`.
 //
 // This is the suite for the defect found on 2026-09-24: `scan --deep` ran the port
 // scan, wrote the results onto every host, and printed a table that did not include

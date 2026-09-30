@@ -1,6 +1,6 @@
 // PortLongForm.swift — one row per OPEN port, under the device table.
 //
-// Stage 3 of `Docs/PORTS-rendering.md`. The matrix answers *which hosts*; this answers
+// Stage 3 of `Docs/plans/PORTS-rendering.md`. The matrix answers *which hosts*; this answers
 // *what is running*, and it is the only view where service identity appears at all.
 //
 // ── Only open ports get rows ──────────────────────────────────────────────────

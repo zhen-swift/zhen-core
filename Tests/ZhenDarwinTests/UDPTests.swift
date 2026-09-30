@@ -236,7 +236,7 @@ private let linkLocal6 = IPAddress("fe80::1%lo0")!
 // P3: the same three outcomes over IPv6, on `::1` and on `fe80::1%lo0` — the second
 // because a link-local peer is only reachable through its zone, so it is what tests
 // `sin6_scope_id` on the connected UDP socket. The live half, a real host on the LAN,
-// is `udpLiveV6` below and the P3 section of Docs/V6-progress.md.
+// is `udpLiveV6` below and the P3 section of Docs/process/V6-progress.md.
 @Suite("UDP over IPv6: the same three outcomes")
 struct UDPv6OutcomeTests {
     private func probe(_ address: IPAddress, _ port: UInt16) async throws -> PortObservation {

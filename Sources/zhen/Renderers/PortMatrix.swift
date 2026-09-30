@@ -1,6 +1,6 @@
 // PortMatrix.swift — one column per port, one row per host.
 //
-// Stage 2 of `Docs/PORTS-rendering.md`, and the thing that closes the defect found on
+// Stage 2 of `Docs/plans/PORTS-rendering.md`, and the thing that closes the defect found on
 // 2026-09-24: `zhen scan --deep --ports 22,80,443` ran the port scan, wrote the results
 // onto every host in `ScanPipeline`, and then printed six hardcoded columns that did
 // not include any of them. The data reached the artifact and was discarded at print

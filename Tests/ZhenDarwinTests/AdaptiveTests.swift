@@ -447,7 +447,7 @@ struct DescriptorLifetimeTests {
                         // `IPv6Address?`. Reproduced on a clean tree by adding that one
                         // field; `String?`, `IPv4Address?` and `[IPAddress]` do not trigger
                         // it, ASan is clean, and production binds its result. See the
-                        // C2 section of Docs/V6-progress.md.
+                        // C2 section of Docs/process/V6-progress.md.
                         let outcome = await TCPConnectScanEngine.probe(
                             .init(ip: .v4(loopback), port: port), budget: .milliseconds(80)
                         )

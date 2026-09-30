@@ -144,7 +144,7 @@ public actor LogHistoryStore: HistoryStore {
     /// silently drops every schema-3 device, and erases them the first time it compacts.
     ///
     /// The fault is in the old reader, so nothing here can fix the schema-3 case — that
-    /// one is a warning in `Docs/V6-questions.md`. This is the fix for the NEXT one, and
+    /// one is a warning in `Docs/process/V6-questions.md`. This is the fix for the NEXT one, and
     /// it has to ship before the schema that needs it, which is the whole reason it is
     /// here now rather than then.
     ///

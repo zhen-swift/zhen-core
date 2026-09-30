@@ -1,6 +1,6 @@
 // PortView.swift — which port table, if any.
 //
-// Stage 3 of `Docs/PORTS-rendering.md`, and the seam stage 4 replaces.
+// Stage 3 of `Docs/plans/PORTS-rendering.md`, and the seam stage 4 replaces.
 //
 // The two tables differ in KIND, not only in shape, and this is the one place that
 // knows it. The matrix REPLACES the device table — a person reading a port matrix is

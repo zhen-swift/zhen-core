@@ -3,7 +3,7 @@ import Testing
 @testable import ZhenCore
 @testable import zhen
 
-// The long form, stage 3 of `Docs/PORTS-rendering.md`.
+// The long form, stage 3 of `Docs/plans/PORTS-rendering.md`.
 //
 // ── Why none of this reuses PortMatrixTests' fixture ──────────────────────────
 //
