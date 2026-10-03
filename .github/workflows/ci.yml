@@ -1,0 +1,167 @@
+name: CI
+
+# Every claim this repository makes about itself is checkable — but not every check is
+# about every change.
+#
+# This repository is one Swift package at its root. Until 2026-10-03 it was the `zhen/`
+# directory of a monorepo that also held the app, and the filter below is that one's tool
+# filter with the prefix removed: what used to be `zhen/**` is now `Package.swift`,
+# `Sources/` and `Tests/` — the package README and `zhen.1` used to trigger it and no
+# longer do, because nothing that builds or tests reads either. The app job left with the app.
+#
+# Filtering is computed in a job rather than declared per job, because GitHub supports
+# `paths:` only at the workflow level — where it would gate the whole run, which is the
+# opposite of what is wanted.
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: What changed
+    runs-on: ubuntu-latest
+    outputs:
+      tool: ${{ steps.filter.outputs.tool }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The whole history, because the diff base can be several commits back and a
+          # shallow clone would make `git diff` fail rather than say so.
+          fetch-depth: 0
+
+      - name: Compare against the base
+        id: filter
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+
+          # Run everything when the answer cannot be computed, never nothing. A new
+          # branch reports an all-zero `before`, a manual dispatch has no base at all,
+          # and a workflow edit has to prove itself on every job. Failing open costs one
+          # slow run; failing closed silently skips the check that would have caught it.
+          run_all() {
+            echo "tool=true" >> "$GITHUB_OUTPUT"
+            echo "Running every job: $1"
+            exit 0
+          }
+
+          if [ "$EVENT" = "workflow_dispatch" ]; then run_all "manual dispatch"; fi
+
+          if [ "$EVENT" = "pull_request" ]; then BASE="$BASE_SHA"; else BASE="$BEFORE"; fi
+
+          case "$BASE" in
+            ""|0000000000000000000000000000000000000000) run_all "no usable base commit" ;;
+          esac
+
+          git cat-file -e "$BASE^{commit}" 2>/dev/null \
+            || run_all "base commit $BASE is not in this clone"
+
+          CHANGED="$(git diff --name-only "$BASE" "$GITHUB_SHA")"
+          echo "Changed files:"; echo "$CHANGED" | sed 's/^/  /'
+
+          if echo "$CHANGED" | grep -q '^\.github/workflows/'; then
+            run_all "the workflow itself changed"
+          fi
+
+          # What compiles: the manifest, the sources, the tests. Docs/, Scripts/, the man page
+          # and the hygiene files at the root do not run it; the docs job checks prose.
+          if echo "$CHANGED" | grep -qE '^(Package\.swift|Sources/|Tests/)'; then
+            TOOL=true
+          else
+            TOOL=false
+          fi
+
+          echo "tool=$TOOL" >> "$GITHUB_OUTPUT"
+          echo "tool=$TOOL"
+
+  docs:
+    # Prose is the only thing here with no compiler. This checks the claims a document
+    # makes about paths and commands — the defect it exists for is the reorganisation
+    # leaving the README with two identical build steps and one that could not work, which
+    # survived four days because nothing looked.
+    #
+    # Unfiltered on purpose: it is seconds long, and a change anywhere can stale a document.
+    name: Docs — the claims resolve
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: check-docs
+        run: ./Scripts/check-docs.sh
+
+  tool-linux:
+    name: Linux — the package stays portable
+    needs: changes
+    if: needs.changes.outputs.tool == 'true'
+    runs-on: ubuntu-latest
+    container: swift:6.2
+    steps:
+      - uses: actions/checkout@v7
+
+      # The portability claim, checked on its own so it cannot be masked by anything
+      # else in the package failing for an unrelated reason.
+      - name: Build ZhenCore
+        run: swift build --target ZhenCore
+
+      # Building is not running, and the difference is not academic: the file-backed
+      # history store compiled cleanly on Linux and then failed at runtime, because
+      # `FileManager.replaceItemAt` does not leave the file at the original URL on
+      # swift-corelibs-foundation. Nothing that only compiles the code could find that.
+      #
+      # This runs the whole suite. ZhenDarwin and its tests are each wrapped in
+      # `#if canImport(Darwin)`, so on Linux they compile to nothing. The CLI's only
+      # Darwin-dependent files — ScannerFactory and Terminal — are guarded the same way,
+      # which means this step now also answers a question the roadmap asks: how close is
+      # the command line to building on Linux already. If it fails, the failure IS the
+      # answer and belongs in DIRECTION.md's Linux item, not hidden behind a narrower
+      # invocation.
+      - name: Run the portable tests
+        run: swift test
+
+  tool-macos:
+    name: macOS — the tool
+    needs: changes
+    if: needs.changes.outputs.tool == 'true'
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v7
+      - name: Show toolchain
+        run: swift --version
+      - name: Build and test
+        run: swift test
+
+  ci:
+    # One check to require and one to read. Everything above can be skipped by the
+    # filter, and a skipped job is not a passed job: branch protection requiring
+    # `tool-macos` directly would block every docs-only change forever, waiting for a
+    # run that correctly decided not to happen.
+    name: CI
+    needs: [changes, docs, tool-linux, tool-macos]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report
+        run: |
+          set -euo pipefail
+          printf 'docs       %s\ntool-linux %s\ntool-macos %s\n' \
+            "${{ needs.docs.result }}" \
+            "${{ needs.tool-linux.result }}" \
+            "${{ needs.tool-macos.result }}"
+          for r in "${{ needs.docs.result }}" \
+                   "${{ needs.tool-linux.result }}" \
+                   "${{ needs.tool-macos.result }}"; do
+            case "$r" in
+              success|skipped) ;;
+              *) echo "A required job did not succeed."; exit 1 ;;
+            esac
+          done
+          echo "OK"

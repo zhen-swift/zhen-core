@@ -1,0 +1,57 @@
+name: Bug report
+description: Something behaves differently from what the documentation says.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A scan artifact is worth more than a description. `zhen scan --json`
+        records the versions, the timing budgets in force, and every degradation —
+        attach it and most of the questions below answer themselves.
+
+        Redact addresses and device names if you would rather not publish them; the
+        timing and degradation fields are what matter.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected instead
+    validations:
+      required: true
+  - type: textarea
+    id: artifact
+    attributes:
+      label: The scan artifact
+      description: Output of `zhen scan --json`, or the relevant part of it.
+      render: json
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: "`zhen --version`, or the commit hash."
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: macOS version and hardware
+      placeholder: "26.6.2, Mac16,9"
+    validations:
+      required: true
+  - type: dropdown
+    id: privileged
+    attributes:
+      label: Was it running privileged?
+      options:
+        - "No — the unprivileged default"
+        - "Yes — under sudo"
+    validations:
+      required: true
+  - type: checkboxes
+    id: permission
+    attributes:
+      label: Local Network permission
+      description: >-
+        Denial returns zero results rather than an error, so an empty scan is
+        usually this. System Settings → Privacy & Security → Local Network.
+      options:
+        - label: I have confirmed the app or terminal is allowed

@@ -1,0 +1,17 @@
+# Line endings: normalise on commit, so a checkout on another platform does not
+# produce a diff of the whole tree.
+* text=auto eol=lf
+
+# Binary, so git never tries to merge or diff them as text.
+*.png binary
+*.bin binary
+*.xcscheme text eol=lf
+
+# Generated. Marking it tells GitHub to collapse it in diffs and to leave it out
+# of language statistics — it is a plist of cross-referenced identifiers, not
+# something anybody reads or reviews line by line.
+Zhen.xcodeproj/project.pbxproj linguist-generated=true
+App/Info.plist                      linguist-generated=true
+
+# Documentation is the point here, not a rounding error in the language bar.
+*.md linguist-documentation=false
