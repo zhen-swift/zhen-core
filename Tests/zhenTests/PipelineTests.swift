@@ -197,7 +197,7 @@ struct ArtifactSourceTests {
 
     @Test("Stage timings come from the envelope, not from events")
     func timingComesFromTheEnvelope() async {
-        let engine = FakeDiscovery(hosts: [], events: [])
+        let engine = FakeDiscovery(hosts: [HostFacts(ip: IPv4Address("10.10.20.1")!)], events: [])
         let completed = await pipeline(engine, renderer: RecordingRenderer()).run(
             target: target, budget: .seconds(5)
         )
