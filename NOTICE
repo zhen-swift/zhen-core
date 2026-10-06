@@ -1,0 +1,29 @@
+Zhen
+Copyright 2026 Juan Carlos Estévez Rodríguez
+
+This product includes software developed as part of the Zhen project
+(https://github.com/JCTec/zhen).
+
+Licensed under the Apache License, Version 2.0. See LICENSE for the full text.
+
+────────────────────────────────────────────────────────────────────────────
+
+THIRD-PARTY COMPONENTS
+
+Zhen links two dependencies, both from Apple and both under the Apache
+License 2.0. Keeping the count that low is deliberate: every addition is a
+supply chain this project then owns.
+
+  swift-argument-parser   https://github.com/apple/swift-argument-parser
+                          Copyright Apple Inc. and the Swift project authors
+                          Apache License 2.0
+                          Linked by the command-line tool.
+
+  swift-docc-plugin       https://github.com/apple/swift-docc-plugin
+                          Copyright Apple Inc. and the Swift project authors
+                          Apache License 2.0
+                          A build-tool plugin only. It contributes documentation
+                          subcommands and links nothing into any shipped binary.
+
+Nothing else is vendored, bundled or statically linked. Zhen spawns no
+subprocesses and depends on no external binaries at runtime.

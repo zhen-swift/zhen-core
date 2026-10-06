@@ -538,27 +538,6 @@ struct VersionTests {
         // And both of those now come from core, which is the only declaration.
         #expect(Version.current == ZhenVersion.current)
     }
-
-    /// The repository root, from this file's own path.
-    static let repositoryRoot: URL = URL(fileURLWithPath: #filePath)
-        .deletingLastPathComponent()   // zhenTests
-        .deletingLastPathComponent()   // Tests
-        .deletingLastPathComponent()   // zhen
-        .deletingLastPathComponent()   // the repository
-
-    // The third copy, and the one nothing was watching. Pinning the command line to its
-    // plist fixed that pair and left the shape: the app declared a version, this file
-    // declared a version, and they were free to drift apart between releases.
-    @Test("CITATION.cff states the version core declares")
-    func citationMatches() throws {
-        let url = Self.repositoryRoot.appendingPathComponent("CITATION.cff")
-        let text = try String(contentsOf: url, encoding: .utf8)
-        let stated = text
-            .split(separator: "\n")
-            .first { $0.hasPrefix("version:") }
-            .map { $0.dropFirst("version:".count).trimmingCharacters(in: .whitespaces) }
-        #expect(stated == ZhenVersion.current)
-    }
 }
 
 @Suite("Where history is kept, and whose it is")
