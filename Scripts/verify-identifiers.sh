@@ -37,7 +37,7 @@ echo "authority: $APP · $HELPER"
 
 # RENAME-to-zhen.md is the rename plan and quotes the old identifiers on purpose.
 # Study/ records what was measured under the former name and is never rewritten.
-FOUND=$(grep -rhoE '\b(com|dev)\.[a-z]+\.[a-zA-Z.]*(zhen|netsanity)[a-zA-Z.]*' Docs/ \
+FOUND=$(grep -rhoE '\b(com|dev)\.[a-z]+\.[a-zA-Z.]*zhen[a-zA-Z.]*' Docs/ \
         --include='*.md' --exclude='RENAME-to-zhen.md' | sort -u || true)
 
 BAD=""

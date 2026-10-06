@@ -751,105 +751,14 @@ struct HistoryLogTests {
     }
 }
 
-@Suite("History written under the former name is brought across")
-struct LegacyStoreMigrationTests {
-    private func temporaryDirectory() throws -> URL {
-        let directory = URL(fileURLWithPath: NSTemporaryDirectory())
-            .appendingPathComponent("zhen-migrate-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        return directory
-    }
-
-    @Test("An old store is copied when the new path has nothing")
-    func copiesIntoAnAbsence() throws {
-        // The case this exists for: somebody upgrading has a populated
-        // ~/Library/Application Support/zhen/history.ndjson that the app and the
-        // command line share, and a rename that left it behind would orphan it on the
-        // one day they would notice.
-        let directory = try temporaryDirectory()
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let old = directory.appendingPathComponent("netsanity/history.ndjson")
-        let new = directory.appendingPathComponent("zhen/history.ndjson")
-        try FileManager.default.createDirectory(
-            at: old.deletingLastPathComponent(), withIntermediateDirectories: true
-        )
-        try "{\"type\":\"run\"}\n".write(to: old, atomically: true, encoding: .utf8)
-
-        #expect(HistoryLocation.migrateLegacyStore(to: new, from: old))
-        #expect(FileManager.default.fileExists(atPath: new.path))
-        // The original stays exactly where it was. A rename is not a reason to take
-        // somebody's data out of the place they last saw it.
-        #expect(FileManager.default.fileExists(atPath: old.path),
-                "the migration moved the old history instead of copying it")
-        #expect(try String(contentsOf: new, encoding: .utf8)
-                == String(contentsOf: old, encoding: .utf8))
-    }
-
-    @Test("A new store that already has history is never overwritten")
-    func refusesToOverwrite() throws {
-        // A store with even one scan in it has history of its own, and replacing that
-        // with an older file would lose the thing this function exists to preserve.
-        let directory = try temporaryDirectory()
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let old = directory.appendingPathComponent("netsanity/history.ndjson")
-        let new = directory.appendingPathComponent("zhen/history.ndjson")
-        for url in [old, new] {
-            try FileManager.default.createDirectory(
-                at: url.deletingLastPathComponent(), withIntermediateDirectories: true
-            )
-        }
-        try "old\n".write(to: old, atomically: true, encoding: .utf8)
-        try "new\n".write(to: new, atomically: true, encoding: .utf8)
-
-        #expect(!HistoryLocation.migrateLegacyStore(to: new, from: old))
-        #expect(try String(contentsOf: new, encoding: .utf8) == "new\n")
-    }
-
-    @Test("Nothing to migrate is not a failure")
-    func absentSourceIsFine() throws {
-        let directory = try temporaryDirectory()
-        defer { try? FileManager.default.removeItem(at: directory) }
-        #expect(!HistoryLocation.migrateLegacyStore(
-            to: directory.appendingPathComponent("zhen/history.ndjson"),
-            from: directory.appendingPathComponent("netsanity/history.ndjson")
-        ))
-    }
-
-    @Test("The names of the former things are literally the former names")
-    func legacyConstantsAreNotRenamed() {
-        // These two exist to name history that is ALREADY ON DISK under the previous
-        // name. A project-wide substitution rewrote both during the rename, twice, and
-        // the consequence was not a failing build: the migration looked for the file it
-        // was about to create, found nothing, and did nothing. Silently.
-        //
-        // The only reason it surfaced at all was that making the legacy variable equal
-        // to the current one turned a dictionary literal below into a duplicate key,
-        // which traps. That is luck, not testing. This is the test.
-        #expect(HistoryLocation.legacyOverrideVariable == "NETSANITY_HISTORY")
-        #expect(HistoryLocation.legacyDirectoryName == "netsanity")
+@Suite("Where history lives is named, not derived")
+struct HistoryNameTests {
+    @Test("The store's names are the ones already on disk")
+    func namesArePinned() {
+        // These name history that already exists. A change to either is not a rename:
+        // the next run opens an empty store beside the populated one and reports every
+        // device as new, and nothing fails.
         #expect(HistoryLocation.overrideVariable == "ZHEN_HISTORY")
         #expect(HistoryLocation.directoryName == "zhen")
-        #expect(HistoryLocation.legacyOverrideVariable != HistoryLocation.overrideVariable,
-                "the legacy name was renamed to the current one, which disables migration")
-        #expect(HistoryLocation.legacyDirectoryName != HistoryLocation.directoryName)
-    }
-
-    @Test("The former override variable is still honoured, and the new one wins")
-    func bothOverrideVariables() {
-        // Study/harness/conditions.py sets the former name to point each measured run
-        // at a disposable store. A harness setting a variable nothing reads would not
-        // fail — it would write every run's history to the shared default path instead,
-        // silently, and the only sign would be numbers that did not reproduce.
-        let legacy = HistoryLocation.resolve(
-            environment: [HistoryLocation.legacyOverrideVariable: "/tmp/legacy.ndjson"]
-        )
-        #expect(legacy?.path == "/tmp/legacy.ndjson")
-
-        let both = HistoryLocation.resolve(environment: [
-            HistoryLocation.legacyOverrideVariable: "/tmp/legacy.ndjson",
-            HistoryLocation.overrideVariable: "/tmp/current.ndjson",
-        ])
-        #expect(both?.path == "/tmp/current.ndjson",
-                "a stale variable left in a shell overrode the current one")
     }
 }
