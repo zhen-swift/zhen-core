@@ -160,7 +160,7 @@ main-actor by default.
 This package moved to the root of its own repository on 2026-10-03. Its history here
 begins on 2026-09-26, when it was gathered into one package at `zhen/`; everything before
 that — when it was `zhen-core` and `zhen-cli` under `Packages/` — is in the archived
-monorepo, [`JCTec/zhen`](https://github.com/JCTec/zhen), tagged `monorepo-final`.
+monorepo this repository was split from.
 
 ## Licence
 

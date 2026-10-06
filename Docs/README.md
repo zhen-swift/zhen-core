@@ -18,7 +18,7 @@ prefix. A path they name outside `zhen/` is in one of these:
 |---|---|
 | [`zhen-app`](https://github.com/zhen-swift/zhen-app) | the macOS app, its design system and artboards, and their documents |
 | [`zhen-study`](https://github.com/zhen-swift/zhen-study) | the frozen measurement study behind the timing model |
-| [`InfinityCastle`](https://github.com/JCTec/zhen) | the archived monorepo: ledgers, run reports, agent briefs, and the package's history before it moved to `zhen/` on 2026-09-26 |
+| the archived monorepo | not published here: ledgers, run reports, agent briefs, and the package's history before it moved to `zhen/` on 2026-09-26 |
 
 ## Start here
 

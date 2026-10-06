@@ -12,7 +12,7 @@ and this is a bug — please say so.
 ## Install
 
 ```sh
-git clone https://github.com/JCTec/zhen.git && cd zhen
+git clone https://github.com/zhen-swift/zhen-core.git && cd zhen-core
 PREFIX=$HOME/.local ./Scripts/install.sh
 ```
 
