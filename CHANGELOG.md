@@ -11,12 +11,12 @@ follow the app's `CFBundleShortVersionString`.
 ## [0.6.0] — 2026-10-05 — the former name, retired
 
 ### Removed
-- **The netsanity migration, and `NETSANITY_HISTORY`.** Both existed to carry history
-  across the rename: a one-time copy of `~/Library/Application Support/netsanity/` into
-  `zhen/`, and a second name for the history override. Nothing was ever released under
-  either name, and the one installation that had netsanity history migrated on
-  2026-09-22. `ZHEN_HISTORY` is now the only override; a `NETSANITY_HISTORY` left in a
-  shell is ignored, and the scan uses the default store.
+- **The rename's compatibility layer.** It existed to carry history across the
+  project's rename: a one-time copy of the store under the former name into `zhen/`,
+  and the former name of the history override, still honoured. Nothing was ever
+  released under the former name, and the one installation that had history under it
+  migrated on 2026-09-22. `ZHEN_HISTORY` is now the only override; the former variable,
+  if left in a shell, is ignored and the scan uses the default store.
 
   **For anyone importing `ZhenCore`**, four public members are gone:
   `HistoryLocation.legacyOverrideVariable`, `.legacyDirectoryName`, `.legacyStore(…)`
