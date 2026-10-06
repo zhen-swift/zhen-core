@@ -117,9 +117,6 @@ struct Scan: AsyncParsableCommand {
 
         // Nowhere to write history is not a reason to refuse to scan. It is reported
         // once, on stderr so the artifact on stdout stays clean, and the scan runs.
-        // The command line shares the file with the app, so whichever runs first after
-        // the rename brings the old history across.
-        HistoryLocation.migrateLegacyStore(to: HistoryLocation.resolve())
         let historyURL = HistoryLocation.resolve()
         if historyURL == nil {
             Out.stderr(HistoryOptions.noStoreNotice)

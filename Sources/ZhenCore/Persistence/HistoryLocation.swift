@@ -41,31 +41,8 @@ public enum HistoryLocation {
     /// path and getting a different one is worse than having no override at all.
     public static let overrideVariable = "ZHEN_HISTORY"
 
-    /// The name this variable had before the project was renamed.
-    ///
-    /// Still honoured, and deliberately. `Study/harness/conditions.py` sets the former
-    /// name to point each measured run at a disposable store, and a harness that set a
-    /// variable nothing reads would not fail — it would write every run's history to the
-    /// shared default path instead, silently, and the only sign would be numbers that
-    /// did not reproduce. Accepting both names costs one dictionary lookup and removes
-    /// that entire failure.
-    ///
-    /// The new name wins when both are set, so a caller who has migrated is never
-    /// overridden by a stale variable left in a shell.
-    public static let legacyOverrideVariable = "NETSANITY_HISTORY"
-
     /// The directory under application support that holds the store.
     public static let directoryName = "zhen"
-
-    /// What that directory was called before the rename, for the migration.
-    ///
-    /// **This string is not subject to the rename and never will be.** It names history
-    /// that already exists on disk under the former name, so rewriting it to the current
-    /// name makes the migration look for the file it is trying to create. A project-wide
-    /// substitution rewrote both this and `legacyOverrideVariable` once; the migration
-    /// then silently did nothing and the only failing test was one that tripped over a
-    /// duplicate dictionary key.
-    public static let legacyDirectoryName = "netsanity"
 
     /// Resolves the store path, or nil when there is nowhere sensible to put it.
     ///
@@ -90,7 +67,6 @@ public enum HistoryLocation {
         )
     ) -> URL? {
         let override = environment[overrideVariable].flatMap { $0.isEmpty ? nil : $0 }
-            ?? environment[legacyOverrideVariable].flatMap { $0.isEmpty ? nil : $0 }
         if let override {
             return URL(fileURLWithPath: (override as NSString).expandingTildeInPath)
         }
@@ -115,76 +91,6 @@ public enum HistoryLocation {
     private static func invokingUser(in environment: [String: String]) -> String? {
         guard let user = environment["SUDO_USER"], !user.isEmpty, user != "root" else { return nil }
         return user
-    }
-
-    /// The store the previous name wrote to, if it is still there.
-    ///
-    /// Only meaningful for the default path. A caller who set the override variable
-    /// named a path explicitly and is not migrating from anything.
-    public static func legacyStore(
-        environment: [String: String] = ProcessInfo.processInfo.environment,
-        home: URL = URL(fileURLWithPath: NSHomeDirectory()),
-        support: URL? = try? FileManager.default.url(
-            for: .applicationSupportDirectory, in: .userDomainMask,
-            appropriateFor: nil, create: false
-        )
-    ) -> URL? {
-        guard environment[overrideVariable]?.isEmpty ?? true,
-              environment[legacyOverrideVariable]?.isEmpty ?? true,
-              let support
-        else { return nil }
-        var base = support
-        if let invoking = invokingUser(in: environment),
-           let owned = rehome(support, from: home, to: invoking) {
-            base = owned
-        }
-        return base.appendingPathComponent(legacyDirectoryName, isDirectory: true)
-            .appendingPathComponent("history.ndjson")
-    }
-
-    /// Brings history written under the former name across, once.
-    ///
-    /// ── Copy, never move ────────────────────────────────────────────────────────
-    ///
-    /// The original is left exactly where it is. A rename is not a reason to take
-    /// somebody's data out of the place they last saw it, and if anything here is wrong
-    /// the old file is still the file — which is the whole reason to prefer a copy over
-    /// a move when the operation is unattended and runs once.
-    ///
-    /// ── Only into an absence ────────────────────────────────────────────────────
-    ///
-    /// It runs only when the new path does not exist. A new store with even one scan in
-    /// it has history of its own, and overwriting that with an older file would lose the
-    /// very thing this function exists to preserve. There is no merge here on purpose:
-    /// folding two ledgers is the identity resolver's job and doing it during a
-    /// first-run migration would make a silent, unreviewable decision about identity.
-    ///
-    /// This project's stated position is that history outlives the app. A rename that
-    /// quietly orphaned it would contradict that on the one day a person would notice.
-    ///
-    /// - Returns: whether anything was copied.
-    @discardableResult
-    public static func migrateLegacyStore(
-        to destination: URL?,
-        from source: URL? = legacyStore(),
-        fileManager: FileManager = .default
-    ) -> Bool {
-        guard let destination, let source else { return false }
-        guard !fileManager.fileExists(atPath: destination.path) else { return false }
-        guard fileManager.fileExists(atPath: source.path) else { return false }
-        do {
-            try fileManager.createDirectory(
-                at: destination.deletingLastPathComponent(),
-                withIntermediateDirectories: true
-            )
-            try fileManager.copyItem(at: source, to: destination)
-            return true
-        } catch {
-            // A failed migration is not a failed launch. The scan still runs and still
-            // records; what is lost is the old history, which is still sitting in its
-            // original place for anyone who goes looking.
-            return false
-        }
     }
 
     /// Rebuilds a path that sits under one home directory to sit under another's.

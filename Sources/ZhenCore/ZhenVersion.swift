@@ -13,14 +13,14 @@
 // value.
 //
 // So it lives here. Both packages already depend on core, which makes this the only
-// place either of them can share. The derived files — the command line's `Info.plist`,
-// the app's generated `App/Info.plist`, `CITATION.cff` — are still checked by tests,
-// but they are now checked against *this*, not against each other.
+// place either of them can share. The one derived file left in this package — the
+// command line's `Info.plist` — is still checked by a test, against *this*. The helper's
+// `HelperBuild.version` is not, and is bumped by hand with it.
 public enum ZhenVersion {
     /// The current version, and the only declaration of it in the repository.
     ///
     /// Semantic versioning, and the changelog follows it. The floor for a bump is
     /// whether the artifact or the command surface changed in a way a person would
     /// notice — not whether the code moved.
-    public static let current = "0.5.0"
+    public static let current = "0.6.0"
 }

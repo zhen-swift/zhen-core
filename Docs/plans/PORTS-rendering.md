@@ -121,8 +121,8 @@ port columns makes that visible, so width detection comes first:
 
 Not a TTY means a pipe or a file, and a fixed 80 is the reproducible choice there.
 Anything else makes `zhen … > out.txt` produce different bytes depending on the window
-it was launched from, which is the same class of problem the study harness hit with
-`NETSANITY_HISTORY`.
+it was launched from, which is the same class of problem the study harness hit with its
+history-override variable.
 
 ## 6. Escape hatch
 
