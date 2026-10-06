@@ -503,21 +503,29 @@ struct SkippedDeepScanTests {
     /// arguing against.
     @Test("A deep scan skipped by a partial discovery is reported, not silent")
     func skippedDeepScanIsReported() async {
+        // The partial discovery is dictated, not provoked. This test used to run the real
+        // scanner against 10.10.20.0/30 with a 1 ms budget and rely on discovery not
+        // finishing — but the refusal fires only when discovery found at least one host,
+        // and in 1 ms the only host the real scanner can produce is one already in the
+        // kernel's neighbour cache. On the machine it was written on, 10.10.20.1 is the
+        // default gateway and always cached; on a CI runner nothing in that range is, so
+        // discovery found nobody, the stage correctly stayed quiet, and the test failed.
+        // It was measuring the network it ran on, not the pipeline.
+        let partial = FakeDiscovery(
+            hosts: [HostFacts(ip: IPv4Address("10.10.20.1")!)],
+            outcome: .deadlineExpired)
         let pipeline = ScanPipeline(
-            scanner: try! await PlatformScanner.make(concurrencyOverride: 1),
+            scanner: PlatformScanner(
+                interfaces: FakeInterfaces(), discovery: partial, ports: FakePorts(),
+                udpPorts: FakePorts(), ipv6Neighbors: NoIPv6Neighbors(),
+                naming: FakeNaming(),
+                descriptorLimit: 92_160, concurrency: 512, notices: []
+            ),
             renderer: SilentRenderer(),
             deep: true,
             ports: PortSpec([80]),
             history: nil)
-        // A budget of nothing: discovery cannot finish, so the deep stage is skipped by
-        // the guard rather than by choice.
-        let completed = await pipeline.run(
-            target: ScanTarget(network: IPv4Network("10.10.20.0/30")!,
-                               interface: NetworkInterface(
-                                   name: "lo0", address: IPv4Address("127.0.0.1")!,
-                                   network: IPv4Network("127.0.0.0/8")!,
-                                   hardwareAddress: nil)),
-            budget: .milliseconds(1))
+        let completed = await pipeline.run(target: target, budget: .seconds(5))
 
         let skipped = completed.report.degradations.first { $0.stage == .deepScan }
         #expect(skipped != nil,
