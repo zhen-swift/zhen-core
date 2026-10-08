@@ -8,6 +8,16 @@ follow the app's `CFBundleShortVersionString`.
 
 ## [Unreleased]
 
+### Added
+- **`Contrast`, for choosing a foreground that reads on a background at runtime.** WCAG 2
+  ratios, the three floors that apply to this project (3:1 non-text, 4.5:1 AA, 7:1 AAA),
+  and `Contrast.foreground(on:preferring:level:)`, which keeps the first candidate that
+  meets the floor and otherwise returns the best one marked as falling short. Colours are
+  `SRGBColor`, gamma-encoded components with no UI framework behind them, so the rule is
+  the same on Linux and is tested there. The tests reproduce the 100 pairs the app's
+  previous palette measured, against all three of the surfaces it drew text on. That
+  palette was derived by hand against one of them and was wrong on the other two.
+
 ## [0.6.0] — 2026-10-05 — the former name, retired
 
 ### Removed
