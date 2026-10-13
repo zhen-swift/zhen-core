@@ -411,8 +411,15 @@ public actor LogHistoryStore: HistoryStore {
                 continue
             }
             switch entry.payload {
+            // A line that decodes but names a key kind or an event kind this build does
+            // not know is kept verbatim too, and for the same reason. 0.6.0 skipped both,
+            // which is how a 0.6.0 build erases 0.7.0's port events: they decode as an
+            // event line and then were simply not there to be written back.
             case .device(let stored):
-                guard let key = stored.key.identifier else { continue }
+                guard let key = stored.key.identifier else {
+                    unreadable.append(Data(line))
+                    continue
+                }
                 records[key] = HistoryLedger.Record(
                     device: stored.device,
                     firstSeen: Timestamp(millisecondsSinceEpoch: stored.firstSeenMillis),
@@ -423,7 +430,10 @@ public actor LogHistoryStore: HistoryStore {
                     macHistory: stored.macHistory?.map(\.sighting)
                 )
             case .event(let stored):
-                guard let kind = DerivedEvent.Kind(rawValue: stored.kind) else { continue }
+                guard let kind = DerivedEvent.Kind(rawValue: stored.kind) else {
+                    unreadable.append(Data(line))
+                    continue
+                }
                 log.append(DerivedEvent(
                     id: stored.id, at: Timestamp(millisecondsSinceEpoch: stored.atMillis),
                     kind: kind, subject: stored.subject, detail: stored.detail,

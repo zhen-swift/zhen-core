@@ -8,6 +8,17 @@ follow the app's `CFBundleShortVersionString`.
 
 ## [Unreleased]
 
+### Fixed
+- **A merge is logged once.** A run that proved two records were one device logged the
+  `merged` event twice, same id — once by the join and again by the fold. Found by the
+  0.6.0 history fixture, which holds exactly that pair. Existing duplicates in a store are
+  left as they are: removing them would be rewriting history to tidy it.
+- **A line this build understands only in part is kept, not dropped.** An event whose kind
+  it does not know, or a device whose key kind it does not know, decoded as a line and was
+  then skipped — and erased at the next compaction. They are now kept verbatim, like a line
+  that does not decode at all. This is the fault that lets a 0.6.0 build erase 0.7.0's port
+  events; fixed here so 0.7.0 cannot do the same to whatever comes next.
+
 ### Added
 - **A port scan can be kept in history without being a run.**
   `HistoryStore.recordPorts(_:targeted:at:)` folds a `PortScanResult` into the devices

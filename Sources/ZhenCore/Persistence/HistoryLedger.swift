@@ -372,7 +372,11 @@ public struct HistoryLedger: Sendable {
         // an mDNS name and a rotated MAC is what links the record keyed by the old MAC
         // to the one keyed by the new — and that evidence only exists after the loop
         // above has unioned those candidates into the record it matched.
-        let joined = reconcile(at: at, runID: report.run.id)
+        //
+        // `join`, not `reconcile`: the joins are logged below with everything else this
+        // run derived. Calling `reconcile` here logged them twice — the same event, same
+        // id — which the history file 0.6.0 wrote still shows.
+        let joined = join(at: at, runID: report.run.id)
         events.append(contentsOf: joined)
 
         // Both sets are keyed by records that may no longer exist. A key absorbed into
@@ -614,6 +618,14 @@ public struct HistoryLedger: Sendable {
     /// - Returns: the events to emit, one per group joined rather than one per pair.
     @discardableResult
     public mutating func reconcile(at: Timestamp, runID: UUID) -> [DerivedEvent] {
+        let events = join(at: at, runID: runID)
+        log.append(contentsOf: events)
+        return events
+    }
+
+    /// The joins `reconcile` makes, without logging them, for a caller that logs them
+    /// itself — the fold, which logs everything a run derived at once.
+    private mutating func join(at: Timestamp, runID: UUID) -> [DerivedEvent] {
         var events: [DerivedEvent] = []
 
         // Repeated to a fixed point rather than a single pass. Merging A into B can put
@@ -651,8 +663,6 @@ public struct HistoryLedger: Sendable {
                 runID: runID
             ))
         }
-
-        log.append(contentsOf: events)
         return events
     }
 

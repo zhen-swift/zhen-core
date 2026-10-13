@@ -382,6 +382,25 @@ struct HistoryLedgerTests {
                 "a merged record was reported as a device that left")
     }
 
+    @Test("A merge proved by a run is logged once, not once by the join and again by the fold")
+    func mergeIsLoggedOnce() {
+        // Found by the 0.6.0 history fixture: the file 0.6.0 wrote holds the same merged
+        // event, same id, twice. `reconcile` logs what it joins, and `fold` then logged
+        // everything it derived — the join included — a second time.
+        let name = HostIdentifier.mdnsInstance("living-room")
+        let a = colliding(ip: "10.10.20.20", mac: "AA:BB:CC:00:00:01",
+                          ordinal: 1, firstSeen: day(0), sharing: name)
+        let b = colliding(ip: "10.10.20.21", mac: "AA:BB:CC:00:00:02",
+                          ordinal: 2, firstSeen: day(1), sharing: name)
+        var ledger = HistoryLedger(
+            records: [a.0: a.1, b.0: b.1], log: [], latestRun: report([], at: day(20)).run
+        )
+        let fold = ledger.fold(report([claimant(at: day(21))], at: day(21)))
+        #expect(fold.events.filter { $0.kind == .merged }.count == 1)
+        #expect(ledger.events().filter { $0.kind == .merged }.count == 1,
+                "the log holds the merge twice")
+    }
+
     @Test("Records that share only an address are left alone")
     func leasesDoNotJoin() {
         // The guard, at ledger level. Two devices that held one address at different
