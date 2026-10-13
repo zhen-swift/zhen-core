@@ -40,6 +40,7 @@
 .Op Fl -scan-type Ar type
 .Op Fl -yes
 .Op Fl -check
+.Op Fl -record
 .Op Fl -json
 .Op Fl -quiet
 .Op Fl -no-color
@@ -244,6 +245,16 @@ counts as not open, because a shell
 .Ic if
 cannot represent
 .Dq maybe .
+.It Fl -record
+Keep the results in history: the ports of each device history already holds,
+and an event for each port that opened or stopped being open.
+Never recorded as a scan, so nothing goes offline because it was not asked
+about, and a host history has never seen is skipped rather than added.
+Written where
+.Cm scan
+writes, so
+.Ev ZHEN_HISTORY
+moves it too.
 .It Fl -json
 Emit one port-scan report as JSON on standard output.
 .It Fl -quiet , Fl -no-color

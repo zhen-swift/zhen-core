@@ -92,6 +92,19 @@ struct Ports: AsyncParsableCommand {
     @Flag(name: .long, help: "Exit 0 if any requested port is open, 1 if none. Prints nothing.")
     var check = false
 
+    /// Keep the results in history.
+    ///
+    /// Ports and port events for the devices history already holds, and never a run.
+    /// `zhen ports` takes addresses and does not sweep, so what it saw is not a picture
+    /// of the network — recording it as a run would make it the latest one, and every
+    /// device it did not touch would read as gone. A host history has never seen is
+    /// skipped: a port answer is not a discovery, and `zhen scan` is how a host joins.
+    ///
+    /// A flag rather than the default, because this command has written nothing since
+    /// it was added and a script that runs it in a loop is entitled to keep that.
+    @Flag(name: .long, help: "Keep the results in history: ports and port events. Never recorded as a scan.")
+    var record = false
+
     @Flag(name: .long, help: "Emit one PortScanReport as JSON on stdout.")
     var json = false
 
@@ -132,6 +145,10 @@ struct Ports: AsyncParsableCommand {
             Out.stderr(size.announcement(hosts: addresses.count, ports: spec.probeCount) + "\n")
         }
         let renderer = PortsRenderer(json: json, quiet: quiet, color: colorOnStdout)
+        // Said before the scan, as `zhen scan` says it: nowhere to write is not a reason
+        // to refuse to probe, and finding out afterwards would be finding out too late.
+        let history = recordingStore(at: HistoryLocation.resolve())
+        if record, history == nil { Out.stderr(HistoryOptions.noStoreNotice) }
 
         let work = Task { () -> PortScanResult in
             let deadline = Deadline(after: budget)
@@ -170,7 +187,32 @@ struct Ports: AsyncParsableCommand {
         defer { signals.stop() }
 
         let result = await work.value
-        if signals.wasInterrupted { return .interrupted }
+        return await conclude(
+            result, targets: addresses, spec: spec, renderer: renderer,
+            history: history, interrupted: signals.wasInterrupted
+        )
+    }
+
+    /// The store `--record` writes to, or nil when it was not asked for or there is
+    /// nowhere to keep one. Internal so the flag can be tested without a network.
+    func recordingStore(at url: URL?) -> LogHistoryStore? {
+        guard record, let url else { return nil }
+        return LogHistoryStore(url: url)
+    }
+
+    /// Everything after the probes: keep, then answer.
+    ///
+    /// Internal rather than private so what `--record` keeps can be tested without a
+    /// network, the line `parsedTargets` already draws.
+    func conclude(
+        _ result: PortScanResult, targets addresses: [IPAddress], spec: PortSpec,
+        renderer: PortsRenderer, history: (any HistoryStore)?, interrupted: Bool,
+        at: Timestamp = .now
+    ) async -> ExitStatus {
+        // First, and whether or not the scan was interrupted: an interrupted `zhen scan`
+        // commits what it found, and a port that answered before the ^C answered.
+        if let history { _ = await history.recordPorts(result, targeted: addresses, at: at) }
+        if interrupted { return .interrupted }
 
         // `--check` answers with the code and prints nothing at all, including the
         // degradations the renderer would otherwise put on stderr. A caller using this

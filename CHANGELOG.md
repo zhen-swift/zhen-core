@@ -27,6 +27,11 @@ follow the app's `CFBundleShortVersionString`.
   address rather than replaced, so a run without a port stage no longer forgets them.
 
   **Source-breaking** for an exhaustive `switch` over `DerivedEvent.Kind`.
+- **`zhen ports --record`.** Keeps what the scan found in history, through the call
+  above: ports and port events for devices history already holds, never a run. Off unless
+  asked for, because the command has written nothing since it was added. An interrupted
+  scan keeps what it had probed, as an interrupted `zhen scan` does. Written where `zhen
+  scan` writes, so `ZHEN_HISTORY` moves it too.
 - **`Contrast`, for choosing a foreground that reads on a background at runtime.** WCAG 2
   ratios, the three floors that apply to this project (3:1 non-text, 4.5:1 AA, 7:1 AAA),
   and `Contrast.foreground(on:preferring:level:)`, which keeps the first candidate that
