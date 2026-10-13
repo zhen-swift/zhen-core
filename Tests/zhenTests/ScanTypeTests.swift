@@ -62,7 +62,20 @@ struct ScanTypeArgumentTests {
     }
 }
 
-@Suite("Forcing a mechanism that is unavailable refuses rather than downgrades")
+/// Whether this platform has a scanning engine behind `PlatformScanner.make`.
+///
+/// A trait rather than `#if`: on Linux the suite below is reported as skipped, with the
+/// reason, instead of compiling to nothing. A skip nobody can see is how a platform
+/// quietly stops being tested.
+#if canImport(Darwin)
+nonisolated private let platformHasScanningEngine = true
+#else
+nonisolated private let platformHasScanningEngine = false
+#endif
+
+@Suite("Forcing a mechanism that is unavailable refuses rather than downgrades",
+       .enabled(if: platformHasScanningEngine,
+                "asks the real platform scanner, and this platform has no engine yet"))
 struct ScanTypeRefusalTests {
     /// **The property that makes the flag worth having.**
     ///

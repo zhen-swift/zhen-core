@@ -14,6 +14,16 @@ follow the app's `CFBundleShortVersionString`.
   it lives: Zhen, by zhen-swift, at `https://github.com/zhen-swift/zhen-core`. A
   `CITATION.cff` is new beside it, for anyone citing the tool in a paper or a report.
 
+### Fixed
+- **The Linux CI job is green, and its skips are visible.** It had been red since the split.
+  One test's `try!` on the platform scanner crashed the whole test process on Linux, so
+  every failure behind it went unreported. Two tests assumed a runner that is not root.
+  The `--scan-type` refusal suite needs a scanning engine Linux does not have yet; it is
+  now listed as skipped with that reason instead of failing. Two Linux-only races, both
+  in the tests rather than the tool: the signal test fired before libdispatch had armed its
+  source, and the cross-process lock test waited thirty seconds for a SIGTERM its child had
+  inherited blocked.
+
 ## [0.7.0] — 2026-10-12 — ports in history
 
 Ports reach history. A port scan can be kept without being a run, a port opening or

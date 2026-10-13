@@ -410,6 +410,14 @@ struct SignalTests {
         let fired = Counter()
         let handler = SignalHandler { fired.bump() }
         #expect(!handler.wasInterrupted)
+        // Armed first. Signalling the instant the handler exists lost the signal on Linux
+        // whenever other suites kept Dispatch busy — see `isArmed`. Sending it again
+        // instead is not an option: a second SIGINT is the path that exits the process.
+        let armedBy = ContinuousClock.now + .seconds(5)
+        while !handler.isArmed, ContinuousClock.now < armedBy {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        try #require(handler.isArmed, "the signal sources never finished installing")
         // `kill(getpid(), …)` rather than `raise(…)`: raise is thread-directed, and
         // the kqueue signal filter behind DispatchSourceSignal observes
         // process-directed signals. SIGINT is ignored before the source is installed,
@@ -563,8 +571,13 @@ struct HistoryLocationTests {
 
     @Test("Under sudo the file belongs to the user who typed it, not to root")
     func sudoWritesToTheInvokingUsersHome() throws {
+        // `nobody` rather than whoever runs the tests. That used to be `NSUserName()`,
+        // which is `root` in a CI container — and `SUDO_USER=root` is the case the test
+        // below proves is deliberately left alone, so this one failed for running as
+        // the wrong user. `nobody` is a real non-root account with a home on both
+        // macOS (`/var/empty`) and Linux (`/nonexistent`), whoever is running.
         let resolved = HistoryLocation.resolve(
-            environment: ["SUDO_USER": NSUserName()],
+            environment: ["SUDO_USER": "nobody"],
             home: Self.rootHome, support: Self.rootSupport
         )
         // The function is required to decline rather than guess if the invoking user's

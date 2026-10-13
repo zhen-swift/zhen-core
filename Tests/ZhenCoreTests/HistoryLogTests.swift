@@ -610,7 +610,13 @@ struct HistoryLogTests {
         // And it becomes available the moment that process is gone. The kernel releases
         // on close, which includes the holder dying, and that is why this design carries
         // no stale-lock detection and no recovery path to get wrong.
-        child.terminate()
+        //
+        // SIGKILL, not `terminate()`. On Linux, Foundation spawns the child with the
+        // spawning thread's signal mask, and a Swift concurrency thread blocks nearly
+        // every signal — so SIGTERM sat pending until perl's `sleep 30` ran out, and this
+        // test took thirty seconds to pass. A kill that cannot be blocked is also the
+        // holder dying in the strongest sense, which is the case the claim is about.
+        kill(child.processIdentifier, SIGKILL)
         child.waitUntilExit()
         #expect(flock(mine, LOCK_EX | LOCK_NB) == 0,
                 "the lock outlived the process that held it")
