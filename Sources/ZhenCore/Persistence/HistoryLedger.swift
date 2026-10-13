@@ -100,17 +100,75 @@ public struct HistoryLedger: Sendable {
         /// Insertion order, so a listing is stable across a reload that does not
         /// preserve dictionary order — which no store does.
         public var ordinal: Int
+        /// Every hardware address this device has presented, oldest first, each with
+        /// the span it was seen over and how it joined. See `MACSighting` for why this is
+        /// here and not on `Device`.
+        public var macHistory: [MACSighting]
 
         /// Creates a record. Each field is documented on the property it sets.
+        ///
+        /// - Parameter macHistory: nil for a record written before 0.7.0, which kept one
+        ///   MAC. Its history is seeded from that one, spanning the record's first-seen to
+        ///   the device's last-seen — the earliest and latest the ledger can say it was in
+        ///   use. A rotation before 0.7.0 was never written down and cannot be recovered;
+        ///   for the burned-in MAC most devices have, the seed is simply right.
         public init(
             device: Device, firstSeen: Timestamp, lastRunID: UUID,
-            identifiers: Set<HostIdentifier>, ordinal: Int
+            identifiers: Set<HostIdentifier>, ordinal: Int,
+            macHistory: [MACSighting]? = nil
         ) {
             self.device = device
             self.firstSeen = firstSeen
             self.lastRunID = lastRunID
             self.identifiers = identifiers
             self.ordinal = ordinal
+            self.macHistory = macHistory ?? device.mac.map {
+                [MACSighting(mac: $0, firstSeen: firstSeen, lastSeen: device.lastSeen, link: .original)]
+            } ?? []
+        }
+
+        /// Notes the hardware address an observation carried.
+        ///
+        /// An address already in the history widens its span — a device that rotates back
+        /// is one row, not two. A new one is appended, linked by the identifier the
+        /// observation was matched on, which is the thing that did not rotate.
+        mutating func observe(_ mac: MACAddress?, at: Timestamp, matchedBy kind: HostIdentifierKind) {
+            guard let mac else { return }
+            if let index = macHistory.firstIndex(where: { $0.mac == mac }) {
+                macHistory[index].firstSeen = min(macHistory[index].firstSeen, at)
+                macHistory[index].lastSeen = max(macHistory[index].lastSeen, at)
+            } else {
+                macHistory.append(MACSighting(
+                    mac: mac, firstSeen: at, lastSeen: at,
+                    link: macHistory.isEmpty ? .original : .rotation(by: kind)
+                ))
+            }
+        }
+
+        /// Takes in the addresses of a record being absorbed into this one.
+        ///
+        /// The absorbed record's own first address becomes a merge, by the identifier the
+        /// two shared; its rotations stay rotations. An address both records knew is one
+        /// row with the wider span, linked however it was linked first.
+        mutating func absorb(_ absorbed: [MACSighting], sharing kind: HostIdentifierKind) {
+            for var sighting in absorbed {
+                if case .original = sighting.link { sighting.link = .merge(by: kind) }
+                if let index = macHistory.firstIndex(where: { $0.mac == sighting.mac }) {
+                    if sighting.firstSeen < macHistory[index].firstSeen {
+                        macHistory[index].link = sighting.link
+                    }
+                    macHistory[index].firstSeen = min(macHistory[index].firstSeen, sighting.firstSeen)
+                    macHistory[index].lastSeen = max(macHistory[index].lastSeen, sighting.lastSeen)
+                } else {
+                    macHistory.append(sighting)
+                }
+            }
+            macHistory.sort { ($0.firstSeen, $0.mac.raw) < ($1.firstSeen, $1.mac.raw) }
+        }
+
+        /// The addresses this device presented before its current one, oldest first.
+        public var priorMACs: [MACSighting] {
+            macHistory.filter { $0.mac != device.mac }
         }
     }
 
@@ -159,7 +217,12 @@ public struct HistoryLedger: Sendable {
         let currentRun = latestRun?.id
         return records.values
             .sorted { $0.ordinal < $1.ordinal }
-            .map { StoredDevice(device: $0.device, isPresent: $0.lastRunID == currentRun) }
+            .map {
+                StoredDevice(
+                    device: $0.device, isPresent: $0.lastRunID == currentRun,
+                    macHistory: $0.macHistory
+                )
+            }
             .sorted { $0.device.primaryAddress < $1.device.primaryAddress }
     }
 
@@ -176,7 +239,7 @@ public struct HistoryLedger: Sendable {
         for host in facts {
             let candidates = HostIdentifier.candidates(for: host, in: network)
             if let match = resolve(candidates) {
-                result[host.ip] = records[match]?.firstSeen
+                result[host.ip] = records[match.record]?.firstSeen
             }
         }
         return result
@@ -245,7 +308,8 @@ public struct HistoryLedger: Sendable {
             let candidates = HostIdentifier.candidates(for: device, in: network)
             guard let key = candidates.first else { continue }
 
-            if let existing = resolve(candidates), var record = records[existing] {
+            if let match = resolve(candidates), var record = records[match.record] {
+                let existing = match.record
                 let wasPresent = record.lastRunID == latestRun?.id
                 let ports = Self.portChange(
                     from: record.device.ports, to: device.ports, holding: device.addresses
@@ -276,6 +340,7 @@ public struct HistoryLedger: Sendable {
                 var observed = device
                 observed.ports = ports.ports
                 record.device = observed
+                record.observe(device.mac, at: device.lastSeen, matchedBy: match.by.kind)
                 record.lastRunID = report.run.id
                 record.identifiers.formUnion(candidates)
                 records[existing] = record
@@ -284,7 +349,10 @@ public struct HistoryLedger: Sendable {
                 records[key] = Record(
                     device: device, firstSeen: device.firstSeen,
                     lastRunID: report.run.id, identifiers: Set(candidates),
-                    ordinal: nextOrdinal
+                    ordinal: nextOrdinal,
+                    macHistory: device.mac.map {
+                        [MACSighting(mac: $0, firstSeen: device.lastSeen, lastSeen: device.lastSeen, link: .original)]
+                    } ?? []
                 )
                 nextOrdinal += 1
                 seenNow.insert(key)
@@ -551,7 +619,7 @@ public struct HistoryLedger: Sendable {
         // Repeated to a fixed point rather than a single pass. Merging A into B can put
         // B in the same group as C — three records chained by two different shared keys
         // are one device, and a single pass would leave the third behind.
-        while let group = nextGroup() {
+        while let (shared, group) = nextGroup() {
             let ordered = group.sorted { lhs, rhs in
                 guard let left = records[lhs], let right = records[rhs] else { return lhs < rhs }
                 return (left.ordinal, lhs) < (right.ordinal, rhs)
@@ -565,6 +633,7 @@ public struct HistoryLedger: Sendable {
                 survivor.identifiers.formUnion(loser.identifiers)
                 survivor.identifiers.insert(key)
                 survivor.firstSeen = min(survivor.firstSeen, loser.firstSeen)
+                survivor.absorb(loser.macHistory, sharing: shared.kind)
                 // The most recent observation wins the device and the run it came from,
                 // so a merge never rolls a device's address or name backwards.
                 if loser.device.lastSeen > survivor.device.lastSeen {
@@ -615,8 +684,10 @@ public struct HistoryLedger: Sendable {
 
     /// The next set of record keys that share an identifier stronger than a lease.
     ///
-    /// Returns nil when nothing is left to join, which is what ends the loop above.
-    private func nextGroup() -> Set<HostIdentifier>? {
+    /// Returns nil when nothing is left to join, which is what ends the loop above. The
+    /// identifier comes back with the group because it is the reason they joined, and a
+    /// MAC history says why each address belongs to the device.
+    private func nextGroup() -> (shared: HostIdentifier, keys: Set<HostIdentifier>)? {
         var claimants: [HostIdentifier: Set<HostIdentifier>] = [:]
         for (key, record) in records {
             // The record's own key counts: a record keyed by an identifier another
@@ -630,8 +701,8 @@ public struct HistoryLedger: Sendable {
         // the first hit.
         return claimants
             .filter { $0.value.count > 1 }
-            .min { ($0.key, $0.value.count) < ($1.key, $1.value.count) }?
-            .value
+            .min { ($0.key, $0.value.count) < ($1.key, $1.value.count) }
+            .map { (shared: $0.key, keys: $0.value) }
     }
 
     /// Drops events older than the retention policy allows, and returns how many.
@@ -660,12 +731,17 @@ public struct HistoryLedger: Sendable {
     /// a missed merge is recoverable, since the next observation carrying a shared key
     /// joins the two records, and un-merging is not: the histories have already been
     /// written into each other and nothing records which half was whose.
-    private func resolve(_ candidates: [HostIdentifier]) -> HostIdentifier? {
+    ///
+    /// Returns the candidate that matched as well as the record, because which identifier
+    /// carried a device across a MAC rotation is the reason its history gives.
+    private func resolve(
+        _ candidates: [HostIdentifier]
+    ) -> (record: HostIdentifier, by: HostIdentifier)? {
         for candidate in candidates where candidate.kind != .ipLease {
-            if let match = match(candidate) { return match }
+            if let match = match(candidate) { return (match, candidate) }
         }
         for candidate in candidates where candidate.kind == .ipLease {
-            if let match = match(candidate) { return match }
+            if let match = match(candidate) { return (match, candidate) }
         }
         return nil
     }

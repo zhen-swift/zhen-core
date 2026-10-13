@@ -27,6 +27,18 @@ follow the app's `CFBundleShortVersionString`.
   address rather than replaced, so a run without a port stage no longer forgets them.
 
   **Source-breaking** for an exhaustive `switch` over `DerivedEvent.Kind`.
+- **A device's hardware addresses are kept, one row each.** The ledger has always
+  followed a device across a MAC rotation and kept only the newest address. Each record
+  now carries `macHistory`: every MAC it has presented, oldest first, with the span it was
+  seen over and how it joined — `original`, `rotation(by:)` the identifier that did not
+  rotate, or `merge(by:)` the identifier two records shared. On the ledger's `Record`
+  and on `StoredDevice`, not on `Device`: like presence, it is history rather than
+  observation. A record written before 0.7.0 is seeded from its one MAC, spanning the
+  record's first-seen to its last-seen; a rotation before 0.7.0 was never written down.
+
+  **Do not point a 0.6.0 build at a store 0.7.0 has written.** It reads the device lines
+  and ignores `mac_history`, reads the port events and drops them, and the first time it
+  rewrites the file both are gone. Nothing written by 0.7.0 can prevent that.
 - **`zhen ports --record`.** Keeps what the scan found in history, through the call
   above: ports and port events for devices history already holds, never a run. Off unless
   asked for, because the command has written nothing since it was added. An interrupted

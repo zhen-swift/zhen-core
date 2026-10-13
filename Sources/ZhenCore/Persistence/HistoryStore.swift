@@ -139,11 +139,15 @@ public struct StoredDevice: Sendable, Hashable {
     /// last thing observed about it rather than a liveness flag that would be stale the
     /// moment it was written.
     public var isPresent: Bool
+    /// Every hardware address the device has presented, oldest first, with the span each
+    /// was seen over. History, like `isPresent`, and for the same reason not on `Device`.
+    public var macHistory: [MACSighting]
 
     /// Creates a value from its fields.
-    public init(device: Device, isPresent: Bool) {
+    public init(device: Device, isPresent: Bool, macHistory: [MACSighting] = []) {
         self.device = device
         self.isPresent = isPresent
+        self.macHistory = macHistory
     }
 }
 
