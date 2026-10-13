@@ -22,9 +22,22 @@ nonisolated final class SignalHandler: @unchecked Sendable {
     private let queue = DispatchQueue(label: "com.jctec.zhen.signals")
     private let lock = NSLock()
     private var interrupted = false
+    private var registered = 0
 
     /// Whether a first interrupt has arrived.
     var wasInterrupted: Bool { lock.withLock { interrupted } }
+
+    /// Whether every source is installed and a signal sent now will be seen.
+    ///
+    /// Installation finishes after `init` returns, on Dispatch's own thread. On Linux,
+    /// libdispatch arms a signal source by replacing the disposition with its own
+    /// handler, so until then SIGINT is still `SIG_IGN` and the kernel discards it. A
+    /// person cannot press Ctrl-C inside that window; a test that signals itself the
+    /// instant the handler exists can, and lost the signal whenever the machine was busy.
+    var isArmed: Bool { lock.withLock { registered == Self.watched.count } }
+
+    /// The signals this handler takes over.
+    private static let watched = [SIGINT, SIGTERM]
 
     /// What each watched signal's disposition was before this handler changed it.
     ///
@@ -47,11 +60,15 @@ nonisolated final class SignalHandler: @unchecked Sendable {
     ///   signal exits immediately without running it again — at hour three of a watch,
     ///   a user who presses Ctrl-C twice wants out now, not a tidy shutdown.
     init(onFirst: @escaping @Sendable () -> Void) {
-        for number in [SIGINT, SIGTERM] {
+        for number in Self.watched {
             // Ignore the default disposition first, or the process dies before the
             // dispatch source ever sees anything.
             previous.updateValue(signal(number, SIG_IGN), forKey: number)
             let source = DispatchSource.makeSignalSource(signal: number, queue: queue)
+            source.setRegistrationHandler { [weak self] in
+                guard let self else { return }
+                self.lock.withLock { self.registered += 1 }
+            }
             source.setEventHandler { [weak self] in
                 guard let self else { return }
                 let alreadyInterrupted: Bool = self.lock.withLock {

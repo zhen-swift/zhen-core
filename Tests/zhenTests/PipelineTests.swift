@@ -543,19 +543,26 @@ struct SkippedDeepScanTests {
 
     @Test("A run that never asked for ports is not told they are missing")
     func withoutDeepThereIsNoComplaint() async {
+        // The same dictated partial discovery as the test above, so the one condition
+        // that would produce the complaint is present and `deep` is the only difference.
+        // This used to build the real platform scanner, which made it a Darwin-only test
+        // that measured nothing a fake cannot — and on Linux, where there is no engine,
+        // its `try!` took the whole test process down with it.
+        let partial = FakeDiscovery(
+            hosts: [HostFacts(ip: IPv4Address("10.10.20.1")!)],
+            outcome: .deadlineExpired)
         let pipeline = ScanPipeline(
-            scanner: try! await PlatformScanner.make(concurrencyOverride: 1),
+            scanner: PlatformScanner(
+                interfaces: FakeInterfaces(), discovery: partial, ports: FakePorts(),
+                udpPorts: FakePorts(), ipv6Neighbors: NoIPv6Neighbors(),
+                naming: FakeNaming(),
+                descriptorLimit: 92_160, concurrency: 512, notices: []
+            ),
             renderer: SilentRenderer(),
             deep: false,
             ports: PortSpec([80]),
             history: nil)
-        let completed = await pipeline.run(
-            target: ScanTarget(network: IPv4Network("10.10.20.0/30")!,
-                               interface: NetworkInterface(
-                                   name: "lo0", address: IPv4Address("127.0.0.1")!,
-                                   network: IPv4Network("127.0.0.0/8")!,
-                                   hardwareAddress: nil)),
-            budget: .milliseconds(1))
+        let completed = await pipeline.run(target: target, budget: .seconds(5))
         #expect(!completed.report.degradations.contains { $0.stage == .deepScan },
                 "a scan that did not ask for ports was told they were not scanned")
     }
