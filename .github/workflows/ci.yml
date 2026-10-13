@@ -19,14 +19,22 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Read-only, and nothing here needs more. The default token can write to the
+# repository, and a pull request from a fork runs this file.
+permissions:
+  contents: read
+
+# A newer push to a pull request makes the older run worthless. A push to main does not:
+# every commit there keeps its own result, so a red one can be found later.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   changes:
     name: What changed
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       tool: ${{ steps.filter.outputs.tool }}
     steps:
@@ -93,8 +101,9 @@ jobs:
     # Unfiltered on purpose: it is seconds long, and a change anywhere can stale a document.
     name: Docs — the claims resolve
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: check-docs
         run: ./Scripts/check-docs.sh
 
@@ -104,6 +113,9 @@ jobs:
     if: needs.changes.outputs.tool == 'true'
     runs-on: ubuntu-latest
     container: swift:6.2
+    # The whole suite runs in under a second; the build is the rest. A hang ends here
+    # rather than at GitHub's six hours.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
 
@@ -124,6 +136,10 @@ jobs:
       # the command line to building on Linux already. If it fails, the failure IS the
       # answer and belongs in DIRECTION.md's Linux item, not hidden behind a narrower
       # invocation.
+      #
+      # A CLI test that needs the real scanning engine is skipped by a trait rather than
+      # an `#if`, so the run lists it, with its reason, as skipped on Linux. The rest of
+      # the suite is portable and has to pass.
       - name: Run the portable tests
         run: swift test
 
@@ -132,6 +148,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.tool == 'true'
     runs-on: macos-26
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       - name: Show toolchain
@@ -148,6 +165,7 @@ jobs:
     needs: [changes, docs, tool-linux, tool-macos]
     if: always()
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - name: Report
         run: |
