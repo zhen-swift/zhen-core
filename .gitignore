@@ -1,0 +1,24 @@
+# ── Secrets ─────────────────────────────────────────────────────────────────
+# Nothing in this project needs credentials, but the guard stays, because the cost
+# of it being here and unnecessary is nothing and the cost of it being absent once
+# is permanent.
+.env
+*.pem
+*.p12
+
+# ── Swift and SwiftPM ───────────────────────────────────────────────────────
+.build/
+.swiftpm/
+*.doccarchive
+
+# Resolved dependency versions. This is a library: a consumer resolves its own graph,
+# and the one remote dependency, swift-argument-parser, is pinned by a `from:` range
+# that has never needed a lockfile to reproduce.
+Package.resolved
+
+# ── macOS ───────────────────────────────────────────────────────────────────
+.DS_Store
+
+# Captured route-socket and NBSTAT fixtures are committed deliberately — see
+# Tests/ZhenDarwinTests/Fixtures, and the header there explaining which are real
+# captures and which are constructed. Nothing else binary belongs in the tree.

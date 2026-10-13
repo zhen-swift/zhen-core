@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<root xmlns="urn:schemas-upnp-org:device-1-0">
+  <device>
+    <deviceType>urn:schemas-upnp-org:device:InternetGatewayDevice:1</deviceType>
+    <friendlyName>   </friendlyName>
+    <modelName>GW1000</modelName>
+  </device>
+</root>

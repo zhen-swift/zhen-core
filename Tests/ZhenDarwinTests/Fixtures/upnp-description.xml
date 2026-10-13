@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root xmlns="urn:schemas-upnp-org:device-1-0">
+  <specVersion><major>1</major><minor>0</minor></specVersion>
+  <device>
+    <deviceType>urn:schemas-upnp-org:device:MediaRenderer:1</deviceType>
+    <friendlyName>Sala &amp; Comedor TV</friendlyName>
+    <manufacturer>Roku, Inc.</manufacturer>
+    <modelName>Roku Streaming Stick 4K</modelName>
+    <UDN>uuid:roku:ecp:1GU00Z000001</UDN>
+    <deviceList>
+      <device>
+        <deviceType>urn:schemas-upnp-org:device:MediaServer:1</deviceType>
+        <friendlyName>Embedded Media Service</friendlyName>
+        <modelName>Embedded Renderer</modelName>
+      </device>
+    </deviceList>
+  </device>
+</root>

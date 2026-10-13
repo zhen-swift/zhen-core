@@ -1,0 +1,255 @@
+{
+  "_comment": [
+    "Real Bonjour strings, committed so the naming rules are tested against what the",
+    "network actually says rather than against what this code expects it to say.",
+    "",
+    "Provenance is recorded per entry. 'spec' entries are the strings recorded in",
+    "SPEC.md section 6, captured from the reference network during earlier work.",
+    "'captured' entries were read off 10.10.20.0/24 with `dns-sd -B` on 2026-09-03",
+    "while building this phase. 'constructed' entries are shapes the rules must handle",
+    "that no device on this network produces — they are labelled so nobody mistakes",
+    "one for evidence.",
+    "Entries marked 'constructed (unicode)' pin a crash rather than a naming rule: lowercased() does not preserve length for these scalars, and computing a range against a lowered copy then slicing the original trapped on them."
+  ],
+  "instance_names": [
+    {
+      "provenance": "spec",
+      "service_type": "_raop._tcp",
+      "raw": "5E0A1B2C3D4E@Mac Studio de Luis._raop._tcp.local.",
+      "clean": "Mac Studio de Luis",
+      "note": "Fullname form: a hardware-address prefix AND a service suffix, both cut."
+    },
+    {
+      "provenance": "captured",
+      "service_type": "_raop._tcp",
+      "raw": "5E0B1C2D3E4F@Sala de estar principal",
+      "clean": "Sala de estar principal",
+      "note": "Instance-label form, as a browse reply delivers it."
+    },
+    {
+      "provenance": "spec",
+      "service_type": "_sleep-proxy._udp",
+      "raw": "70-35-60-63.1 Sala de estar principal",
+      "clean": "Sala de estar principal",
+      "note": "The same device as the _companion-link entry below, named differently."
+    },
+    {
+      "provenance": "captured",
+      "service_type": "_companion-link._tcp",
+      "raw": "Sala de estar principal",
+      "clean": "Sala de estar principal",
+      "note": "Already clean. The rules must leave it alone."
+    },
+    {
+      "provenance": "captured",
+      "service_type": "_companion-link._tcp",
+      "raw": "Alex’s MacBook Pro",
+      "clean": "Alex’s MacBook Pro",
+      "note": "Non-ASCII apostrophe U+2019, which must survive intact through to the JSON."
+    },
+    {
+      "provenance": "spec",
+      "service_type": "_workstation._tcp",
+      "raw": "host [aa:bb:cc:dd:ee:ff]",
+      "clean": "host",
+      "note": "avahi appends the MAC so two hosts with one name do not collide."
+    },
+    {
+      "provenance": "constructed",
+      "service_type": "_workstation._tcp",
+      "raw": "Printer [lobby]",
+      "clean": "Printer [lobby]",
+      "note": "A bracketed suffix that is NOT a MAC must be kept. The rule parses, it does not pattern-match."
+    },
+    {
+      "provenance": "constructed",
+      "service_type": "_smb._tcp",
+      "raw": "luis@home fileshare",
+      "clean": "luis@home fileshare",
+      "note": "An at-sign in an ordinary name. A loose 'everything before the @' rule would truncate this."
+    },
+    {
+      "provenance": "constructed",
+      "service_type": "_sleep-proxy._udp",
+      "raw": "70-35-60-63.1 ",
+      "clean": null,
+      "note": "A prefix and nothing else is not a name. Must be rejected, not returned empty."
+    },
+    {
+      "provenance": "constructed (unicode)",
+      "service_type": "_smb._tcp",
+      "raw": "İstanbul Ofis._smb._tcp.local.",
+      "clean": "İstanbul Ofis",
+      "note": "U+0130 LATIN CAPITAL I WITH DOT ABOVE lowercases to TWO scalars. A range from a lowered copy indexes past the end of the original and traps."
+    },
+    {
+      "provenance": "constructed (unicode)",
+      "service_type": "_airplay._tcp",
+      "raw": "K Studio._airplay._tcp.local.",
+      "clean": "K Studio",
+      "note": "U+212A KELVIN SIGN lowercases to 'k', which encodes shorter. Same defect, opposite direction."
+    },
+    {
+      "provenance": "constructed (unicode)",
+      "service_type": "_workstation._tcp",
+      "raw": "ẞ-Server._workstation._tcp.local.",
+      "clean": "ẞ-Server",
+      "note": "U+1E9E LATIN CAPITAL SHARP S lowercases to U+00DF."
+    },
+    {
+      "provenance": "constructed (unicode)",
+      "service_type": "_device-info._tcp",
+      "raw": "Ångström Lab._device-info._tcp.local.",
+      "clean": "Ångström Lab",
+      "note": "Precomposed A-ring, plus a non-ASCII name that must survive intact."
+    },
+    {
+      "provenance": "constructed (unicode)",
+      "service_type": "_smb._tcp",
+      "raw": "İİİ",
+      "clean": "İİİ",
+      "note": "No suffix at all, so the rule must return the name untouched rather than mis-slicing it."
+    }
+  ],
+  "txt_models": [
+    {
+      "provenance": "spec",
+      "service_type": "_raop._tcp",
+      "txt": {
+        "md": "0,1,2",
+        "am": "AppleTV5,3",
+        "vn": "65537",
+        "tp": "UDP"
+      },
+      "model": "AppleTV5,3",
+      "note": "THE TRAP. `md` on _raop is the supported-metadata list, not a model. Reading it fills the report with \"0,1,2\"."
+    },
+    {
+      "provenance": "constructed",
+      "service_type": "_raop._tcp",
+      "txt": {
+        "md": "0,1,2"
+      },
+      "model": null,
+      "note": "With `md` alone there is no model at all, and the honest answer is nothing."
+    },
+    {
+      "provenance": "spec",
+      "service_type": "_device-info._tcp",
+      "txt": {
+        "model": "Mac16,9",
+        "osxvers": "26"
+      },
+      "model": "Mac16,9"
+    },
+    {
+      "provenance": "constructed",
+      "service_type": "_companion-link._tcp",
+      "txt": {
+        "rpMd": "AppleTV5,3",
+        "rpVr": "550.13"
+      },
+      "model": "AppleTV5,3"
+    },
+    {
+      "provenance": "constructed",
+      "service_type": "_ipp._tcp",
+      "txt": {
+        "ty": "HP LaserJet MFP M28-M31",
+        "rp": "ipp/print"
+      },
+      "model": "HP LaserJet MFP M28-M31"
+    },
+    {
+      "provenance": "constructed",
+      "service_type": "_esphomelib._tcp",
+      "txt": {
+        "device": "esp32",
+        "version": "2024.6.4"
+      },
+      "model": "esp32"
+    },
+    {
+      "provenance": "constructed",
+      "service_type": "_airplay._tcp",
+      "txt": {
+        "am": "",
+        "model": "AppleTV5,3"
+      },
+      "model": "AppleTV5,3",
+      "note": "First NON-EMPTY wins. An empty `am` must not shadow a later key."
+    },
+    {
+      "provenance": "constructed",
+      "service_type": "_raop._tcp",
+      "txt": {
+        "MD": "0,1,2",
+        "AM": "AppleTV5,3"
+      },
+      "model": "AppleTV5,3",
+      "note": "Publishers are inconsistent about case. `MD` must be forbidden as firmly as `md`."
+    },
+    {
+      "provenance": "constructed",
+      "service_type": "_googlecast._tcp",
+      "txt": {
+        "md": "Chromecast Ultra",
+        "fn": "Sala TV",
+        "id": "0a5e1f2b3c4d5e6f"
+      },
+      "model": "Chromecast Ultra",
+      "note": "md IS the model here. Forbidding it globally to dodge the _raop trap silently discarded the real model on every Chromecast, Nest and Android TV."
+    },
+    {
+      "provenance": "constructed",
+      "service_type": "_googlecast._tcp",
+      "txt": {
+        "MD": "Google Nest Mini"
+      },
+      "model": "Google Nest Mini",
+      "note": "Case-insensitively, and still permitted: the exclusion is scoped to a service type, not to a spelling."
+    },
+    {
+      "provenance": "constructed",
+      "service_type": "_androidtvremote2._tcp",
+      "txt": {
+        "md": "Chromecast HD"
+      },
+      "model": "Chromecast HD",
+      "note": "Any type that is not _raop reads md normally."
+    },
+    {
+      "provenance": "spec",
+      "service_type": "_raop._tcp",
+      "txt": {
+        "md": "0,1,2",
+        "vn": "65537"
+      },
+      "model": null,
+      "note": "And on _raop it is still refused, with nothing to fall back to."
+    }
+  ],
+  "name_choice": [
+    {
+      "provenance": "constructed",
+      "service_type": "_googlecast._tcp",
+      "instance": "Chromecast-0a5e1f2b3c4d5e6f",
+      "txt": {
+        "fn": "Sala TV",
+        "md": "Chromecast Ultra"
+      },
+      "name": "Sala TV",
+      "note": "The only field on the whole list a person typed. The instance name is a factory string."
+    },
+    {
+      "provenance": "constructed",
+      "service_type": "_googlecast._tcp",
+      "instance": "Chromecast-0a5e1f2b3c4d5e6f",
+      "txt": {
+        "md": "Chromecast Ultra"
+      },
+      "name": "Chromecast-0a5e1f2b3c4d5e6f",
+      "note": "With no `fn`, the instance name is all there is and is better than nothing."
+    }
+  ]
+}
