@@ -1,0 +1,12 @@
+version: 2
+updates:
+  # One dependency in the whole package, from Apple, Apache 2.0. Keeping it that way is a
+  # design goal, not an accident — see CONTRIBUTING.
+  - package-ecosystem: swift
+    directory: "/"
+    schedule:
+      interval: monthly
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly

@@ -1,0 +1,38 @@
+# M-SEARCH responses, one per block, blocks separated by a line of "---".
+#
+# Shapes taken from the UPnP Device Architecture 2.0 specification and from what real
+# devices put on the wire; NOT captured from 10.10.20.0/24, which has no UPnP responder
+# at all. They are here to exercise the parser's tolerance, which is the part that
+# actually breaks: header case, header order, LF versus CRLF, and unsolicited NOTIFY.
+---
+HTTP/1.1 200 OK
+CACHE-CONTROL: max-age=1800
+DATE: Wed, 03 Sep 2026 19:00:00 GMT
+EXT:
+LOCATION: http://10.10.20.14:8060/dial/dd.xml
+SERVER: Roku/12.0.0 UPnP/1.0 Roku/12.0.0
+ST: upnp:rootdevice
+USN: uuid:roku:ecp:1GU48T017973::upnp:rootdevice
+---
+HTTP/1.1 200 OK
+Cache-Control: max-age=100
+Location: http://10.10.20.31:80/description.xml
+Server: Linux/4.4 UPnP/1.0 IpBridge/1.65.0
+St: upnp:rootdevice
+Usn: uuid:2f402f80-da50-11e1-9b23-001788102201::upnp:rootdevice
+---
+NOTIFY * HTTP/1.1
+HOST: 239.255.255.250:1900
+CACHE-CONTROL: max-age=1800
+LOCATION: http://10.10.20.44:5000/rootDesc.xml
+NT: urn:schemas-upnp-org:device:MediaServer:1
+NTS: ssdp:alive
+SERVER: Synology/DSM/7.2 UPnP/1.0 DLNADOC/1.50
+---
+HTTP/1.1 200 OK
+ST: urn:schemas-upnp-org:device:InternetGatewayDevice:1
+SERVER: TP-LINK/1.0 UPnP/1.0 MiniUPnPd/2.1
+EXT:
+---
+HTTP/1.1 404 Not Found
+Server: nothing/1.0
