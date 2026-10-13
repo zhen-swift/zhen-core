@@ -78,6 +78,27 @@ public struct DerivedEvent: Identifiable, Sendable, Hashable {
         /// no case for it. The design system has had a label, a symbol and a filter
         /// category for it the whole time too. This is the case that was missing.
         case merged
+        /// A port that was not open answered as open.
+        ///
+        /// The same bug `merged` was, recurring in the same enum: the app's Activity screen
+        /// has had a Ports segment since the design system was written, and with no case
+        /// here it could only ever say there was nothing to show.
+        ///
+        /// **Only transitions involving `open` are events**, in both directions. `PortState`
+        /// has four values so that a scan RESULT can be honest about what it knows; an event
+        /// log is for what a person would act on, and "a port the firewall was already
+        /// hiding is hidden differently" — `filtered` becoming `open_filtered` — is not
+        /// that. A port seen for the first time is not a transition either: there is no
+        /// earlier state for it to have changed from, which is the same reason a first run
+        /// produces no `appeared`.
+        case portOpened
+        /// A port that was open answered as anything else.
+        ///
+        /// Named for the direction rather than for the state it landed in: open becoming
+        /// `filtered` is a closing as far as a person is concerned, and the detail says
+        /// which state it is now. A port the newest scan did not ask about is NOT closed —
+        /// it was not asked about — so this is never derived from an absence.
+        case portClosed
     }
 
     /// Stable identity.
@@ -118,11 +139,15 @@ public struct StoredDevice: Sendable, Hashable {
     /// last thing observed about it rather than a liveness flag that would be stale the
     /// moment it was written.
     public var isPresent: Bool
+    /// Every hardware address the device has presented, oldest first, with the span each
+    /// was seen over. History, like `isPresent`, and for the same reason not on `Device`.
+    public var macHistory: [MACSighting]
 
     /// Creates a value from its fields.
-    public init(device: Device, isPresent: Bool) {
+    public init(device: Device, isPresent: Bool, macHistory: [MACSighting] = []) {
         self.device = device
         self.isPresent = isPresent
+        self.macHistory = macHistory
     }
 }
 
@@ -134,6 +159,33 @@ public struct StoredDevice: Sendable, Hashable {
 public protocol HistoryStore: Sendable {
     /// Folds a finished run into history and returns what changed.
     func record(_ report: ScanReport) async -> [DerivedEvent]
+
+    /// Folds a port scan into history and returns what changed.
+    ///
+    /// **A port scan is not a run**, and this is what lets one be kept without pretending
+    /// to be one. `zhen ports` has always taken addresses, never run discovery and written
+    /// nothing; the app, wanting the results kept, routed its port probe through a run
+    /// instead — and a run of one address, recorded, became the latest run and reported
+    /// every other device as gone. So the app threw its port results away rather than
+    /// record them, and they were lost at relaunch.
+    ///
+    /// This updates the ports of the devices the scan reached and derives port events. It
+    /// touches presence not at all: no `appeared`, no `disappeared`, and the latest run is
+    /// still the latest run. A host that answered but that no record holds is skipped
+    /// rather than invented, because a port answer is not a discovery.
+    ///
+    /// A requirement, not a defaulted extension, for the reason `setRetention` is one: a
+    /// default would let a conformance inherit a method that silently drops what it is
+    /// given, which is the defect this exists to remove.
+    ///
+    /// - Parameters:
+    ///   - result: what the port engines observed.
+    ///   - targets: the addresses the scan was asked about. A host in `result` outside
+    ///     them is not folded.
+    ///   - at: when the scan finished. The events carry it; nothing else does.
+    func recordPorts(
+        _ result: PortScanResult, targeted targets: [IPAddress], at: Timestamp
+    ) async -> [DerivedEvent]
 
     /// Sets how long the event log is kept, from now on.
     ///

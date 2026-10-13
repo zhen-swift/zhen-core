@@ -8,7 +8,7 @@
 .\" Checked against `Zhen.configuration.subcommands` and each command's `help` output,
 .\" not against memory: every option the parser accepts is here, and nothing is here
 .\" that it does not accept. There is no `--udp` flag; UDP is `U:` in a port spec.
-.Dd September 27, 2026
+.Dd October 12, 2026
 .Dt ZHEN 1
 .Os
 .Sh NAME
@@ -40,6 +40,7 @@
 .Op Fl -scan-type Ar type
 .Op Fl -yes
 .Op Fl -check
+.Op Fl -record
 .Op Fl -json
 .Op Fl -quiet
 .Op Fl -no-color
@@ -244,6 +245,16 @@ counts as not open, because a shell
 .Ic if
 cannot represent
 .Dq maybe .
+.It Fl -record
+Keep the results in history: the ports of each device history already holds,
+and an event for each port that opened or stopped being open.
+Never recorded as a scan, so nothing goes offline because it was not asked
+about, and a host history has never seen is skipped rather than added.
+Written where
+.Cm scan
+writes, so
+.Ev ZHEN_HISTORY
+moves it too.
 .It Fl -json
 Emit one port-scan report as JSON on standard output.
 .It Fl -quiet , Fl -no-color

@@ -272,6 +272,29 @@ public actor LogHistoryStore: HistoryStore {
         }
     }
 
+    /// Folds a port scan in, under the same exclusive lock as a run.
+    ///
+    /// Written as the lines the file already has — the updated device lines and the event
+    /// lines — and never as a run line, because it is not a run and a run line is what
+    /// makes one the latest. `PortScanResult` is deliberately not given `Codable` to be
+    /// stored whole: this file is a record of devices and events, not an archive of what
+    /// the engines returned, and a second wire format would drift from the first.
+    public func recordPorts(
+        _ result: PortScanResult, targeted targets: [IPAddress], at: Timestamp
+    ) async -> [DerivedEvent] {
+        withLock(exclusive: true) {
+            reload()
+            let fold = ledger.foldPorts(result, targeted: targets, at: at)
+            if fold.prunedEvents > 0 || prunedOnLoad > 0 || reconciledOnLoad > 0 {
+                // A deletion cannot be appended; see `record`.
+                compact()
+            } else if fold.updatedRecords > 0 {
+                append(events: fold.events, run: nil)
+            }
+            return fold.events
+        }
+    }
+
     // ── The lock ────────────────────────────────────────────────────────────────
 
     /// Runs `body` with the store locked against every other holder of this file.
@@ -388,17 +411,29 @@ public actor LogHistoryStore: HistoryStore {
                 continue
             }
             switch entry.payload {
+            // A line that decodes but names a key kind or an event kind this build does
+            // not know is kept verbatim too, and for the same reason. 0.6.0 skipped both,
+            // which is how a 0.6.0 build erases 0.7.0's port events: they decode as an
+            // event line and then were simply not there to be written back.
             case .device(let stored):
-                guard let key = stored.key.identifier else { continue }
+                guard let key = stored.key.identifier else {
+                    unreadable.append(Data(line))
+                    continue
+                }
                 records[key] = HistoryLedger.Record(
                     device: stored.device,
                     firstSeen: Timestamp(millisecondsSinceEpoch: stored.firstSeenMillis),
                     lastRunID: stored.lastRunID,
                     identifiers: Set(stored.identifiers.compactMap(\.identifier)),
-                    ordinal: stored.ordinal
+                    ordinal: stored.ordinal,
+                    // Absent on a line written before 0.7.0; the record seeds it.
+                    macHistory: stored.macHistory?.map(\.sighting)
                 )
             case .event(let stored):
-                guard let kind = DerivedEvent.Kind(rawValue: stored.kind) else { continue }
+                guard let kind = DerivedEvent.Kind(rawValue: stored.kind) else {
+                    unreadable.append(Data(line))
+                    continue
+                }
                 log.append(DerivedEvent(
                     id: stored.id, at: Timestamp(millisecondsSinceEpoch: stored.atMillis),
                     kind: kind, subject: stored.subject, detail: stored.detail,
@@ -440,7 +475,10 @@ public actor LogHistoryStore: HistoryStore {
     /// set that actually changed is nearly the whole set anyway, and computing the
     /// difference precisely would buy a few lines at the cost of being able to reason
     /// about what is in the file.
-    private func append(events: [DerivedEvent], run: ScanRun) {
+    ///
+    /// `run` is nil for a port scan, which writes devices and events and no run line: a
+    /// run line is what `reload` takes the latest run from.
+    private func append(events: [DerivedEvent], run: ScanRun?) {
         var lines: [Line] = []
         for (key, record) in ledger.records.sorted(by: { $0.key < $1.key }) {
             lines.append(Line(payload: .device(StoredDeviceLine(
@@ -448,7 +486,8 @@ public actor LogHistoryStore: HistoryStore {
                 firstSeenMillis: record.firstSeen.millisecondsSinceEpoch,
                 lastRunID: record.lastRunID,
                 identifiers: record.identifiers.sorted().map(StoredKey.init),
-                ordinal: record.ordinal
+                ordinal: record.ordinal,
+                macHistory: record.macHistory.map(StoredMACSighting.init)
             ))))
         }
         lines += events.map {
@@ -457,7 +496,7 @@ public actor LogHistoryStore: HistoryStore {
                 subject: $0.subject, detail: $0.detail, runID: $0.runID
             )))
         }
-        lines.append(Line(payload: .run(run)))
+        if let run { lines.append(Line(payload: .run(run))) }
 
         guard let encoded = Self.encode(lines) else { return }
         if appendBytes(encoded) {
@@ -486,7 +525,8 @@ public actor LogHistoryStore: HistoryStore {
                 firstSeenMillis: record.firstSeen.millisecondsSinceEpoch,
                 lastRunID: record.lastRunID,
                 identifiers: record.identifiers.sorted().map(StoredKey.init),
-                ordinal: record.ordinal
+                ordinal: record.ordinal,
+                macHistory: record.macHistory.map(StoredMACSighting.init)
             ))))
         }
         lines += ledger.log.map {
@@ -616,6 +656,13 @@ extension LogHistoryStore {
         var lastRunID: UUID
         var identifiers: [StoredKey]
         var ordinal: Int
+        /// Added in 0.7.0, and optional so every line written before it still decodes.
+        ///
+        /// A build older than 0.7.0 reading this line ignores the key, and if it then
+        /// rewrites the file it writes the line without it — the history is lost and the
+        /// next 0.7.0 read seeds it again from the one MAC. That is a fault in the older
+        /// reader and nothing written here can prevent it; the changelog says so.
+        var macHistory: [StoredMACSighting]?
 
         enum CodingKeys: String, CodingKey {
             case key
@@ -624,6 +671,56 @@ extension LogHistoryStore {
             case lastRunID = "last_run_id"
             case identifiers
             case ordinal
+            case macHistory = "mac_history"
+        }
+    }
+
+    /// One `MACSighting`, as it appears on disk.
+    ///
+    /// The link is two plain strings rather than a nested enum, and both are read
+    /// leniently: a link or an identifier kind this build does not know reads as
+    /// `original`. Failing the decode instead would send the whole device line to the
+    /// unreadable pile — the device would vanish from every listing to protect the
+    /// reason one of its addresses joined it.
+    struct StoredMACSighting: Codable, Sendable {
+        var mac: MACAddress
+        var firstSeenMillis: Int64
+        var lastSeenMillis: Int64
+        var link: String
+        var by: String?
+
+        enum CodingKeys: String, CodingKey {
+            case mac
+            case firstSeenMillis = "first_seen_millis"
+            case lastSeenMillis = "last_seen_millis"
+            case link
+            case by
+        }
+
+        init(_ sighting: MACSighting) {
+            mac = sighting.mac
+            firstSeenMillis = sighting.firstSeen.millisecondsSinceEpoch
+            lastSeenMillis = sighting.lastSeen.millisecondsSinceEpoch
+            switch sighting.link {
+            case .original: link = "original"; by = nil
+            case .rotation(let kind): link = "rotation"; by = kind.rawValue
+            case .merge(let kind): link = "merge"; by = kind.rawValue
+            }
+        }
+
+        var sighting: MACSighting {
+            let kind = by.flatMap(HostIdentifierKind.init(rawValue:))
+            let resolved: MACSighting.Link = switch (link, kind) {
+            case ("rotation", let kind?): .rotation(by: kind)
+            case ("merge", let kind?): .merge(by: kind)
+            default: .original
+            }
+            return MACSighting(
+                mac: mac,
+                firstSeen: Timestamp(millisecondsSinceEpoch: firstSeenMillis),
+                lastSeen: Timestamp(millisecondsSinceEpoch: lastSeenMillis),
+                link: resolved
+            )
         }
     }
 

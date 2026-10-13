@@ -37,6 +37,15 @@ public enum ProbePermissionAdvice: Sendable, Hashable, CaseIterable {
     /// Apple platforms: the Local Network privacy grant, which cannot be queried and
     /// returns zero results rather than an error when denied.
     case appleLocalNetwork
+    /// Apple platforms, inside an app bundle: the same grant, without the sentence about
+    /// command-line builds.
+    ///
+    /// `appleLocalNetwork` ends by warning that a command-line build has no bundle of its
+    /// own, so the grant may be listed under the terminal. True for `zhen`, and wrong in an
+    /// app — which has a bundle, and is listed under its own name. The app was deleting
+    /// that sentence from this text at runtime, which is a consumer re-wording a finding;
+    /// the right fix is for the finding to be worded for where it is read.
+    case appleLocalNetworkInApp
     /// Linux: unprivileged ICMP datagram sockets are gated by a sysctl, and a user
     /// outside the permitted group range gets silence in much the same way.
     case linuxPingGroupRange
@@ -52,6 +61,12 @@ public enum ProbePermissionAdvice: Sendable, Hashable, CaseIterable {
             be checked directly — grant it under Privacy & Security › Local Network. A \
             command-line build has no bundle of its own, so the grant may be listed \
             under the terminal application rather than under this tool.
+            """
+        case .appleLocalNetworkInApp:
+            """
+            On macOS this is usually the Local Network privacy permission, which cannot \
+            be checked directly — grant it under Privacy & Security › Local Network, where \
+            this app is listed under its own name.
             """
         case .linuxPingGroupRange:
             """

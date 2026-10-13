@@ -100,17 +100,75 @@ public struct HistoryLedger: Sendable {
         /// Insertion order, so a listing is stable across a reload that does not
         /// preserve dictionary order — which no store does.
         public var ordinal: Int
+        /// Every hardware address this device has presented, oldest first, each with
+        /// the span it was seen over and how it joined. See `MACSighting` for why this is
+        /// here and not on `Device`.
+        public var macHistory: [MACSighting]
 
         /// Creates a record. Each field is documented on the property it sets.
+        ///
+        /// - Parameter macHistory: nil for a record written before 0.7.0, which kept one
+        ///   MAC. Its history is seeded from that one, spanning the record's first-seen to
+        ///   the device's last-seen — the earliest and latest the ledger can say it was in
+        ///   use. A rotation before 0.7.0 was never written down and cannot be recovered;
+        ///   for the burned-in MAC most devices have, the seed is simply right.
         public init(
             device: Device, firstSeen: Timestamp, lastRunID: UUID,
-            identifiers: Set<HostIdentifier>, ordinal: Int
+            identifiers: Set<HostIdentifier>, ordinal: Int,
+            macHistory: [MACSighting]? = nil
         ) {
             self.device = device
             self.firstSeen = firstSeen
             self.lastRunID = lastRunID
             self.identifiers = identifiers
             self.ordinal = ordinal
+            self.macHistory = macHistory ?? device.mac.map {
+                [MACSighting(mac: $0, firstSeen: firstSeen, lastSeen: device.lastSeen, link: .original)]
+            } ?? []
+        }
+
+        /// Notes the hardware address an observation carried.
+        ///
+        /// An address already in the history widens its span — a device that rotates back
+        /// is one row, not two. A new one is appended, linked by the identifier the
+        /// observation was matched on, which is the thing that did not rotate.
+        mutating func observe(_ mac: MACAddress?, at: Timestamp, matchedBy kind: HostIdentifierKind) {
+            guard let mac else { return }
+            if let index = macHistory.firstIndex(where: { $0.mac == mac }) {
+                macHistory[index].firstSeen = min(macHistory[index].firstSeen, at)
+                macHistory[index].lastSeen = max(macHistory[index].lastSeen, at)
+            } else {
+                macHistory.append(MACSighting(
+                    mac: mac, firstSeen: at, lastSeen: at,
+                    link: macHistory.isEmpty ? .original : .rotation(by: kind)
+                ))
+            }
+        }
+
+        /// Takes in the addresses of a record being absorbed into this one.
+        ///
+        /// The absorbed record's own first address becomes a merge, by the identifier the
+        /// two shared; its rotations stay rotations. An address both records knew is one
+        /// row with the wider span, linked however it was linked first.
+        mutating func absorb(_ absorbed: [MACSighting], sharing kind: HostIdentifierKind) {
+            for var sighting in absorbed {
+                if case .original = sighting.link { sighting.link = .merge(by: kind) }
+                if let index = macHistory.firstIndex(where: { $0.mac == sighting.mac }) {
+                    if sighting.firstSeen < macHistory[index].firstSeen {
+                        macHistory[index].link = sighting.link
+                    }
+                    macHistory[index].firstSeen = min(macHistory[index].firstSeen, sighting.firstSeen)
+                    macHistory[index].lastSeen = max(macHistory[index].lastSeen, sighting.lastSeen)
+                } else {
+                    macHistory.append(sighting)
+                }
+            }
+            macHistory.sort { ($0.firstSeen, $0.mac.raw) < ($1.firstSeen, $1.mac.raw) }
+        }
+
+        /// The addresses this device presented before its current one, oldest first.
+        public var priorMACs: [MACSighting] {
+            macHistory.filter { $0.mac != device.mac }
         }
     }
 
@@ -159,7 +217,12 @@ public struct HistoryLedger: Sendable {
         let currentRun = latestRun?.id
         return records.values
             .sorted { $0.ordinal < $1.ordinal }
-            .map { StoredDevice(device: $0.device, isPresent: $0.lastRunID == currentRun) }
+            .map {
+                StoredDevice(
+                    device: $0.device, isPresent: $0.lastRunID == currentRun,
+                    macHistory: $0.macHistory
+                )
+            }
             .sorted { $0.device.primaryAddress < $1.device.primaryAddress }
     }
 
@@ -176,7 +239,7 @@ public struct HistoryLedger: Sendable {
         for host in facts {
             let candidates = HostIdentifier.candidates(for: host, in: network)
             if let match = resolve(candidates) {
-                result[host.ip] = records[match]?.firstSeen
+                result[host.ip] = records[match.record]?.firstSeen
             }
         }
         return result
@@ -204,12 +267,22 @@ public struct HistoryLedger: Sendable {
         /// back on the next open and resurrect the duplicate. A store seeing a non-zero
         /// count here has to rewrite rather than append.
         public var mergedRecords: Int
+        /// How many records a port fold changed.
+        ///
+        /// A run always writes, because it moves the latest run. A port scan writes only
+        /// when it reached a device history holds, and this is how a store tells the
+        /// difference without diffing the ledger.
+        public var updatedRecords: Int
 
         /// Creates a value from its fields.
-        public init(events: [DerivedEvent], prunedEvents: Int, mergedRecords: Int = 0) {
+        public init(
+            events: [DerivedEvent], prunedEvents: Int, mergedRecords: Int = 0,
+            updatedRecords: Int = 0
+        ) {
             self.events = events
             self.prunedEvents = prunedEvents
             self.mergedRecords = mergedRecords
+            self.updatedRecords = updatedRecords
         }
     }
 
@@ -235,8 +308,12 @@ public struct HistoryLedger: Sendable {
             let candidates = HostIdentifier.candidates(for: device, in: network)
             guard let key = candidates.first else { continue }
 
-            if let existing = resolve(candidates), var record = records[existing] {
+            if let match = resolve(candidates), var record = records[match.record] {
+                let existing = match.record
                 let wasPresent = record.lastRunID == latestRun?.id
+                let ports = Self.portChange(
+                    from: record.device.ports, to: device.ports, holding: device.addresses
+                )
                 if record.device.primaryAddress != device.primaryAddress {
                     events.append(DerivedEvent(
                         at: at, kind: .ipChanged, subject: Self.display(device),
@@ -257,7 +334,13 @@ public struct HistoryLedger: Sendable {
                         detail: "answered again at \(device.primaryAddress)", runID: report.run.id
                     ))
                 }
-                record.device = device
+                events += ports.transitions.map {
+                    Self.portEvent($0, device: device, at: at, runID: report.run.id)
+                }
+                var observed = device
+                observed.ports = ports.ports
+                record.device = observed
+                record.observe(device.mac, at: device.lastSeen, matchedBy: match.by.kind)
                 record.lastRunID = report.run.id
                 record.identifiers.formUnion(candidates)
                 records[existing] = record
@@ -266,7 +349,10 @@ public struct HistoryLedger: Sendable {
                 records[key] = Record(
                     device: device, firstSeen: device.firstSeen,
                     lastRunID: report.run.id, identifiers: Set(candidates),
-                    ordinal: nextOrdinal
+                    ordinal: nextOrdinal,
+                    macHistory: device.mac.map {
+                        [MACSighting(mac: $0, firstSeen: device.lastSeen, lastSeen: device.lastSeen, link: .original)]
+                    } ?? []
                 )
                 nextOrdinal += 1
                 seenNow.insert(key)
@@ -286,7 +372,11 @@ public struct HistoryLedger: Sendable {
         // an mDNS name and a rotated MAC is what links the record keyed by the old MAC
         // to the one keyed by the new — and that evidence only exists after the loop
         // above has unioned those candidates into the record it matched.
-        let joined = reconcile(at: at, runID: report.run.id)
+        //
+        // `join`, not `reconcile`: the joins are logged below with everything else this
+        // run derived. Calling `reconcile` here logged them twice — the same event, same
+        // id — which the history file 0.6.0 wrote still shows.
+        let joined = join(at: at, runID: report.run.id)
         events.append(contentsOf: joined)
 
         // Both sets are keyed by records that may no longer exist. A key absorbed into
@@ -315,6 +405,176 @@ public struct HistoryLedger: Sendable {
             prunedEvents: pruneEvents(asOf: at),
             mergedRecords: joined.count
         )
+    }
+
+    // ── Ports ────────────────────────────────────────────────────────────────────
+
+    /// Folds a port scan in and reports everything a store has to write down.
+    ///
+    /// ── Why this is not `fold` with a smaller network ───────────────────────────
+    ///
+    /// Because a port scan is not a run. `fold` takes the run it is given as the latest,
+    /// and presence is "seen by the latest run", so a run of one address folded there
+    /// marks everything else on the network as gone and derives a `disappeared` for each
+    /// of them. That is what the app ran into, and why it threw its port results away.
+    /// Teaching presence to be scope-aware was considered and declined: a port scan was
+    /// already not a run in the command line — `zhen ports` writes nothing — and what was
+    /// missing was a way to keep one, not a new meaning for presence.
+    ///
+    /// So this changes ports, the fingerprint the port probe elicited, and nothing else:
+    /// not `lastRunID`, not `latestRun`, not `lastSeen`, not presence. A host that answered
+    /// but that no record holds is skipped, because a port answer is not a discovery.
+    ///
+    /// ── Which record an address belongs to ──────────────────────────────────────
+    ///
+    /// The one the latest run saw there. An absent record's address is not trusted with
+    /// what answers at it now: a lease moves, and the thing answering on 22 at a phone's
+    /// old address is somebody else's laptop. Without a hardware address in a port answer
+    /// there is no way to tell, so the absent record is left alone rather than given ports
+    /// that may not be its own. The app guarded the same case with a MAC comparison; core
+    /// has no MAC to compare and so refuses the match instead.
+    ///
+    /// - Parameters:
+    ///   - result: what the port engines observed, by host.
+    ///   - targets: the addresses the scan was asked about. A host outside them is not
+    ///     folded, whatever the engine handed back.
+    ///   - at: when the scan finished, stamped on the events.
+    /// - Returns: the events, and a count of records changed so a store knows whether
+    ///   there is anything to write.
+    @discardableResult
+    public mutating func foldPorts(
+        _ result: PortScanResult, targeted targets: [IPAddress], at: Timestamp
+    ) -> Fold {
+        let asked = Set(targets)
+        // The events need a run id and there is no run. A fresh one names this scan, and
+        // matches no `ScanRun` on purpose: a reader looking for "the run that did this"
+        // should find that there was none.
+        let scanID = UUID()
+        var events: [DerivedEvent] = []
+        var updated = 0
+
+        for (address, observations) in result.ports.sorted(by: { $0.key < $1.key })
+        where asked.contains(address) {
+            guard let key = presentHolder(of: address), var record = records[key] else { continue }
+            // An engine leaves `address` nil because it knows its target; history does not.
+            let stamped = observations.map { observation in
+                var stamped = observation
+                if stamped.address == nil { stamped.address = address }
+                return stamped
+            }
+            let change = Self.portChange(
+                from: record.device.ports, to: stamped, holding: record.device.addresses
+            )
+            record.device.ports = change.ports
+            if let v4 = address.v4, let fingerprint = result.fingerprints[v4] {
+                record.device.osFingerprint = fingerprint
+            }
+            records[key] = record
+            updated += 1
+            events += change.transitions.map {
+                Self.portEvent($0, device: record.device, at: at, runID: scanID)
+            }
+        }
+
+        log.append(contentsOf: events)
+        return Fold(events: events, prunedEvents: pruneEvents(asOf: at), updatedRecords: updated)
+    }
+
+    /// The record the latest run saw at this address, or nil.
+    private func presentHolder(of address: IPAddress) -> HostIdentifier? {
+        guard let current = latestRun?.id else { return nil }
+        return records
+            .filter { $0.value.lastRunID == current && $0.value.device.addresses.contains(address) }
+            .min { ($0.value.ordinal, $0.key) < ($1.value.ordinal, $1.key) }?
+            .key
+    }
+
+    /// One port's change of state: the observation history had, and the one that replaced it.
+    struct PortTransition: Sendable, Hashable {
+        var before: PortObservation
+        var after: PortObservation
+    }
+
+    /// What a device's ports become when new observations arrive, and which of the
+    /// changes are events.
+    ///
+    /// ── A merge, not a replacement ──────────────────────────────────────────────
+    ///
+    /// An observation replaces the one for the same port, protocol and address. A port
+    /// the new observations do not mention keeps its last known state, because it was
+    /// not asked about — and a port that was not asked about has not closed. Replacing
+    /// the list wholesale was what `fold` did before ports were events, and it was
+    /// harmless then; with events it would make every run without a port stage forget
+    /// the ports, and the next run with one report them all as opening.
+    ///
+    /// The exception is an address the device no longer holds. A port observed at an
+    /// address the device has left is a fact about that address, not about the device,
+    /// so it is dropped — silently, since leaving an address is already the `ipChanged`.
+    ///
+    /// ── Which changes are events ────────────────────────────────────────────────
+    ///
+    /// Only those involving `open`, and only between two observations. See
+    /// `DerivedEvent.Kind.portOpened` for why the other twelve pairs are not events and
+    /// why a first observation is not one either.
+    static func portChange(
+        from stored: [PortObservation], to incoming: [PortObservation],
+        holding addresses: Set<IPAddress>
+    ) -> (ports: [PortObservation], transitions: [PortTransition]) {
+        struct Key: Hashable {
+            var port: UInt16
+            var proto: TransportProtocol
+            var address: IPAddress?
+            init(_ observation: PortObservation) {
+                port = observation.port
+                proto = observation.proto
+                address = observation.address
+            }
+        }
+        var merged: [Key: PortObservation] = [:]
+        // A stored port with no address predates schema 3 and is kept: it cannot be
+        // shown to belong to an address the device has left.
+        for observation in stored where observation.address.map(addresses.contains) ?? true {
+            merged[Key(observation)] = observation
+        }
+        var transitions: [PortTransition] = []
+        for observation in incoming {
+            let key = Key(observation)
+            if let before = merged[key], (before.state == .open) != (observation.state == .open) {
+                transitions.append(PortTransition(before: before, after: observation))
+            }
+            merged[key] = observation
+        }
+        return (
+            merged.values.sorted(by: PortObservation.canonicalOrder),
+            transitions.sorted { PortObservation.canonicalOrder($0.after, $1.after) }
+        )
+    }
+
+    /// "22/tcp open at 10.10.20.5 · was filtered" — the port, what it is now, where, and
+    /// what it was, in the shape the other events' sentences already have.
+    private static func portEvent(
+        _ transition: PortTransition, device: Device, at: Timestamp, runID: UUID
+    ) -> DerivedEvent {
+        let after = transition.after
+        let place = after.address.map { " at \($0)" } ?? ""
+        return DerivedEvent(
+            at: at, kind: after.state == .open ? .portOpened : .portClosed,
+            subject: display(device),
+            detail: "\(after.port)/\(after.proto.rawValue) \(spoken(after.state))\(place)"
+                + " · was \(spoken(transition.before.state))",
+            runID: runID
+        )
+    }
+
+    /// A port state as a sentence says it. `open_filtered` is the one whose raw value is
+    /// not a phrase.
+    private static func spoken(_ state: PortState) -> String {
+        switch state {
+        case .open: "open"
+        case .closed: "closed"
+        case .filtered: "filtered"
+        case .openFiltered: "open or filtered"
+        }
     }
 
     // ── Reconciliation ───────────────────────────────────────────────────────────
@@ -358,12 +618,20 @@ public struct HistoryLedger: Sendable {
     /// - Returns: the events to emit, one per group joined rather than one per pair.
     @discardableResult
     public mutating func reconcile(at: Timestamp, runID: UUID) -> [DerivedEvent] {
+        let events = join(at: at, runID: runID)
+        log.append(contentsOf: events)
+        return events
+    }
+
+    /// The joins `reconcile` makes, without logging them, for a caller that logs them
+    /// itself — the fold, which logs everything a run derived at once.
+    private mutating func join(at: Timestamp, runID: UUID) -> [DerivedEvent] {
         var events: [DerivedEvent] = []
 
         // Repeated to a fixed point rather than a single pass. Merging A into B can put
         // B in the same group as C — three records chained by two different shared keys
         // are one device, and a single pass would leave the third behind.
-        while let group = nextGroup() {
+        while let (shared, group) = nextGroup() {
             let ordered = group.sorted { lhs, rhs in
                 guard let left = records[lhs], let right = records[rhs] else { return lhs < rhs }
                 return (left.ordinal, lhs) < (right.ordinal, rhs)
@@ -377,6 +645,7 @@ public struct HistoryLedger: Sendable {
                 survivor.identifiers.formUnion(loser.identifiers)
                 survivor.identifiers.insert(key)
                 survivor.firstSeen = min(survivor.firstSeen, loser.firstSeen)
+                survivor.absorb(loser.macHistory, sharing: shared.kind)
                 // The most recent observation wins the device and the run it came from,
                 // so a merge never rolls a device's address or name backwards.
                 if loser.device.lastSeen > survivor.device.lastSeen {
@@ -394,8 +663,6 @@ public struct HistoryLedger: Sendable {
                 runID: runID
             ))
         }
-
-        log.append(contentsOf: events)
         return events
     }
 
@@ -427,8 +694,10 @@ public struct HistoryLedger: Sendable {
 
     /// The next set of record keys that share an identifier stronger than a lease.
     ///
-    /// Returns nil when nothing is left to join, which is what ends the loop above.
-    private func nextGroup() -> Set<HostIdentifier>? {
+    /// Returns nil when nothing is left to join, which is what ends the loop above. The
+    /// identifier comes back with the group because it is the reason they joined, and a
+    /// MAC history says why each address belongs to the device.
+    private func nextGroup() -> (shared: HostIdentifier, keys: Set<HostIdentifier>)? {
         var claimants: [HostIdentifier: Set<HostIdentifier>] = [:]
         for (key, record) in records {
             // The record's own key counts: a record keyed by an identifier another
@@ -442,8 +711,8 @@ public struct HistoryLedger: Sendable {
         // the first hit.
         return claimants
             .filter { $0.value.count > 1 }
-            .min { ($0.key, $0.value.count) < ($1.key, $1.value.count) }?
-            .value
+            .min { ($0.key, $0.value.count) < ($1.key, $1.value.count) }
+            .map { (shared: $0.key, keys: $0.value) }
     }
 
     /// Drops events older than the retention policy allows, and returns how many.
@@ -472,12 +741,17 @@ public struct HistoryLedger: Sendable {
     /// a missed merge is recoverable, since the next observation carrying a shared key
     /// joins the two records, and un-merging is not: the histories have already been
     /// written into each other and nothing records which half was whose.
-    private func resolve(_ candidates: [HostIdentifier]) -> HostIdentifier? {
+    ///
+    /// Returns the candidate that matched as well as the record, because which identifier
+    /// carried a device across a MAC rotation is the reason its history gives.
+    private func resolve(
+        _ candidates: [HostIdentifier]
+    ) -> (record: HostIdentifier, by: HostIdentifier)? {
         for candidate in candidates where candidate.kind != .ipLease {
-            if let match = match(candidate) { return match }
+            if let match = match(candidate) { return (match, candidate) }
         }
         for candidate in candidates where candidate.kind == .ipLease {
-            if let match = match(candidate) { return match }
+            if let match = match(candidate) { return (match, candidate) }
         }
         return nil
     }

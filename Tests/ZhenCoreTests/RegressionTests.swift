@@ -624,6 +624,19 @@ struct PermissionAdviceTests {
         #expect(reason.contains("likely cause"))
     }
 
+    @Test("An app gets the same grant, without the sentence about command-line builds")
+    func appAdvice() {
+        let cli = degradation(.appleLocalNetwork).reason
+        let app = degradation(.appleLocalNetworkInApp).reason
+        #expect(app.contains("Privacy & Security › Local Network"))
+        #expect(app.contains("likely cause"))
+        // The sentence the app used to cut out of the text at runtime.
+        #expect(!app.contains("command-line"), "an app was told it has no bundle")
+        #expect(!app.contains("terminal"))
+        #expect(cli.contains("A command-line build has no bundle of its own"),
+                "the command line lost the sentence it needs")
+    }
+
     @Test("Linux gets the sysctl that actually governs unprivileged ICMP there")
     func linuxAdvice() {
         let reason = degradation(.linuxPingGroupRange).reason

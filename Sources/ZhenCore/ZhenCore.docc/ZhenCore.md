@@ -178,3 +178,8 @@ loses one of those two facts every time.
 
 - ``InternetChecksum``
 - ``WireDecodable``
+
+### Legibility
+
+- ``Contrast``
+- ``SRGBColor``

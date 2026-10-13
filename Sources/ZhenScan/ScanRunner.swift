@@ -102,14 +102,16 @@ public struct ScanRunner: Sendable {
     ///   - network: what to scan. Defaults to the primary interface's own network.
     ///   - budget: the total time allowed. Every stage subdivides this with
     ///     `clamped(to:)`; nothing reads a global timeout.
-    ///   - deepScan: whether to probe ports on the hosts that answered.
+    ///   - ports: which of the hosts that answered to probe for ports — none, all, or
+    ///     only those history has never seen. Was `deepScan: Bool`, which could not say
+    ///     the third.
     ///   - progress: display only. Lossy by design, and nothing here is load-bearing.
     /// - Returns: the artifact and the events it implies. Never throws — a deadline hit
     ///   and a cancellation are both normal returns carrying real partial results.
     public func run(
         network: IPv4Network? = nil,
         budget: Duration,
-        deepScan: Bool,
+        ports: PortStage,
         progress: ProgressSink
     ) async -> CompletedScan {
         let startedAt = Timestamp.now
@@ -173,10 +175,19 @@ public struct ScanRunner: Sendable {
             if resolution.outcome == .cancelled { outcome = .cancelled }
         }
 
-        // ── Deep scan, only when asked ───────────────────────────────────────────
-        if deepScan, !facts.isEmpty, outcome == .complete, !deadline.isExpired {
+        // History supplies first-seen. `Device(observing:…)` defaults it to `lastSeen`,
+        // which is right on a first-ever run and wrong on every one after it.
+        //
+        // Asked before the port stage rather than after, because it is also what decides
+        // which hosts are new — and the port stage adds ports and a fingerprint, never an
+        // identifier, so the answer is the same on either side of it.
+        let firstSeen = await store.firstSeen(for: Array(facts.values), in: target.network)
+
+        // ── Deep scan, only when asked, and only of whom it was asked for ────────
+        let probed = ports.targets(among: Array(facts.keys), known: firstSeen)
+        if !probed.isEmpty, outcome == .complete, !deadline.isExpired {
             let result = await scanner.ports.scan(
-                facts.keys.sorted().map(IPAddress.v4),
+                probed.map(IPAddress.v4),
                 ports: .commonServices,
                 // A ceiling, not a fixed wait: the engine narrows it per host from that
                 // host's own measured round trips.
@@ -199,9 +210,6 @@ public struct ScanRunner: Sendable {
         if stages.isEmpty { stages.append(StageTiming(stage: .discovery, elapsedMillis: 0)) }
 
         let finishedAt = Timestamp.now
-        // History supplies first-seen. `Device(observing:…)` defaults it to `lastSeen`,
-        // which is right on a first-ever run and wrong on every one after it.
-        let firstSeen = await store.firstSeen(for: Array(facts.values), in: target.network)
         // Fused, so a host found at a v4 address and at link-local v6 ones is one
         // device. The rule, and why two v4 records never fuse, is on `Device.fusing`.
         let devices = Device.fusing(facts.values
@@ -244,6 +252,54 @@ public struct ScanRunner: Sendable {
 
         let events = await store.record(report)
         return CompletedScan(report: report, events: events)
+    }
+
+    /// Probes ports on addresses already known, and keeps what answered — without a run.
+    ///
+    /// The other half of `HistoryStore.recordPorts`. A port probe of one device used to go
+    /// through `run`, which records a run, and a run of one address made every other device
+    /// read as gone; the app's answer was a store that refused to record, which kept the
+    /// network honest and lost the ports at relaunch. This never discovers, never names,
+    /// and never records a run: it probes, then folds the ports into the devices history
+    /// already holds.
+    ///
+    /// - Parameters:
+    ///   - addresses: what to probe. Discovery is not run, so an address that answers no
+    ///     ping is still probed.
+    ///   - spec: which ports. Defaults to the common set the deep stage uses.
+    ///   - budget: the total time allowed.
+    ///   - progress: display only.
+    /// - Returns: what the engine observed, and the port events history derived from it.
+    ///   Never throws; a deadline and a cancellation are normal returns.
+    public func probePorts(
+        _ addresses: [IPAddress],
+        spec: PortSpec = .commonServices,
+        budget: Duration,
+        progress: ProgressSink
+    ) async -> CompletedPortScan {
+        let result = await scanner.ports.scan(
+            addresses, ports: spec,
+            // The ceiling `run` uses; the engine narrows it per host.
+            perHostDeadline: .milliseconds(600),
+            deadline: Deadline(after: budget),
+            progress: progress
+        )
+        let events = await store.recordPorts(result, targeted: addresses, at: .now)
+        return CompletedPortScan(result: result, events: events)
+    }
+}
+
+/// What a port probe observed, plus the events history derived from it.
+public struct CompletedPortScan: Sendable {
+    /// What the engines observed, by host.
+    public var result: PortScanResult
+    /// The port events it implied for the devices history holds. Never a presence event.
+    public var events: [DerivedEvent]
+
+    /// Creates a value from its fields.
+    public init(result: PortScanResult, events: [DerivedEvent]) {
+        self.result = result
+        self.events = events
     }
 }
 

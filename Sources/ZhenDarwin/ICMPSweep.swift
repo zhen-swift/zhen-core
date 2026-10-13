@@ -113,7 +113,7 @@ public struct ICMPSweepEngine: HostDiscovery {
         attempts: Int = 3,
         concurrency: Int = 256,
         neighbors: any NeighborCache = DarwinNeighborCache(),
-        advice: ProbePermissionAdvice = .appleLocalNetwork,
+        advice: ProbePermissionAdvice = .appleForThisProcess,
         spacing: SweepSpacing = .spreadIntoTail,
         budgets: SweepBudgets = .split
     ) {

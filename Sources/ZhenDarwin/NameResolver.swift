@@ -179,7 +179,7 @@ public struct DarwinNameResolver: NameResolving {
             ))
         }
         if let denial = NameSourceSilenceHeuristic.evaluate(
-            activity, hostsProbed: addresses.count, advice: .appleLocalNetwork
+            activity, hostsProbed: addresses.count, advice: .appleForThisProcess
         ) {
             degradations.append(denial)
         }

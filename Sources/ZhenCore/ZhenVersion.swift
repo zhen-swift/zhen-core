@@ -22,5 +22,5 @@ public enum ZhenVersion {
     /// Semantic versioning, and the changelog follows it. The floor for a bump is
     /// whether the artifact or the command surface changed in a way a person would
     /// notice — not whether the code moved.
-    public static let current = "0.6.0"
+    public static let current = "0.7.0"
 }

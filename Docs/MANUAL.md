@@ -135,6 +135,19 @@ zhen ports "$GATEWAY" 22 --check && ssh "$GATEWAY"
 is open, **1** if none is. A scan that could not run exits neither — so a failure never
 reads as "closed".
 
+### Keeping the answer
+
+```sh
+zhen ports 10.10.20.11 22,80,443 --record
+```
+
+`zhen ports` writes nothing unless asked. `--record` keeps what it found in history: the
+ports of each device history already holds, and an event when a port opens or stops being
+open. It is **not recorded as a scan** — `zhen ports` never sweeps, so it says nothing about
+the rest of the network, and nothing goes offline because it was not asked about. A host
+history has never seen is skipped rather than added: a port answer is not a discovery, and
+`zhen scan` is how a host joins.
+
 ### Choosing the mechanism
 
 ```sh
@@ -176,7 +189,8 @@ Every scan is recorded, so you can ask what changed.
 
 ```sh
 zhen hosts                             # every device history has seen, present or absent
-zhen events                            # what changed between scans, newest first
+zhen events                            # what changed between scans, newest first: arrivals,
+                                       #   departures, moves, renames, ports opening and closing
 zhen history 10.10.20.11               # one device: what is known, what has happened
 zhen export                            # the whole history as one JSON document
 ```

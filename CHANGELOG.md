@@ -6,7 +6,100 @@ nothing is released yet.
 The format is loosely [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions
 follow the app's `CFBundleShortVersionString`.
 
-## [Unreleased]
+## [0.7.0] — 2026-10-12 — ports in history
+
+Ports reach history. A port scan can be kept without being a run, a port opening or
+closing is an event, and a device's hardware addresses are kept one row each — the three
+things the app was working around. The privileged helper is a product the app can embed,
+its check is bounded, and the Local Network advice reads right inside an app.
+
+**Upgrading.** Source-breaking for anyone conforming to `HistoryStore` (one new
+requirement), switching exhaustively over `DerivedEvent.Kind` (two new cases), or calling
+`ScanRunner.run(…deepScan:…)` (now `ports: PortStage`). `ScanReport.schemaVersion` stays 3:
+nothing in `Model/` changed. Once 0.7.0 has written a history store, do not point a 0.6.0
+build at it — see the entry on hardware addresses below.
+
+### Added
+- **A port scan can be kept in history without being a run.**
+  `HistoryStore.recordPorts(_:targeted:at:)` folds a `PortScanResult` into the devices
+  history already holds — their ports, and the fingerprint the probe elicited — and
+  touches presence not at all: no `appeared`, no `disappeared`, and the latest run stays
+  the latest. A host no record holds is skipped, because a port answer is not a
+  discovery; so is an absent device's old address, because whatever answers there now
+  may be somebody else. Written as the device and event lines the file already has, and
+  never as a run line.
+
+  **For anyone conforming to `HistoryStore`**, this is a new requirement, not a defaulted
+  method, for the reason `setRetention` is one.
+- **Port events.** `DerivedEvent.Kind` gains `portOpened` and `portClosed`, derived when a
+  port moves into or out of `open` — the other twelve transitions between the four states
+  are not events, and neither is a port seen for the first time. A port the newest scan
+  did not ask about is not closed: a device's ports are now merged by port, protocol and
+  address rather than replaced, so a run without a port stage no longer forgets them.
+
+  **Source-breaking** for an exhaustive `switch` over `DerivedEvent.Kind`.
+- **A device's hardware addresses are kept, one row each.** The ledger has always
+  followed a device across a MAC rotation and kept only the newest address. Each record
+  now carries `macHistory`: every MAC it has presented, oldest first, with the span it was
+  seen over and how it joined — `original`, `rotation(by:)` the identifier that did not
+  rotate, or `merge(by:)` the identifier two records shared. On the ledger's `Record`
+  and on `StoredDevice`, not on `Device`: like presence, it is history rather than
+  observation. A record written before 0.7.0 is seeded from its one MAC, spanning the
+  record's first-seen to its last-seen; a rotation before 0.7.0 was never written down.
+
+  **Do not point a 0.6.0 build at a store 0.7.0 has written.** It reads the device lines
+  and ignores `mac_history`, reads the port events and drops them, and the first time it
+  rewrites the file both are gone. Nothing written by 0.7.0 can prevent that.
+- **A port stage for new devices only.** `PortStage` — `off`, `everyHost`, `newHosts` —
+  and `ScanRunner.run(network:budget:ports:progress:)` takes it. "New" is history's
+  answer, through `firstSeen(for:in:)`, so a device that rotated its MAC is not new and is
+  not re-probed for it. **Source-breaking:** `run(…deepScan:…)` is gone; `true` is
+  `.everyHost` and `false` is `.off`.
+- **`ScanRunner.probePorts(_:spec:budget:progress:)`.** Probes known addresses and keeps
+  the result through `recordPorts`: no discovery, no naming, no run. What an app needs to
+  scan one device's ports without taking the rest of the network offline.
+- **The helper check at scanner build is bounded at 750 ms.** Building a scanner under
+  `.helperThenDirect` asks whether a helper answers, and a registration launchd cannot
+  start accepts the connection and never does. That check waited out the full 3 s
+  acquisition timeout — 3.2 s on every engine build, measured in the app on a Mac with a
+  stale registration. `HelperClient.probeTimeout` now bounds the question "is anybody
+  there"; a scan's own acquisitions keep `acquisitionTimeout`. Once the check fails the
+  privileged engines are not built, so nothing waits again until the next build.
+- **The Local Network remedy is worded for an app when it is read in one.**
+  `ProbePermissionAdvice.appleLocalNetworkInApp` gives the same grant without the sentence
+  telling a command-line build its permission may be listed under the terminal — true for
+  `zhen`, wrong in an app, and something the app was cutting out of core's text at runtime.
+  The sweep and the naming stage pick it themselves, from whether the running bundle is an
+  `.app` (`ProbePermissionAdvice.appleForThisProcess`); the command line's text is unchanged.
+- **A `zhen-helper` product.** The privileged helper was an executable target with no
+  product, so it never crossed the package boundary: the app could not embed it from the
+  version it pins and built it by hand from a checkout. Declaring it changes no scheme
+  list — measured: this package already showed a `zhen-helper` scheme when opened alone,
+  and the app's project shows none for a remote package's products.
+- **`zhen ports --record`.** Keeps what the scan found in history, through the call
+  above: ports and port events for devices history already holds, never a run. Off unless
+  asked for, because the command has written nothing since it was added. An interrupted
+  scan keeps what it had probed, as an interrupted `zhen scan` does. Written where `zhen
+  scan` writes, so `ZHEN_HISTORY` moves it too.
+- **`Contrast`, for choosing a foreground that reads on a background at runtime.** WCAG 2
+  ratios, the three floors that apply to this project (3:1 non-text, 4.5:1 AA, 7:1 AAA),
+  and `Contrast.foreground(on:preferring:level:)`, which keeps the first candidate that
+  meets the floor and otherwise returns the best one marked as falling short. Colours are
+  `SRGBColor`, gamma-encoded components with no UI framework behind them, so the rule is
+  the same on Linux and is tested there. The tests reproduce the 100 pairs the app's
+  previous palette measured, against all three of the surfaces it drew text on. That
+  palette was derived by hand against one of them and was wrong on the other two.
+
+### Fixed
+- **A merge is logged once.** A run that proved two records were one device logged the
+  `merged` event twice, same id — once by the join and again by the fold. Found by the
+  0.6.0 history fixture, which holds exactly that pair. Existing duplicates in a store are
+  left as they are: removing them would be rewriting history to tidy it.
+- **A line this build understands only in part is kept, not dropped.** An event whose kind
+  it does not know, or a device whose key kind it does not know, decoded as a line and was
+  then skipped — and erased at the next compaction. They are now kept verbatim, like a line
+  that does not decode at all. This is the fault that lets a 0.6.0 build erase 0.7.0's port
+  events; fixed here so 0.7.0 cannot do the same to whatever comes next.
 
 ## [0.6.0] — 2026-10-05 — the former name, retired
 

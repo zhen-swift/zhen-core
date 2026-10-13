@@ -374,3 +374,86 @@ struct CheckFlagTests {
         }
     }
 }
+
+// ── --record ─────────────────────────────────────────────────────────────────────────
+
+@Suite("zhen ports --record keeps ports, and never a run")
+struct PortsRecordTests {
+    static let network = IPv4Network("10.10.20.0/24")!
+    static let at = Timestamp(millisecondsSinceEpoch: 1_700_000_000_000)
+    static let five = IPAddress.v4(IPv4Address("10.10.20.5")!)
+
+    private func temporaryLog() throws -> URL {
+        let directory = FileManager.default.temporaryDirectory
+            .appending(path: "zhen-ports-record-\(UUID().uuidString)", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory.appending(path: "history.ndjson")
+    }
+
+    /// A store whose one run saw 10.10.20.5, which is what a port scan has to find.
+    private func storeWithOneRun(at url: URL) async -> (LogHistoryStore, ScanRun) {
+        let store = LogHistoryStore(url: url)
+        let run = ScanRun(
+            id: UUID(), startedAt: Self.at, finishedAt: Self.at, target: Self.network,
+            interface: "en0",
+            engine: EngineDescriptor(name: "test", kind: .unprivileged, capabilities: []),
+            outcome: .complete, timing: Timing()
+        )
+        let device = Device(
+            observing: HostFacts(ip: IPv4Address("10.10.20.5")!, mac: MACAddress("AA:BB:CC:00:00:05")),
+            in: Self.network, firstSeen: Self.at, lastSeen: Self.at
+        )
+        _ = await store.record(ScanReport(run: run, devices: [device]))
+        return (store, run)
+    }
+
+    private let result = PortScanResult(ports: [five: [PortObservation(port: 22, state: .open)]])
+
+    @Test("Off unless asked for: the command has written nothing since it was added")
+    func offByDefault() throws {
+        let url = URL(fileURLWithPath: "/tmp/never-written.ndjson")
+        #expect(try Ports.parse(["10.10.20.5"]).recordingStore(at: url) == nil)
+        #expect(try Ports.parse(["10.10.20.5", "--record"]).recordingStore(at: url)?.url == url,
+                "--record did not open the history store")
+        #expect(try Ports.parse(["10.10.20.5", "--record"]).recordingStore(at: nil) == nil,
+                "a store was invented with nowhere to keep it")
+    }
+
+    @Test("The ports are kept, and the latest run is still the latest run")
+    func recordsPortsNotARun() async throws {
+        let url = try temporaryLog()
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        let (store, run) = await storeWithOneRun(at: url)
+        let command = try Ports.parse(["10.10.20.5", "22", "--record", "--check"])
+        let status = await command.conclude(
+            result, targets: [Self.five], spec: try PortSpec.parse("22"),
+            renderer: PortsRenderer(json: false, quiet: true, color: false),
+            history: command.recordingStore(at: url), interrupted: false, at: Self.at
+        )
+        let reopened = LogHistoryStore(url: url)
+        let devices = await reopened.devices()
+        let latest = await reopened.latestRun()
+        #expect(status == .ok)
+        #expect(devices.first?.device.ports.map(\.port) == [22], "--record kept nothing")
+        #expect(latest?.id == run.id, "--record wrote a run")
+        #expect(devices.allSatisfy { $0.isPresent })
+        _ = store
+    }
+
+    @Test("An interrupted scan keeps what it probed, as an interrupted zhen scan does")
+    func interruptedStillRecords() async throws {
+        let url = try temporaryLog()
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+        _ = await storeWithOneRun(at: url)
+        let command = try Ports.parse(["10.10.20.5", "22", "--record"])
+        let status = await command.conclude(
+            result, targets: [Self.five], spec: try PortSpec.parse("22"),
+            renderer: PortsRenderer(json: false, quiet: true, color: false),
+            history: command.recordingStore(at: url), interrupted: true, at: Self.at
+        )
+        let devices = await LogHistoryStore(url: url).devices()
+        #expect(status == .interrupted)
+        #expect(devices.first?.device.ports.map(\.port) == [22],
+                "an interrupted scan threw away what it had probed")
+    }
+}

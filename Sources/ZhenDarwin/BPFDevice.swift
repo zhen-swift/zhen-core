@@ -146,10 +146,11 @@ actor BPFDevice {
     /// `sudo` can still put ARP on the wire, and it fails the same way every other rung
     /// does — by returning why, so the caller can try the next one.
     static func openViaHelper(
-        interface: String, filter: [bpf_insn] = BPFFilter.arp()
+        interface: String, filter: [bpf_insn] = BPFFilter.arp(),
+        timeout: Duration = HelperClient.acquisitionTimeout
     ) async throws(BPFUnavailable) -> BPFDevice {
         let acquired = try await HelperClient.openCaptureDevice(
-            interface: interface, filter: filter.portable
+            interface: interface, filter: filter.portable, timeout: timeout
         )
         return adopting(acquired, interface: interface)
     }
