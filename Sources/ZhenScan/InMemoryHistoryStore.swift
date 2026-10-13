@@ -50,6 +50,12 @@ public actor InMemoryHistoryStore: HistoryStore {
         ledger.record(report)
     }
 
+    public func recordPorts(
+        _ result: PortScanResult, targeted targets: [IPAddress], at: Timestamp
+    ) async -> [DerivedEvent] {
+        ledger.foldPorts(result, targeted: targets, at: at).events
+    }
+
     /// Sets how long events are kept, from the next recorded run onward.
     ///
     /// One line, which is the shape a store's share of retention is supposed to be: the

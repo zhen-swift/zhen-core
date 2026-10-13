@@ -272,6 +272,29 @@ public actor LogHistoryStore: HistoryStore {
         }
     }
 
+    /// Folds a port scan in, under the same exclusive lock as a run.
+    ///
+    /// Written as the lines the file already has — the updated device lines and the event
+    /// lines — and never as a run line, because it is not a run and a run line is what
+    /// makes one the latest. `PortScanResult` is deliberately not given `Codable` to be
+    /// stored whole: this file is a record of devices and events, not an archive of what
+    /// the engines returned, and a second wire format would drift from the first.
+    public func recordPorts(
+        _ result: PortScanResult, targeted targets: [IPAddress], at: Timestamp
+    ) async -> [DerivedEvent] {
+        withLock(exclusive: true) {
+            reload()
+            let fold = ledger.foldPorts(result, targeted: targets, at: at)
+            if fold.prunedEvents > 0 || prunedOnLoad > 0 || reconciledOnLoad > 0 {
+                // A deletion cannot be appended; see `record`.
+                compact()
+            } else if fold.updatedRecords > 0 {
+                append(events: fold.events, run: nil)
+            }
+            return fold.events
+        }
+    }
+
     // ── The lock ────────────────────────────────────────────────────────────────
 
     /// Runs `body` with the store locked against every other holder of this file.
@@ -440,7 +463,10 @@ public actor LogHistoryStore: HistoryStore {
     /// set that actually changed is nearly the whole set anyway, and computing the
     /// difference precisely would buy a few lines at the cost of being able to reason
     /// about what is in the file.
-    private func append(events: [DerivedEvent], run: ScanRun) {
+    ///
+    /// `run` is nil for a port scan, which writes devices and events and no run line: a
+    /// run line is what `reload` takes the latest run from.
+    private func append(events: [DerivedEvent], run: ScanRun?) {
         var lines: [Line] = []
         for (key, record) in ledger.records.sorted(by: { $0.key < $1.key }) {
             lines.append(Line(payload: .device(StoredDeviceLine(
@@ -457,7 +483,7 @@ public actor LogHistoryStore: HistoryStore {
                 subject: $0.subject, detail: $0.detail, runID: $0.runID
             )))
         }
-        lines.append(Line(payload: .run(run)))
+        if let run { lines.append(Line(payload: .run(run))) }
 
         guard let encoded = Self.encode(lines) else { return }
         if appendBytes(encoded) {

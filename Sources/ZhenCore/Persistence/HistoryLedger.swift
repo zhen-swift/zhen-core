@@ -204,12 +204,22 @@ public struct HistoryLedger: Sendable {
         /// back on the next open and resurrect the duplicate. A store seeing a non-zero
         /// count here has to rewrite rather than append.
         public var mergedRecords: Int
+        /// How many records a port fold changed.
+        ///
+        /// A run always writes, because it moves the latest run. A port scan writes only
+        /// when it reached a device history holds, and this is how a store tells the
+        /// difference without diffing the ledger.
+        public var updatedRecords: Int
 
         /// Creates a value from its fields.
-        public init(events: [DerivedEvent], prunedEvents: Int, mergedRecords: Int = 0) {
+        public init(
+            events: [DerivedEvent], prunedEvents: Int, mergedRecords: Int = 0,
+            updatedRecords: Int = 0
+        ) {
             self.events = events
             self.prunedEvents = prunedEvents
             self.mergedRecords = mergedRecords
+            self.updatedRecords = updatedRecords
         }
     }
 
@@ -237,6 +247,9 @@ public struct HistoryLedger: Sendable {
 
             if let existing = resolve(candidates), var record = records[existing] {
                 let wasPresent = record.lastRunID == latestRun?.id
+                let ports = Self.portChange(
+                    from: record.device.ports, to: device.ports, holding: device.addresses
+                )
                 if record.device.primaryAddress != device.primaryAddress {
                     events.append(DerivedEvent(
                         at: at, kind: .ipChanged, subject: Self.display(device),
@@ -257,7 +270,12 @@ public struct HistoryLedger: Sendable {
                         detail: "answered again at \(device.primaryAddress)", runID: report.run.id
                     ))
                 }
-                record.device = device
+                events += ports.transitions.map {
+                    Self.portEvent($0, device: device, at: at, runID: report.run.id)
+                }
+                var observed = device
+                observed.ports = ports.ports
+                record.device = observed
                 record.lastRunID = report.run.id
                 record.identifiers.formUnion(candidates)
                 records[existing] = record
@@ -315,6 +333,176 @@ public struct HistoryLedger: Sendable {
             prunedEvents: pruneEvents(asOf: at),
             mergedRecords: joined.count
         )
+    }
+
+    // ── Ports ────────────────────────────────────────────────────────────────────
+
+    /// Folds a port scan in and reports everything a store has to write down.
+    ///
+    /// ── Why this is not `fold` with a smaller network ───────────────────────────
+    ///
+    /// Because a port scan is not a run. `fold` takes the run it is given as the latest,
+    /// and presence is "seen by the latest run", so a run of one address folded there
+    /// marks everything else on the network as gone and derives a `disappeared` for each
+    /// of them. That is what the app ran into, and why it threw its port results away.
+    /// Teaching presence to be scope-aware was considered and declined: a port scan was
+    /// already not a run in the command line — `zhen ports` writes nothing — and what was
+    /// missing was a way to keep one, not a new meaning for presence.
+    ///
+    /// So this changes ports, the fingerprint the port probe elicited, and nothing else:
+    /// not `lastRunID`, not `latestRun`, not `lastSeen`, not presence. A host that answered
+    /// but that no record holds is skipped, because a port answer is not a discovery.
+    ///
+    /// ── Which record an address belongs to ──────────────────────────────────────
+    ///
+    /// The one the latest run saw there. An absent record's address is not trusted with
+    /// what answers at it now: a lease moves, and the thing answering on 22 at a phone's
+    /// old address is somebody else's laptop. Without a hardware address in a port answer
+    /// there is no way to tell, so the absent record is left alone rather than given ports
+    /// that may not be its own. The app guarded the same case with a MAC comparison; core
+    /// has no MAC to compare and so refuses the match instead.
+    ///
+    /// - Parameters:
+    ///   - result: what the port engines observed, by host.
+    ///   - targets: the addresses the scan was asked about. A host outside them is not
+    ///     folded, whatever the engine handed back.
+    ///   - at: when the scan finished, stamped on the events.
+    /// - Returns: the events, and a count of records changed so a store knows whether
+    ///   there is anything to write.
+    @discardableResult
+    public mutating func foldPorts(
+        _ result: PortScanResult, targeted targets: [IPAddress], at: Timestamp
+    ) -> Fold {
+        let asked = Set(targets)
+        // The events need a run id and there is no run. A fresh one names this scan, and
+        // matches no `ScanRun` on purpose: a reader looking for "the run that did this"
+        // should find that there was none.
+        let scanID = UUID()
+        var events: [DerivedEvent] = []
+        var updated = 0
+
+        for (address, observations) in result.ports.sorted(by: { $0.key < $1.key })
+        where asked.contains(address) {
+            guard let key = presentHolder(of: address), var record = records[key] else { continue }
+            // An engine leaves `address` nil because it knows its target; history does not.
+            let stamped = observations.map { observation in
+                var stamped = observation
+                if stamped.address == nil { stamped.address = address }
+                return stamped
+            }
+            let change = Self.portChange(
+                from: record.device.ports, to: stamped, holding: record.device.addresses
+            )
+            record.device.ports = change.ports
+            if let v4 = address.v4, let fingerprint = result.fingerprints[v4] {
+                record.device.osFingerprint = fingerprint
+            }
+            records[key] = record
+            updated += 1
+            events += change.transitions.map {
+                Self.portEvent($0, device: record.device, at: at, runID: scanID)
+            }
+        }
+
+        log.append(contentsOf: events)
+        return Fold(events: events, prunedEvents: pruneEvents(asOf: at), updatedRecords: updated)
+    }
+
+    /// The record the latest run saw at this address, or nil.
+    private func presentHolder(of address: IPAddress) -> HostIdentifier? {
+        guard let current = latestRun?.id else { return nil }
+        return records
+            .filter { $0.value.lastRunID == current && $0.value.device.addresses.contains(address) }
+            .min { ($0.value.ordinal, $0.key) < ($1.value.ordinal, $1.key) }?
+            .key
+    }
+
+    /// One port's change of state: the observation history had, and the one that replaced it.
+    struct PortTransition: Sendable, Hashable {
+        var before: PortObservation
+        var after: PortObservation
+    }
+
+    /// What a device's ports become when new observations arrive, and which of the
+    /// changes are events.
+    ///
+    /// ── A merge, not a replacement ──────────────────────────────────────────────
+    ///
+    /// An observation replaces the one for the same port, protocol and address. A port
+    /// the new observations do not mention keeps its last known state, because it was
+    /// not asked about — and a port that was not asked about has not closed. Replacing
+    /// the list wholesale was what `fold` did before ports were events, and it was
+    /// harmless then; with events it would make every run without a port stage forget
+    /// the ports, and the next run with one report them all as opening.
+    ///
+    /// The exception is an address the device no longer holds. A port observed at an
+    /// address the device has left is a fact about that address, not about the device,
+    /// so it is dropped — silently, since leaving an address is already the `ipChanged`.
+    ///
+    /// ── Which changes are events ────────────────────────────────────────────────
+    ///
+    /// Only those involving `open`, and only between two observations. See
+    /// `DerivedEvent.Kind.portOpened` for why the other twelve pairs are not events and
+    /// why a first observation is not one either.
+    static func portChange(
+        from stored: [PortObservation], to incoming: [PortObservation],
+        holding addresses: Set<IPAddress>
+    ) -> (ports: [PortObservation], transitions: [PortTransition]) {
+        struct Key: Hashable {
+            var port: UInt16
+            var proto: TransportProtocol
+            var address: IPAddress?
+            init(_ observation: PortObservation) {
+                port = observation.port
+                proto = observation.proto
+                address = observation.address
+            }
+        }
+        var merged: [Key: PortObservation] = [:]
+        // A stored port with no address predates schema 3 and is kept: it cannot be
+        // shown to belong to an address the device has left.
+        for observation in stored where observation.address.map(addresses.contains) ?? true {
+            merged[Key(observation)] = observation
+        }
+        var transitions: [PortTransition] = []
+        for observation in incoming {
+            let key = Key(observation)
+            if let before = merged[key], (before.state == .open) != (observation.state == .open) {
+                transitions.append(PortTransition(before: before, after: observation))
+            }
+            merged[key] = observation
+        }
+        return (
+            merged.values.sorted(by: PortObservation.canonicalOrder),
+            transitions.sorted { PortObservation.canonicalOrder($0.after, $1.after) }
+        )
+    }
+
+    /// "22/tcp open at 10.10.20.5 · was filtered" — the port, what it is now, where, and
+    /// what it was, in the shape the other events' sentences already have.
+    private static func portEvent(
+        _ transition: PortTransition, device: Device, at: Timestamp, runID: UUID
+    ) -> DerivedEvent {
+        let after = transition.after
+        let place = after.address.map { " at \($0)" } ?? ""
+        return DerivedEvent(
+            at: at, kind: after.state == .open ? .portOpened : .portClosed,
+            subject: display(device),
+            detail: "\(after.port)/\(after.proto.rawValue) \(spoken(after.state))\(place)"
+                + " · was \(spoken(transition.before.state))",
+            runID: runID
+        )
+    }
+
+    /// A port state as a sentence says it. `open_filtered` is the one whose raw value is
+    /// not a phrase.
+    private static func spoken(_ state: PortState) -> String {
+        switch state {
+        case .open: "open"
+        case .closed: "closed"
+        case .filtered: "filtered"
+        case .openFiltered: "open or filtered"
+        }
     }
 
     // ── Reconciliation ───────────────────────────────────────────────────────────

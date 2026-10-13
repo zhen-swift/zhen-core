@@ -9,6 +9,24 @@ follow the app's `CFBundleShortVersionString`.
 ## [Unreleased]
 
 ### Added
+- **A port scan can be kept in history without being a run.**
+  `HistoryStore.recordPorts(_:targeted:at:)` folds a `PortScanResult` into the devices
+  history already holds — their ports, and the fingerprint the probe elicited — and
+  touches presence not at all: no `appeared`, no `disappeared`, and the latest run stays
+  the latest. A host no record holds is skipped, because a port answer is not a
+  discovery; so is an absent device's old address, because whatever answers there now
+  may be somebody else. Written as the device and event lines the file already has, and
+  never as a run line.
+
+  **For anyone conforming to `HistoryStore`**, this is a new requirement, not a defaulted
+  method, for the reason `setRetention` is one.
+- **Port events.** `DerivedEvent.Kind` gains `portOpened` and `portClosed`, derived when a
+  port moves into or out of `open` — the other twelve transitions between the four states
+  are not events, and neither is a port seen for the first time. A port the newest scan
+  did not ask about is not closed: a device's ports are now merged by port, protocol and
+  address rather than replaced, so a run without a port stage no longer forgets them.
+
+  **Source-breaking** for an exhaustive `switch` over `DerivedEvent.Kind`.
 - **`Contrast`, for choosing a foreground that reads on a background at runtime.** WCAG 2
   ratios, the three floors that apply to this project (3:1 non-text, 4.5:1 AA, 7:1 AAA),
   and `Contrast.foreground(on:preferring:level:)`, which keeps the first candidate that
