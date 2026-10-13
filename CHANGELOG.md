@@ -50,6 +50,14 @@ follow the app's `CFBundleShortVersionString`.
   **Do not point a 0.6.0 build at a store 0.7.0 has written.** It reads the device lines
   and ignores `mac_history`, reads the port events and drops them, and the first time it
   rewrites the file both are gone. Nothing written by 0.7.0 can prevent that.
+- **A port stage for new devices only.** `PortStage` — `off`, `everyHost`, `newHosts` —
+  and `ScanRunner.run(network:budget:ports:progress:)` takes it. "New" is history's
+  answer, through `firstSeen(for:in:)`, so a device that rotated its MAC is not new and is
+  not re-probed for it. **Source-breaking:** `run(…deepScan:…)` is gone; `true` is
+  `.everyHost` and `false` is `.off`.
+- **`ScanRunner.probePorts(_:spec:budget:progress:)`.** Probes known addresses and keeps
+  the result through `recordPorts`: no discovery, no naming, no run. What an app needs to
+  scan one device's ports without taking the rest of the network offline.
 - **A `zhen-helper` product.** The privileged helper was an executable target with no
   product, so it never crossed the package boundary: the app could not embed it from the
   version it pins and built it by hand from a checkout. Declaring it changes no scheme
