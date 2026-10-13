@@ -17,9 +17,13 @@ file. Nothing has been implemented.
 ## Mission
 
 A native macOS application that scans a local network, identifies every device on it, remembers
-everything it has ever seen, and shows what changes over time. A TP-Link Omada controller is
-integrated as a privileged information source, supplying facts no on-wire probe can reach —
-switch port, VLAN, uplink access point, signal strength, DHCP lease hostnames.
+everything it has ever seen, and shows what changes over time.
+
+**Amended 2026-10-13:** this specification originally included an integration with one vendor's
+network controller, as a privileged source of facts no on-wire probe can reach. That integration
+was dropped before it was built, and every part of this document that described it has been
+removed rather than left to read as a plan. The name-priority slot it occupied survives as
+`NameSource.administrative` — see `Sources/ZhenCore/Model/Naming.swift`.
 
 It is written entirely in Swift 6. It launches no subprocesses, bundles no interpreters, and
 depends on no external binaries.
@@ -50,7 +54,7 @@ automation, but the app is the point, and the architecture is shaped by what the
    back to when there is nowhere to write. SwiftData returns the day something Apple-side needs
    what it offers and the log cannot give — live queries driving a view, most plausibly — and
    that is a decision to take with a feature in hand rather than in advance.
-6. **Omada Open API** — deeper device intelligence via `.env` credentials.
+6. *(Withdrawn — the controller integration; see the amendment under Mission.)*
 7. **One shared library** behind both a CLI and a SwiftUI macOS app.
 8. **Privileged path optional** — a sudoless engine and a root/BPF engine both exist; sudoless is
    the default and must remain fully functional.
@@ -59,7 +63,7 @@ automation, but the app is the point, and the architecture is shaped by what the
 
 ### Prior art
 
-A Python implementation previously existed at `~/Dev/Omada/netscan.py`. **It has been deleted and
+A Python implementation previously existed. **It has been deleted and
 is deliberately not a specification.** Do not attempt to reproduce its output, structure, or
 behavior, and do not treat it as a correctness benchmark. The requirements above are the spec.
 A handful of its non-obvious domain findings are preserved inline in this document because they
@@ -113,7 +117,6 @@ another faults on the wrong queue. `@ModelActor` remains correct, for that reaso
     ICCore/                   // value types, Deadline, boundedPool, engine protocols, event diffing
     ICNet/                    // getifaddrs, route/ARP sysctl, ICMP, TCP connect, banner probes
     ICDiscovery/              // dns_sd mDNS, SSDP, NetBIOS, NameProvider cascade
-    ICOmada/                  // Open API client
     ICPrivileged/             // BPF ARP sweep, SYN scan, PrivilegeBroker
     ICStore/                  // SwiftData @Model entities, @ModelActor HistoryStore
     ICAssembly/               // composition root: selects engines, builds the pipeline
@@ -127,8 +130,8 @@ another faults on the wrong queue. `@ModelActor` remains correct, for that reaso
 CBPFShim ─┐
 ICCore ───┼─> ICNet ──┬─> ICDiscovery ─┐
           │           └─> ICPrivileged ┤
-          ├─> ICOmada ─────────────────┼─> ICAssembly ─┬─> castle (CLI)
-          └─> ICStore ─────────────────┘               └─> InfinityCastle.app
+          └─> ICStore ─────────────────┴─> ICAssembly ─┬─> castle (CLI)
+                                                       └─> InfinityCastle.app
 ```
 
 `ICCore` owns the engine protocols. **Nothing in the pipeline depends on `ICPrivileged`** — only
@@ -176,7 +179,7 @@ key test trivial: `isLocallyAdministered == (raw >> 40) & 0x02 != 0`.
 ### The name cascade is a total order, not a procedure
 
 ```swift
-public enum NameSource: Sendable { case omada, mdns, ssdp, netbios, dns }   // .priority 0…4
+public enum NameSource: Sendable { case administrative, mdns, ssdp, netbios, dns }   // .priority 0…4
 
 public struct NameCandidate: Sendable, Hashable, Comparable {
     let value: String
@@ -187,8 +190,8 @@ public struct NameCandidate: Sendable, Hashable, Comparable {
 // Comparable == lexicographic (source.priority, rank) → the entire cascade is `candidates.min()`
 ```
 
-Priority order is `omada > mdns > ssdp > netbios > dns`: a name you deliberately set in the
-controller should beat one a device advertises about itself.
+Priority order is `administrative > mdns > ssdp > netbios > dns`: a name a person deliberately
+assigned should beat one a device advertises about itself.
 
 Keep every losing candidate on `HostFacts.allNames`. **The design shows these** ("also known as…"
 in the device detail view) — they are the explanation for why a device is named what it is.
@@ -337,8 +340,8 @@ Implementation shape:
 ### Domain knowledge worth preserving (from prior art — hard to rediscover)
 
 - **Service types carry a quality rank.** The same device advertises
-  `"Sala de entretenimiento"` on `_companion-link._tcp` and
-  `"70-35-60-63.1 Sala de entretenimiento"` on `_sleep-proxy._udp`. Rank types by name cleanliness
+  `"Living Room TV"` on `_companion-link._tcp` and
+  `"70-35-60-63.1 Living Room TV"` on `_sleep-proxy._udp`. Rank types by name cleanliness
   and let the best-ranked win. Roughly 17 types are worth browsing, including
   `_googlecast._tcp` (cleanest — its TXT `fn` key is a user-set friendly name),
   `_companion-link._tcp`, `_airplay._tcp`, `_homekit._tcp`, `_device-info._tcp`,
@@ -393,9 +396,6 @@ ScanRun               id, startedAt, finishedAt, network, interface, privileged,
 HostObservation       run, host, ip, mac, name, nameSource, nameRank, model, vendor, reverseDNS,
                       sources, rttMillis, ttl, ports: [PortObservation]
 PortObservation       observation, port, proto, state, service, product, version, banner, tlsSubject
-OmadaClientFacts      observation, switchMac, switchName, port, portName, vid, networkName,
-                      connectType, ssid, signalLevel, rssi, apName, apMac, rxRate, txRate,
-                      trafficDown, trafficUp, uptime, lastSeen, rawJSON, rawHash
 ScanEvent             id, at, run, host?, kind, severity, summary, details
 ```
 
@@ -414,7 +414,6 @@ rotation and make the history worthless.
 ```swift
 public enum HostKey: Hashable, Sendable {
     case universalMAC(MACAddress)            // 100 — globally administered, genuinely stable
-    case omadaClient(String)                 //  90 — controller's own client id
     case mdnsInstance(String)                //  60 — normalized Bonjour instance name
     case dhcpHostname(String)                //  40
     case randomizedMAC(MACAddress)           //  30 — locally administered, rotates
@@ -432,7 +431,7 @@ Resolution, executed inside the store actor:
 2. Look up `HostIdentifier` rows; **first hit wins**.
 3. If two candidates resolve to **different** hosts → **merge**: keep the earlier `firstSeen`,
    repoint the loser's identifiers and observations, delete it, emit `.hostsMerged`. This is how a
-   phone first seen only by rotating MAC is absorbed once the controller names it. **Merges must
+   phone first seen only by rotating MAC is absorbed once mDNS names it. **Merges must
    be events** — otherwise the history becomes inexplicable to the user.
 4. No match → new `Host`, attach all candidate identifiers.
 5. Always upsert every candidate key with a fresh `lastSeen`, so identity *accumulates* over time.
@@ -442,7 +441,7 @@ merge is recoverable — a later observation carrying a shared key joins the two
 and un-merging is not: the two histories have already been written into each other and
 nothing records which half was whose. Accept an `ipLease` match **only if** that host was not already
 observed in the current run under a different IP. Otherwise create a new host and let a later
-mDNS or Omada observation merge them. Bias toward splitting.
+mDNS observation merge them. Bias toward splitting.
 
 `ipMoved` falls out naturally: resolve by MAC, observe an IP differing from the last observation.
 
@@ -511,82 +510,6 @@ grows on disk while shrinking logically.
 
 ---
 
-## Omada Open API
-
-Reference material survives at `~/Dev/Omada/OMADA-API.md` and
-`~/Dev/Omada/reference/omada-openapi-v3.json` (full 1,802-endpoint schema). Hardware context is in
-`~/Dev/Omada/README.md` and `~/Dev/Omada/SG3428-FACTORY-RESET.md`.
-
-### Call sequence
-
-```
-1. GET  /api/info                                                  (unauthenticated)
-        -> result.omadacId
-2. POST /openapi/authorize/token?grant_type=client_credentials
-        body: {"omadacId": ..., "client_id": ..., "client_secret": ...}
-        -> result.accessToken, result.refreshToken, result.expiresIn (7200)
-3. GET  /openapi/v1/{omadacId}/sites?page=1&pageSize=100
-4. GET  /openapi/v1/{omadacId}/sites/{siteId}/clients?page=1&pageSize=1000
-5. GET  /openapi/v1/{omadacId}/sites/{siteId}/setting/service/dhcp/user-list
-```
-
-### Quirks that must be encoded in the type system, not left to call sites
-
-- **The auth header is literally `Authorization: AccessToken=<token>` — NOT `Bearer <token>`**,
-  despite the response's `tokenType` reporting `"bearer"`. This is the most likely single mistake.
-  Put it in one header-builder function.
-- **HTTP status is always 200.** Success is `errorCode == 0` in the body. Wrap every response in
-  `struct OmadaEnvelope<T: Decodable>: Decodable` that throws `OmadaError.api(code:msg:)` on a
-  non-zero code. Never branch on `URLResponse.statusCode`.
-- **`page` and `pageSize` are mandatory** — omitting them returns `-1001`.
-- **Loop on `totalRows`.** `pageSize` is a request, not a guarantee.
-- **Token expiry is 7200s** and a watch loop *will* hit it. Build the `-44112` → refresh-token path
-  now, do not defer it.
-- Known error codes: `0` ok, `-1001` bad param, `-1007` role lacks permission, `-1600` unsupported
-  route, `-7131` bad omadacId, `-44106` invalid credentials, `-44112` expired token.
-
-### Data to capture
-
-Take the **whole client object**, not just names: `switchMac`, `switchName`, `port`, `portName`,
-`vid`, `networkName`, `connectType`, `ssid`, `signalLevel`, `rssi`, `apName`, `apMac`, `rxRate`,
-`txRate`, `trafficDown`, `trafficUp`, `uptime`, `lastSeen`. Store the queryable subset as typed
-properties (the design charts and filters on these) **and** keep `rawJSON` deduplicated by
-`rawHash` for forward compatibility — a firmware update adding a field then requires migration
-only to *query* it, not to *capture* it.
-
-DHCP leases matter independently: **the controller knows hostnames a device never advertises
-on-wire**, which is the single best available input to randomized-MAC identity.
-
-### Controller discovery
-
-Probe the default gateway plus every discovered host IP on ports **443 and 8043** for `/api/info`;
-first responder with a non-empty `omadacId` wins. **Nothing is hardcoded.** The surviving docs
-describe the LAN as `10.10.10.0/24` with the controller at `10.10.10.10`, but the network has since
-been renumbered to `10.10.20.0/24` — which is precisely why discovery is dynamic. Allow an explicit
-override for a controller on an unroutable subnet.
-
-### Credentials
-
-`.env` at the project or working directory with keys `CLIENT_ID` and `CLIENT_SECRET` (this file
-exists at `~/Dev/Omada/.env`). Overridable by `OMADA_CLIENT_ID`, `OMADA_CLIENT_SECRET`,
-`OMADA_URL`, `OMADA_SITE` environment variables, then by CLI flags. Put this behind a
-`CredentialSource` protocol so the app can swap in Keychain without touching the client.
-
-### TLS
-
-**Trust-on-first-use SPKI pinning**, fingerprint persisted in SwiftData, loud failure on change.
-Not blanket trust: step 2 POSTs a `client_secret` for an app with write access to the entire
-controller, and accepting any certificate accepts a MITM on exactly that request.
-
-Requires `final class OmadaTrustDelegate: NSObject, URLSessionDelegate, @unchecked Sendable` — the
-delegate is retained by the session and must be Sendable under Swift 6.
-
-`~/Dev/Omada/certs/` contains an unused local CA (`mango-ca.crt`) and a leaf for
-`omada.mango.lan` whose SAN is `IP:10.10.10.10` — **stale after the renumber**, so do not pin
-against it as-is.
-
----
-
 ## Privilege model
 
 **Mechanism: run under `sudo`, open BPF at startup, then irrevocably drop privileges.**
@@ -600,7 +523,7 @@ if geteuid() == 0 {
 ```
 
 File descriptors survive the drop, shrinking the root window from *the entire scan — including a
-TLS stack talking to the controller and a database engine writing to disk* — down to a handful of
+database engine writing to disk* — down to a handful of
 startup syscalls.
 
 Rejected for now, with reasons: a **setuid helper** requires `chown root` + `chmod u+s` after every
@@ -646,7 +569,6 @@ struct DeniedPrivilegeBroker: PrivilegeBroker    // always throws .notPrivileged
 | `castle hosts` | Every host ever seen, with last-seen and identity confidence. |
 | `castle history <host>` | Timeline for one host: IP moves, name changes, port changes. |
 | `castle events [--since 24h]` | The derived event log. |
-| `castle omada` | Controller/site/client dump, for verifying credentials. |
 | `castle export` | Full NDJSON dump of the store. |
 
 Global flags: `--json`, `--quiet`, `--cidr`, `--iface`, `--store`, `--retain-days`.
@@ -671,10 +593,10 @@ authoritative for layout, spacing, type scale, color and state presentation.
 | Artboard | View | Data source |
 |---|---|---|
 | **Devices** (main window) | `DeviceListView` + sidebar navigation | `HistoryStore.hosts()` |
-| **Device detail** | `DeviceDetailView` | one `Host` + its observations, ports, `OmadaClientFacts`, and `allNames` |
+| **Device detail** | `DeviceDetailView` | one `Host` + its observations, ports, and `allNames` |
 | **Activity timeline** | `ActivityView` | `ScanEvent` records, filterable by kind and time |
 | **Live scan** | `ScanProgressView` | `AsyncStream<ProgressEvent>` from `ProgressSink`, plus `[Degradation]` |
-| **Settings** | `SettingsView` | `CredentialSource`, scan defaults, `RetentionPolicy`, privileged toggle |
+| **Settings** | `SettingsView` | scan defaults, `RetentionPolicy`, privileged toggle |
 
 Implementation notes that the design depends on:
 
@@ -693,20 +615,6 @@ Implementation notes that the design depends on:
 - The view models are `@MainActor` and `@Observable`; the scanning stack is not. Keep the boundary
   crisp — main-actor isolation must not leak into `ICNet` or `ICDiscovery`.
 
-Real device data, for populating previews and verifying the design against reality:
-
-| IP | Name | Model | Vendor | Note |
-|---|---|---|---|---|
-| 10.10.20.1 | *(none)* | — | TP-Link Systems | ER7206 gateway; no friendly name |
-| 10.10.20.2 | Sala de entretenimiento | `AppleTV5,3` | Apple, Inc. | named via mDNS |
-| 10.10.20.3 | JC's MacBook Pro | — | *(randomized MAC)* | named via mDNS |
-| 10.10.20.4 | Mac Studio de Jose | `Mac16,9` | *(randomized MAC)* | named via mDNS |
-| 10.10.20.7 | *(none)* | — | Apple | unidentified |
-| 10.10.20.8 | *(none)* | — | *(randomized MAC)* | fully unidentified |
-
-Note the non-ASCII apostrophe in "JC's MacBook Pro" — do not escape it in JSON output, and make
-sure it renders correctly in the UI.
-
 ---
 
 ## Build order
@@ -719,11 +627,10 @@ sure it renders correctly in the UI.
 3. **`ICNet`** — interfaces, ARP cache, ICMP sweep, TCP connect. Milestone: a correct device list.
 4. **`ICDiscovery`** — mDNS first (it carries most of the naming value), then SSDP, NetBIOS,
    reverse DNS, and the `NameProvider` cascade.
-5. **`ICOmada`** — client, models, TOFU pinning, DHCP leases.
-6. **Deep scan** — connect scan and banner probes.
-7. **`ICAssembly` + `castle`** — pipeline, `EventDeriver`, watch mode, pruning.
-8. **SwiftUI app** against the design canvas.
-9. **`ICPrivileged` last** — BPF and SYN scan are the optional path and must block nothing.
+5. **Deep scan** — connect scan and banner probes.
+6. **`ICAssembly` + `castle`** — pipeline, `EventDeriver`, watch mode, pruning.
+7. **SwiftUI app** against the design canvas.
+8. **`ICPrivileged` last** — BPF and SYN scan are the optional path and must block nothing.
 
 ---
 
@@ -738,16 +645,14 @@ Verify against the requirements. There is no prior implementation to match.
   - The anti-collapse guard — two devices swapping DHCP leases must **not** merge.
   - `deriveEvents` against handcrafted before/after sets.
   - Instance-name cleaning against real Bonjour strings, e.g.
-    `"AA0F330127A2@Mac Studio de Jose._raop._tcp.local."`,
-    `"70-35-60-63.1 Sala de entretenimiento"`, `"host [aa:bb:cc:dd:ee:ff]"`.
-  - `OmadaEnvelope` decoding against recorded fixtures, including the `-44112` expiry path.
+    `"AA0F330127A2@Studio Mac._raop._tcp.local."`,
+    `"70-35-60-63.1 Living Room TV"`, `"host [aa:bb:cc:dd:ee:ff]"`.
 - **No-subprocess invariant** — a test failing if `Foundation.Process`/`posix_spawn` appears in the
   built modules.
 - **Deadline invariant** — run every stage against an unreachable `--cidr 10.99.99.0/24`. Each must
   return within budget, yield partial results, and populate `degradations`. Nothing hangs.
-- **Discovery correctness** — on the live network, cross-check against the Omada controller's own
-  client list, which is the independent source of truth. Every controller-known client on the
-  subnet should appear.
+- **Discovery correctness** — on the live network, cross-check against an independent list of the
+  subnet's clients, such as the router's own. Every client it knows should appear.
 - **Port scan correctness** — verify against a host with known open ports.
 - **Identity over time** — `castle watch --interval 30s` for an hour; force a device off and back
   on. Confirm `hostAppeared`/`hostDisappeared` land, a private-MAC device stays a single `Host`
@@ -780,6 +685,5 @@ Verify against the requirements. There is no prior implementation to match.
 4. **BPF exclusive-open contention** with Wireshark, VPN clients or Little Snitch.
 5. **`RLIMIT_NOFILE` = 256 soft** — raise at startup or deep scans fail confusingly.
 6. **`sudo` store path** resolving to `/var/root` (the SwiftData store).
-7. **Omada token expiry at 7200s** — a watch loop will hit it; build the refresh path up front.
-8. **Variable-length C structs.** `sockaddr_dl` must be parsed with `withUnsafeBytes` and explicit
+7. **Variable-length C structs.** `sockaddr_dl` must be parsed with `withUnsafeBytes` and explicit
    offsets, never `bindMemory` — otherwise alignment UB.

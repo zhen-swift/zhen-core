@@ -8,7 +8,7 @@
 
 /// The stages of a run, in the order they execute.
 ///
-/// `.omada` used to be a case here, for the controller integration. It is dropped
+/// A network-controller stage used to be a case here. The integration is dropped
 /// from the project, so it is dropped from the schema — a stage that can never run
 /// has no business in a wire format that consumers switch over exhaustively.
 public enum Stage: String, Sendable, Hashable, CaseIterable, Codable {

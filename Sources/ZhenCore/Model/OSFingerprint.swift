@@ -200,7 +200,7 @@ public enum StackSignatures {
         // Linux: MSS, SACK, timestamps, NOP, window scale.
         //
         // The option ORDER is the signature. The window scale is not: measured against
-        // 10.10.20.0/24 it was 6 on a TP-Link router and 5 on a camera, both plainly
+        // 10.10.20.0/24 it was 6 on a consumer router and 5 on a camera, both plainly
         // Linux by their option order, because the scale follows the receive buffer and
         // therefore the device's memory rather than its lineage.
         StackSignature(

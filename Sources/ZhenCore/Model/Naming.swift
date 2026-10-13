@@ -4,12 +4,12 @@
 // cascade as Comparable means there is exactly one place the priority lives, and
 // adding a source cannot introduce an ordering bug at a call site.
 //
-// Naming change from the original: the highest-priority source used to be `.omada`,
-// after the TP-Link controller that supplied it. That integration is dropped from
+// Naming change from the original: the highest-priority source used to be named
+// after the network controller that supplied it. That integration is dropped from
 // the project entirely, but the *slot* it occupied is not an accident — it is "a
 // name a person deliberately assigned", which must beat anything a device says about
 // itself. The case is now `.administrative` and the JSON value changed with it.
-// Freezing a dead vendor's name into schema 1 would have been the worse outcome.
+// Freezing a dropped integration's name into schema 1 would have been the worse outcome.
 
 /// Where a name came from, in priority order. Lower priority wins.
 public enum NameSource: String, Sendable, Hashable, CaseIterable, Codable, Comparable {

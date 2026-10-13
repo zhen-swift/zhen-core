@@ -533,8 +533,8 @@ extension IdentificationEvidence {
     ///
     /// "Distinct name" means a name that is not just the model echoed back. A router
     /// we could only name from its model string has a name field populated and is
-    /// still only `.partial`, because knowing a device calls itself `ER7206` is
-    /// knowing the model, not the device.
+    /// still only `.partial`, because knowing a device calls itself by its model
+    /// number is knowing the model, not the device.
     public init(facts: HostFacts) {
         self.init(names: facts.allNames, vendor: facts.vendor, ttl: facts.ttl)
     }

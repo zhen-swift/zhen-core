@@ -32,7 +32,7 @@ prefix. A path they name outside `zhen/` is in one of these:
 
 | | |
 |---|---|
-| `SPEC.md` | The original technical specification. Still authoritative on **concurrency, the identity model, the store, deadlines and the privilege model** — that is where the hard thinking lives, and it is amended rather than replaced where it has been overtaken. The store requirement carries two such amendments, dated in place: SwiftData is Darwin-only, so it could not survive the portability requirement unqualified — and then, once the app was wired to the same file the command line writes, the SwiftData conformance was withdrawn for shipping nowhere. Two further parts are deliberately out of date: the Omada controller integration is dropped, and the naming and layout describe one package with `IC`-prefixed modules where the tool is now this package, with the app in its own repository |
+| `SPEC.md` | The original technical specification. Still authoritative on **concurrency, the identity model, the store, deadlines and the privilege model** — that is where the hard thinking lives, and it is amended rather than replaced where it has been overtaken. The store requirement carries two such amendments, dated in place: SwiftData is Darwin-only, so it could not survive the portability requirement unqualified — and then, once the app was wired to the same file the command line writes, the SwiftData conformance was withdrawn for shipping nowhere. Two further parts are deliberately out of date: the controller integration is dropped (and removed from the text), and the naming and layout describe one package with `IC`-prefixed modules where the tool is now this package, with the app in its own repository |
 
 ## Build briefs
 
