@@ -167,3 +167,8 @@ monorepo this repository was split from.
 **Apache License 2.0.** Use it, fork it, ship it commercially — the licence asks only
 that you keep the notice and state your changes. It also grants a patent licence, which
 MIT does not, and that is the reason to prefer it here. See `LICENSE` and `NOTICE`.
+
+Shipping it inside something else? The `NOTICE` text belongs in your acknowledgements —
+the licence asks for that much — and a link back to this repository is appreciated beyond
+it: it is how a small project gets found. Citing it in a paper or a report: `CITATION.cff`
+has the details, and GitHub offers them as **Cite this repository**.

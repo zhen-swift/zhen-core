@@ -1,0 +1,26 @@
+# How to cite Zhen. GitHub reads this file and offers it as "Cite this repository".
+#
+# No `version` or `date-released`, on purpose: ZhenVersion.swift is the only declaration of
+# the version, and a second copy here would go stale at the first release that forgot it.
+# Someone citing a particular release names it from the tag.
+cff-version: 1.2.0
+message: "If you use Zhen in your work, please cite it as below."
+type: software
+title: "Zhen: a fast, native network scanner for macOS"
+abstract: >-
+  A network scanner written entirely in Swift 6: the engine, the zhen command line, and
+  the privileged helper, as one Swift package. It sweeps a /24 in about three seconds by
+  retransmitting early and declaring late, names devices through Bonjour, NetBIOS and
+  UPnP, and states plainly what it could not work out and why.
+authors:
+  - given-names: "Juan Carlos"
+    family-names: "Estévez Rodríguez"
+repository-code: "https://github.com/zhen-swift/zhen-core"
+url: "https://github.com/zhen-swift/zhen-core"
+license: Apache-2.0
+keywords:
+  - network scanner
+  - host discovery
+  - port scanning
+  - macOS
+  - Swift

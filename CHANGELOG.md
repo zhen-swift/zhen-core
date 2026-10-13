@@ -6,6 +6,14 @@ nothing is released yet.
 The format is loosely [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions
 follow the app's `CFBundleShortVersionString`.
 
+## Unreleased
+
+### Changed
+- **`NOTICE` names the repository, not the organisation.** Its first lines are what a
+  redistributor copies into their acknowledgements, so they now say what this is and where
+  it lives: Zhen, its author, and `https://github.com/zhen-swift/zhen-core`. A
+  `CITATION.cff` is new beside it, for anyone citing the tool in a paper or a report.
+
 ## [0.7.0] — 2026-10-12 — ports in history
 
 Ports reach history. A port scan can be kept without being a run, a port opening or
