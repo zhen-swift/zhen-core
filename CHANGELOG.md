@@ -50,6 +50,11 @@ follow the app's `CFBundleShortVersionString`.
   **Do not point a 0.6.0 build at a store 0.7.0 has written.** It reads the device lines
   and ignores `mac_history`, reads the port events and drops them, and the first time it
   rewrites the file both are gone. Nothing written by 0.7.0 can prevent that.
+- **A `zhen-helper` product.** The privileged helper was an executable target with no
+  product, so it never crossed the package boundary: the app could not embed it from the
+  version it pins and built it by hand from a checkout. Declaring it changes no scheme
+  list — measured: this package already showed a `zhen-helper` scheme when opened alone,
+  and the app's project shows none for a remote package's products.
 - **`zhen ports --record`.** Keeps what the scan found in history, through the call
   above: ports and port events for devices history already holds, never a run. Off unless
   asked for, because the command has written nothing since it was added. An interrupted

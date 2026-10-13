@@ -75,9 +75,19 @@ let package = Package(
         // eventually deletes.
         .library(name: "ZhenScan", targets: ["ZhenScan"]),
         .executable(name: "zhen", targets: ["zhen"]),
-        // No `.executable` product for the helper: `swift build` emits its binary
-        // regardless, and declaring it would put a second scheme in Xcode's menu for a
-        // daemon nobody launches by hand.
+        // A product, so the app can embed the helper from the version it pins instead of
+        // building it by hand from a checkout.
+        //
+        // It used to be withheld, on the grounds that declaring it would put a second
+        // scheme in Xcode's menu for a daemon nobody launches by hand. Measured on
+        // 2026-10-12, neither half of that holds: opened on its own, this package already
+        // lists a `zhen-helper` scheme — SwiftPM synthesises an executable product for
+        // every executable target of a ROOT package, and Xcode makes a scheme for it — and
+        // the app's project lists only its own `Zhen` scheme, because Xcode makes none for
+        // a remote package's products. What the synthesised product does not do is cross
+        // the package boundary: a dependent asking for it got "product 'zhen-helper' not
+        // found". Declaring it changes exactly that, and no scheme list.
+        .executable(name: "zhen-helper", targets: ["zhen-helper"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.5.0"),
