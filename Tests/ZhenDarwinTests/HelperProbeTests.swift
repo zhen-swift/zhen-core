@@ -1,3 +1,5 @@
+// Apple-only, like the target it tests.
+#if canImport(Darwin)
 import Foundation
 import Synchronization
 import Testing
@@ -58,3 +60,5 @@ struct HelperProbeTests {
         #expect(seen.withLock { $0 } == [HelperClient.probeTimeout, HelperClient.acquisitionTimeout])
     }
 }
+
+#endif

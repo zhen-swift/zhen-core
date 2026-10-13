@@ -1,3 +1,5 @@
+// Apple-only, like the target it tests.
+#if canImport(Darwin)
 import Foundation
 import Testing
 @testable import ZhenDarwin
@@ -24,3 +26,5 @@ struct PermissionAdviceChoiceTests {
         #expect(ICMPSweepEngine().advice == .appleLocalNetwork)
     }
 }
+
+#endif
