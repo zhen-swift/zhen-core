@@ -9,9 +9,9 @@ follow the app's `CFBundleShortVersionString`.
 ## Unreleased
 
 ### Changed
-- **`NOTICE` names the repository, not the organisation.** Its first lines are what a
+- **`NOTICE` names the project and where it lives.** Its first lines are what a
   redistributor copies into their acknowledgements, so they now say what this is and where
-  it lives: Zhen, its author, and `https://github.com/zhen-swift/zhen-core`. A
+  it lives: Zhen, by zhen-swift, at `https://github.com/zhen-swift/zhen-core`. A
   `CITATION.cff` is new beside it, for anyone citing the tool in a paper or a report.
 
 ## [0.7.0] — 2026-10-12 — ports in history

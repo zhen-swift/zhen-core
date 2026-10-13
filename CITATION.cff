@@ -13,6 +13,10 @@ abstract: >-
   retransmitting early and declaring late, names devices through Bonjour, NetBIOS and
   UPnP, and states plainly what it could not work out and why.
 authors:
+  - name: "zhen-swift"
+    website: "https://github.com/zhen-swift"
+# Who started it, kept out of the citation itself: tools format `authors` only.
+contact:
   - given-names: "Juan Carlos"
     family-names: "Estévez Rodríguez"
 repository-code: "https://github.com/zhen-swift/zhen-core"
