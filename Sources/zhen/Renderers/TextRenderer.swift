@@ -109,7 +109,7 @@ nonisolated struct TextRenderer: Renderer {
                 device.displayName ?? "\u{2014}",
                 // The model earns a column of its own rather than being folded into the
                 // name. `AppleTV5,3` answers a different question from
-                // "Sala de entretenimiento" — what it IS versus what it is CALLED — and
+                // "Sala de estar principal" — what it IS versus what it is CALLED — and
                 // a device routinely has one without the other: the gateway on this
                 // network has a model and no name at all.
                 device.displayModel ?? "\u{2014}",

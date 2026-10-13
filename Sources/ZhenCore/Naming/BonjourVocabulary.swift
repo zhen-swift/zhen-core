@@ -41,8 +41,8 @@ public enum BonjourVocabulary {
     ///
     /// Ranking exists because ONE DEVICE ADVERTISES ITSELF UNDER SEVERAL TYPES AND THE
     /// NAMES DISAGREE. The Apple TV on the reference network is
-    /// `"Sala de entretenimiento"` on `_companion-link._tcp` and
-    /// `"70-35-60-63.1 Sala de entretenimiento"` on `_sleep-proxy._udp` — same device,
+    /// `"Sala de estar principal"` on `_companion-link._tcp` and
+    /// `"70-35-60-63.1 Sala de estar principal"` on `_sleep-proxy._udp` — same device,
     /// same instant, two names. Without a rank the winner is whichever record arrived
     /// first, which is a race, and the device's name would flip between runs.
     ///
@@ -187,15 +187,15 @@ public enum BonjourVocabulary {
     /// Three rules, each from a real string on a real network, each applied once:
     ///
     ///   1. **`_raop` hardware prefix.** AirPlay receivers publish
-    ///      `"AA0F330127A2@Mac Studio de Jose"` — twelve hex digits, an `@`, then the
+    ///      `"5E0A1B2C3D4E@Mac Studio de Luis"` — twelve hex digits, an `@`, then the
     ///      name. The prefix is the device's hardware address and identifies nothing a
     ///      reader wants.
     ///   2. **`_sleep-proxy` owner prefix.** The proxy publishes on behalf of a
-    ///      sleeping device as `"70-35-60-63.1 Sala de entretenimiento"` — four
+    ///      sleeping device as `"70-35-60-63.1 Sala de estar principal"` — four
     ///      hex-pair groups, a dot, a sequence number, a space, then the name.
     ///   3. **A trailing DNS-SD service suffix.** A browse reply's `serviceName` is the
     ///      bare instance label, but the same name reaches this function in fullname
-    ///      form — `"AA0F330127A2@Mac Studio de Jose._raop._tcp.local."` — from a
+    ///      form — `"5E0A1B2C3D4E@Mac Studio de Luis._raop._tcp.local."` — from a
     ///      resolve reply's `fullname`, from avahi's command-line output, and from every
     ///      captured fixture anyone will ever hand it. Leaving the suffix on turns a
     ///      device name into a protocol string in the device list.
@@ -258,7 +258,7 @@ public enum BonjourVocabulary {
     ///
     /// Anchored on `._tcp.` or `._udp.` and then walked BACK to the start of the service
     /// label, because that label is what has to go too: cutting at `._tcp.` alone would
-    /// leave `"Mac Studio de Jose._raop"`. Only a suffix is considered, so a name with a
+    /// leave `"Mac Studio de Luis._raop"`. Only a suffix is considered, so a name with a
     /// dot in it — and Bonjour instance names may contain dots — keeps everything before
     /// the service label.
     static func strippingServiceSuffix(_ text: String) -> String {

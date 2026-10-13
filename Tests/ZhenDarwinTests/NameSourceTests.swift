@@ -125,7 +125,7 @@ struct UPnPDescriptionTests {
         // An empty name must be nil rather than an empty string, or the device list gets
         // a blank cell where the address should be doing the work.
         #expect(parsed.friendlyName == nil)
-        #expect(parsed.modelName == "ER7206")
+        #expect(parsed.modelName == "GW1000")
     }
 
     @Test("A document missing both fields yields nothing rather than an empty shell")

@@ -106,16 +106,16 @@ struct InstanceNameTests {
         let proxy = try #require(BonjourVocabulary.candidate(from: ServiceSighting(
             ip: IPv4Address("10.10.20.2")!,
             serviceType: "_sleep-proxy._udp",
-            instanceName: "70-35-60-63.1 Sala de entretenimiento"
+            instanceName: "70-35-60-63.1 Sala de estar principal"
         )))
         let companion = try #require(BonjourVocabulary.candidate(from: ServiceSighting(
             ip: IPv4Address("10.10.20.2")!,
             serviceType: "_companion-link._tcp",
-            instanceName: "Sala de entretenimiento"
+            instanceName: "Sala de estar principal"
         )))
         // Cleaning makes the two agree on the value; the rank is what decides the winner
         // when they do not.
-        #expect(proxy.value == "Sala de entretenimiento")
+        #expect(proxy.value == "Sala de estar principal")
         #expect(companion.rank < proxy.rank)
         #expect([proxy, companion].best == companion)
         // And the loser is still there, which is the whole "Known by" panel.
@@ -147,8 +147,8 @@ struct InstanceNameTests {
     @Test("A trailing service suffix goes, and a dot inside a name stays")
     func serviceSuffix() {
         #expect(
-            BonjourVocabulary.cleanInstanceName("Mac Studio de Jose._raop._tcp.local.")
-                == "Mac Studio de Jose"
+            BonjourVocabulary.cleanInstanceName("Mac Studio de Luis._raop._tcp.local.")
+                == "Mac Studio de Luis"
         )
         // Bonjour instance names may contain dots. Only a real service suffix is cut.
         #expect(BonjourVocabulary.cleanInstanceName("Rev.2 Speaker") == "Rev.2 Speaker")
@@ -218,7 +218,7 @@ struct TXTModelTests {
         let candidate = try #require(BonjourVocabulary.candidate(from: ServiceSighting(
             ip: IPv4Address("10.10.20.31")!,
             serviceType: "_googlecast._tcp",
-            instanceName: "Chromecast-6f3a1d9c4b2e8a7f",
+            instanceName: "Chromecast-0a5e1f2b3c4d5e6f",
             txt: ["fn": "Sala TV", "md": "Chromecast Ultra"]
         )))
         #expect(candidate.value == "Sala TV")
@@ -232,16 +232,16 @@ struct TXTModelTests {
         let host = HostFacts(
             ip: IPv4Address("10.10.20.2")!,
             allNames: [
-                NameCandidate(value: "Sala de entretenimiento", source: .administrative),
+                NameCandidate(value: "Sala de estar principal", source: .administrative),
                 try #require(BonjourVocabulary.candidate(from: ServiceSighting(
                     ip: IPv4Address("10.10.20.2")!,
                     serviceType: "_airplay._tcp",
-                    instanceName: "Sala de entretenimiento",
+                    instanceName: "Sala de estar principal",
                     txt: ["md": "0,1,2", "am": "AppleTV5,3"]
                 ))),
             ]
         )
-        #expect(host.displayName == "Sala de entretenimiento")
+        #expect(host.displayName == "Sala de estar principal")
         #expect(host.displayModel == "AppleTV5,3")
     }
 }
@@ -389,9 +389,9 @@ struct NameLedgerTests {
         // report. Without the remap, the machine running the scan is the one device the
         // scan cannot name.
         var ledger = NameLedger(localAddress: Self.local)
-        ledger.record(NameCandidate(value: "JC’s MacBook Pro", source: .mdns, rank: 1),
+        ledger.record(NameCandidate(value: "Alex’s MacBook Pro", source: .mdns, rank: 1),
                       for: IPv4Address("127.0.0.1")!)
-        #expect(ledger.names[Self.local]?.first?.value == "JC’s MacBook Pro")
+        #expect(ledger.names[Self.local]?.first?.value == "Alex’s MacBook Pro")
         #expect(ledger.names[IPv4Address("127.0.0.1")!] == nil)
     }
 
@@ -406,8 +406,8 @@ struct NameLedgerTests {
     func keepsLosersDropsRepeats() {
         var ledger = NameLedger(localAddress: Self.local)
         let ip = IPv4Address("10.10.20.2")!
-        let clean = NameCandidate(value: "Sala de entretenimiento", source: .mdns, rank: 1)
-        let raop = NameCandidate(value: "Sala de entretenimiento", source: .mdns, rank: 15)
+        let clean = NameCandidate(value: "Sala de estar principal", source: .mdns, rank: 1)
+        let raop = NameCandidate(value: "Sala de estar principal", source: .mdns, rank: 15)
         ledger.record(clean, for: ip)
         ledger.record(raop, for: ip)
         // The same browse reply arrives again when mDNSResponder refreshes its cache.
@@ -422,7 +422,7 @@ struct NameLedgerTests {
         let named = IPv4Address("10.10.20.2")!
         let weaklyNamed = IPv4Address("10.10.20.3")!
         let unnamed = IPv4Address("10.10.20.12")!
-        ledger.record(NameCandidate(value: "Sala de entretenimiento", source: .mdns, rank: 1), for: named)
+        ledger.record(NameCandidate(value: "Sala de estar principal", source: .mdns, rank: 1), for: named)
         // Reverse DNS routinely returns a name derived from the address itself, which
         // looks like a name and identifies nothing — so it does not stop NetBIOS.
         ledger.record(NameCandidate(value: "10-10-20-3.lan", source: .dns), for: weaklyNamed)

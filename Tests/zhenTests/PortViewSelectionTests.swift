@@ -21,7 +21,7 @@ private func report(tcp: [UInt16], hosts: Int = 3) -> ScanReport {
     let facts = (0..<hosts).map { index in
         HostFacts(
             ip: IPv4Address("10.10.20.\(index + 1)")!,
-            mac: MACAddress("78:20:51:74:CB:28"), ttl: 64,
+            mac: MACAddress("78:20:51:5E:07:28"), ttl: 64,
             rtt: RTTSample(measured: .microseconds(412)),
             ports: tcp.map {
                 PortObservation(port: $0, proto: .tcp,

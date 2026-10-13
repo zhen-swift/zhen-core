@@ -34,8 +34,8 @@ back together.
 ```
 ADDRESS        NAME                      22   80  443
 10.10.20.1     —                          ·    ●    ●
-10.10.20.103   Sala de entretenimiento    ○    ○    ·
-10.10.20.106   65" Crystal UHD            ·    ●    ·
+10.10.20.103   Sala de estar principal    ○    ○    ·
+10.10.20.106   65" Smart TV               ·    ●    ·
 10.10.20.111   —                          –    –    –
 
 ● open   ○ closed   · filtered   – not probed

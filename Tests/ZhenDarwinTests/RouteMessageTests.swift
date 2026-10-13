@@ -51,11 +51,11 @@ struct RouteMessageTests {
             },
             uniquingKeysWith: { first, _ in first }
         )
-        #expect(byIP[try #require(IPv4Address("10.10.20.1"))]?.description == "78:20:51:74:CB:28")
-        #expect(byIP[try #require(IPv4Address("10.10.20.2"))]?.description == "C8:69:CD:7F:33:E1")
+        #expect(byIP[try #require(IPv4Address("10.10.20.1"))]?.description == "78:20:51:5E:07:28")
+        #expect(byIP[try #require(IPv4Address("10.10.20.2"))]?.description == "C8:69:CD:5E:01:E1")
         // An unpadded octet — 00:92:... — is exactly the case the packed MACAddress
         // type exists for, and it appears in the real capture.
-        #expect(byIP[try #require(IPv4Address("10.10.20.4"))]?.description == "00:92:35:30:37:80")
+        #expect(byIP[try #require(IPv4Address("10.10.20.4"))]?.description == "00:92:35:5E:18:80")
     }
 
     @Test("An incomplete entry yields no hardware address")

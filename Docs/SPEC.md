@@ -340,8 +340,8 @@ Implementation shape:
 ### Domain knowledge worth preserving (from prior art — hard to rediscover)
 
 - **Service types carry a quality rank.** The same device advertises
-  `"Living Room TV"` on `_companion-link._tcp` and
-  `"70-35-60-63.1 Living Room TV"` on `_sleep-proxy._udp`. Rank types by name cleanliness
+  `"Sala de estar principal"` on `_companion-link._tcp` and
+  `"70-35-60-63.1 Sala de estar principal"` on `_sleep-proxy._udp`. Rank types by name cleanliness
   and let the best-ranked win. Roughly 17 types are worth browsing, including
   `_googlecast._tcp` (cleanest — its TXT `fn` key is a user-set friendly name),
   `_companion-link._tcp`, `_airplay._tcp`, `_homekit._tcp`, `_device-info._tcp`,
@@ -645,8 +645,8 @@ Verify against the requirements. There is no prior implementation to match.
   - The anti-collapse guard — two devices swapping DHCP leases must **not** merge.
   - `deriveEvents` against handcrafted before/after sets.
   - Instance-name cleaning against real Bonjour strings, e.g.
-    `"AA0F330127A2@Studio Mac._raop._tcp.local."`,
-    `"70-35-60-63.1 Living Room TV"`, `"host [aa:bb:cc:dd:ee:ff]"`.
+    `"5E0A1B2C3D4E@Mac Studio de Luis._raop._tcp.local."`,
+    `"70-35-60-63.1 Sala de estar principal"`, `"host [aa:bb:cc:dd:ee:ff]"`.
 - **No-subprocess invariant** — a test failing if `Foundation.Process`/`posix_spawn` appears in the
   built modules.
 - **Deadline invariant** — run every stage against an unreachable `--cidr 10.99.99.0/24`. Each must

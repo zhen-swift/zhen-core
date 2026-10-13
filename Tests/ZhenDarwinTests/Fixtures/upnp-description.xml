@@ -6,7 +6,7 @@
     <friendlyName>Sala &amp; Cocina TV</friendlyName>
     <manufacturer>Roku, Inc.</manufacturer>
     <modelName>Roku Streaming Stick 4K</modelName>
-    <UDN>uuid:roku:ecp:1GU48T017973</UDN>
+    <UDN>uuid:roku:ecp:1GU00Z000001</UDN>
     <deviceList>
       <device>
         <deviceType>urn:schemas-upnp-org:device:MediaServer:1</deviceType>

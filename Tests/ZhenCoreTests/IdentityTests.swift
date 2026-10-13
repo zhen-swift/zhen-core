@@ -14,12 +14,12 @@ struct IdentityTests {
 
     @Test("A Bonjour name alone identifies a device, even behind a rotating MAC")
     func bonjourNameIdentifies() throws {
-        // 10.10.20.3, JC's MacBook Pro: named over mDNS, randomized MAC, no vendor
+        // 10.10.20.3, Alex's MacBook Pro: named over mDNS, randomized MAC, no vendor
         // and no model. The brief is explicit that this reads as identified.
         let macbook = device(HostFacts(
             ip: try #require(IPv4Address("10.10.20.3")),
-            mac: try MACAddress.required("DA:5C:22:81:F3:0A"),
-            allNames: [NameCandidate(value: "JC's MacBook Pro", source: .mdns)]
+            mac: try MACAddress.required("DA:5C:22:5E:08:0A"),
+            allNames: [NameCandidate(value: "Alex's MacBook Pro", source: .mdns)]
         ))
         #expect(macbook.identification == .identified)
         #expect(macbook.vendor == nil)
@@ -31,12 +31,12 @@ struct IdentityTests {
 
     @Test("A device named only by its model string is partial, however stable its MAC")
     func modelStringIsNotAName() throws {
-        // 10.10.20.1, the ER7206 gateway: burned-in MAC, no friendly name anywhere,
+        // 10.10.20.1, the GW1000 gateway: burned-in MAC, no friendly name anywhere,
         // and the only name available is the model echoed back.
         let gateway = device(HostFacts(
             ip: try #require(IPv4Address("10.10.20.1")),
-            mac: try MACAddress.required("30:DE:4B:77:A2:10"),
-            allNames: [NameCandidate(value: "ER7206", source: .ssdp, model: "ER7206")],
+            mac: try MACAddress.required("30:DE:4B:5E:03:10"),
+            allNames: [NameCandidate(value: "GW1000", source: .ssdp, model: "GW1000")],
             vendor: "TP-Link Systems"
         ))
         #expect(gateway.identification == .partial)
@@ -49,12 +49,12 @@ struct IdentityTests {
     func confidencesAreIndependent() throws {
         let macbook = device(HostFacts(
             ip: try #require(IPv4Address("10.10.20.3")),
-            mac: try MACAddress.required("DA:5C:22:81:F3:0A"),
-            allNames: [NameCandidate(value: "JC's MacBook Pro", source: .mdns)]
+            mac: try MACAddress.required("DA:5C:22:5E:08:0A"),
+            allNames: [NameCandidate(value: "Alex's MacBook Pro", source: .mdns)]
         ))
         let gateway = device(HostFacts(
             ip: try #require(IPv4Address("10.10.20.1")),
-            mac: try MACAddress.required("30:DE:4B:77:A2:10"),
+            mac: try MACAddress.required("30:DE:4B:5E:03:10"),
             vendor: "TP-Link Systems"
         ))
 
@@ -68,7 +68,7 @@ struct IdentityTests {
     func vendorOnlyAndNothingAtAll() throws {
         let appleish = device(HostFacts(
             ip: try #require(IPv4Address("10.10.20.7")),
-            mac: try MACAddress.required("A8:51:AB:2F:19:6C"),
+            mac: try MACAddress.required("A8:51:AB:5E:09:6C"),
             vendor: "Apple"
         ))
         #expect(appleish.identification == .partial)
@@ -127,7 +127,7 @@ struct IdentityTests {
     func evidenceIsCarried() throws {
         let facts = HostFacts(
             ip: try #require(IPv4Address("10.10.20.2")),
-            allNames: [NameCandidate(value: "Sala de entretenimiento", source: .mdns, rank: 1, model: "AppleTV5,3")],
+            allNames: [NameCandidate(value: "Sala de estar principal", source: .mdns, rank: 1, model: "AppleTV5,3")],
             vendor: "Apple, Inc.",
             ttl: 64
         )
@@ -144,11 +144,11 @@ struct IdentityTests {
 
     @Test("The locally administered bit, not the caller, decides whether a MAC is a key")
     func macKindComesFromTheAddress() throws {
-        let stable = HostIdentifier.fromMAC(try MACAddress.required("30:DE:4B:77:A2:10"))
+        let stable = HostIdentifier.fromMAC(try MACAddress.required("30:DE:4B:5E:03:10"))
         #expect(stable.kind == .universalMAC)
         #expect(stable.weight == 100)
 
-        let rotating = HostIdentifier.fromMAC(try MACAddress.required("DA:5C:22:81:F3:0A"))
+        let rotating = HostIdentifier.fromMAC(try MACAddress.required("DA:5C:22:5E:08:0A"))
         #expect(rotating.kind == .randomizedMAC)
         #expect(rotating.weight == 30)
     }
@@ -163,11 +163,11 @@ struct IdentityTests {
     func candidateKeysAreOrdered() throws {
         let facts = HostFacts(
             ip: try #require(IPv4Address("10.10.20.4")),
-            mac: try MACAddress.required("F2:3A:91:6B:0D:44"),
+            mac: try MACAddress.required("F2:3A:91:5E:0A:44"),
             allNames: [
-                NameCandidate(value: "Mac Studio de Jose", source: .mdns, rank: 1),
+                NameCandidate(value: "Mac Studio de Luis", source: .mdns, rank: 1),
                 // Same instance from a second service type, differing only in case.
-                NameCandidate(value: "mac studio de jose", source: .mdns, rank: 4),
+                NameCandidate(value: "mac studio de luis", source: .mdns, rank: 4),
             ],
             dhcpHostname: "mac-studio"
         )
@@ -179,9 +179,9 @@ struct IdentityTests {
 
     @Test("Stability comes from the strongest key available")
     func stabilityFromStrongestKey() throws {
-        let universal = HostIdentifier.fromMAC(try MACAddress.required("30:DE:4B:77:A2:10"))
-        let mdns = HostIdentifier.mdnsInstance("Mac Studio de Jose")
-        let random = HostIdentifier.fromMAC(try MACAddress.required("DA:5C:22:81:F3:0A"))
+        let universal = HostIdentifier.fromMAC(try MACAddress.required("30:DE:4B:5E:03:10"))
+        let mdns = HostIdentifier.mdnsInstance("Mac Studio de Luis")
+        let random = HostIdentifier.fromMAC(try MACAddress.required("DA:5C:22:5E:08:0A"))
         let lease = HostIdentifier.ipLease(try #require(IPv4Address("10.10.20.8")), in: Self.network)
 
         #expect(Stability(strongestOf: [universal, random, lease]) == .strong)

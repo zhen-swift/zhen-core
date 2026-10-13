@@ -86,7 +86,7 @@ nonisolated struct FakeInterfaces: InterfaceProvider {
     static let en0 = NetworkInterface(
         name: "en0", address: IPv4Address("10.10.20.8")!,
         network: IPv4Network("10.10.20.0/24")!,
-        hardwareAddress: MACAddress("52:A1:8A:E0:7A:8A")
+        hardwareAddress: MACAddress("52:A1:8A:5E:04:8A")
     )
 }
 
@@ -227,7 +227,7 @@ struct DenialExitTests {
         let engine = FakeDiscovery(
             // The ARP cache still yields hosts, so the device list is NOT empty —
             // which is exactly why "zero devices" cannot be the signal.
-            hosts: [HostFacts(ip: IPv4Address("10.10.20.1")!, mac: MACAddress("78:20:51:74:CB:28"))],
+            hosts: [HostFacts(ip: IPv4Address("10.10.20.1")!, mac: MACAddress("78:20:51:5E:07:28"))],
             degradations: [denial!],
             used: [.arpSweep],
             outcome: .complete
@@ -277,10 +277,10 @@ struct DenialExitTests {
 struct NamingStageTests {
     /// The reference network's Apple TV: one device, two service types, two spellings.
     private static let clean = NameCandidate(
-        value: "Sala de entretenimiento", source: .mdns, rank: 1, model: "AppleTV5,3"
+        value: "Sala de estar principal", source: .mdns, rank: 1, model: "AppleTV5,3"
     )
     private static let prefixed = NameCandidate(
-        value: "70-35-60-63.1 Sala de entretenimiento", source: .mdns, rank: 16
+        value: "70-35-60-63.1 Sala de estar principal", source: .mdns, rank: 16
     )
 
     @Test("The winner is shown and every loser is kept")
@@ -292,7 +292,7 @@ struct NamingStageTests {
             target: target, budget: .seconds(5)
         )
         let device = try #require(completed.report.devices.first)
-        #expect(device.displayName == "Sala de entretenimiento")
+        #expect(device.displayName == "Sala de estar principal")
         // The whole "Known by" panel is built from the losers. A pipeline that kept only
         // the winner would pass every test of the winning name and destroy the feature.
         #expect(device.names.count == 2)
@@ -595,7 +595,7 @@ struct IPv6NeighborStageTests {
     private func scan(_ cache: FixedIPv6Neighbors) async -> ScanReport? {
         var discovery = FakeDiscovery()
         // One v4 host that answered. Nothing else answered anything.
-        discovery.hosts = [HostFacts(ip: IPv4Address("10.10.20.1")!, mac: MACAddress("78:20:51:74:CB:28"),
+        discovery.hosts = [HostFacts(ip: IPv4Address("10.10.20.1")!, mac: MACAddress("78:20:51:5E:07:28"),
                                      discoveredVia: [.probeReply])]
         let renderer = RecordingRenderer()
         let scan = ScanPipeline(
@@ -611,9 +611,9 @@ struct IPv6NeighborStageTests {
     @Test("A host only the cache knows is reported, with the cache as its only source")
     func cacheOnlyHostIsReported() async throws {
         let report = try #require(await scan(FixedIPv6Neighbors(entries: [
-            entry("fe80::4d0:baf6:1770:5849%en0", "9E:BA:51:6A:82:9B"),
+            entry("fe80::4d0:baf6:1770:5849%en0", "9E:BA:51:5E:0E:9B"),
         ])))
-        let silent = try #require(report.devices.first { $0.mac == MACAddress("9E:BA:51:6A:82:9B") })
+        let silent = try #require(report.devices.first { $0.mac == MACAddress("9E:BA:51:5E:0E:9B") })
         #expect(silent.addresses == [IPAddress("fe80::4d0:baf6:1770:5849%en0")!])
         #expect(silent.discoveredVia == [.neighborTable])
         #expect(silent.identification == .minimal)
@@ -623,19 +623,19 @@ struct IPv6NeighborStageTests {
     @Test("A cache entry sharing a MAC with a v4 host becomes that host's second address")
     func sameMACFuses() async throws {
         let report = try #require(await scan(FixedIPv6Neighbors(entries: [
-            entry("fe80::7a20:51ff:fe74:cb28%en0", "78:20:51:74:CB:28"),
+            entry("fe80::7a20:51ff:fe5e:728%en0", "78:20:51:5E:07:28"),
         ])))
         #expect(report.devices.count == 1)
         let gateway = try #require(report.devices.first)
-        #expect(gateway.addresses == [IPAddress("10.10.20.1")!, IPAddress("fe80::7a20:51ff:fe74:cb28%en0")!])
+        #expect(gateway.addresses == [IPAddress("10.10.20.1")!, IPAddress("fe80::7a20:51ff:fe5e:728%en0")!])
         #expect(gateway.discoveredVia == [.probeReply, .neighborTable])
     }
 
     @Test("This machine's own addresses and other interfaces' neighbours are not reported")
     func ownAndForeignAreExcluded() async throws {
         let report = try #require(await scan(FixedIPv6Neighbors(entries: [
-            entry("fe80::10fe:8abd:76f3:5a11%en0", "D6:0A:97:FE:72:9C", permanent: true),
-            entry("fe80::8c97:23ff:fe36:6cec%awdl0", "8E:97:23:36:6C:EC"),
+            entry("fe80::10fe:8abd:76f3:5a11%en0", "D6:0A:97:5E:06:9C", permanent: true),
+            entry("fe80::8c97:23ff:fe5e:13ec%awdl0", "8E:97:23:5E:13:EC"),
         ])))
         #expect(report.devices.count == 1, "only the v4 host")
     }
@@ -683,9 +683,9 @@ final class LearningIPv6Neighbors: IPv6NeighborCache, @unchecked Sendable {
 // wrongly, and a v6-only host for the duplicate to appear on.
 @Suite("D2′: one all-nodes echo complements the v4 sweep")
 struct IPv6SolicitationTests {
-    private let gatewayMAC = "78:20:51:74:CB:28", tvMAC = "C8:69:CD:7F:33:E1", onlyV6MAC = "58:D8:12:0A:BF:6E"
-    private let gatewayV6 = "fe80::7a20:51ff:fe74:cb28%en0", tvV6 = "fe80::82f:e557:372d:c208%en0"
-    private let onlyV6 = "fe80::5ad8:12ff:fe0a:bf6e%en0"
+    private let gatewayMAC = "78:20:51:5E:07:28", tvMAC = "C8:69:CD:5E:01:E1", onlyV6MAC = "58:D8:12:5E:16:6E"
+    private let gatewayV6 = "fe80::7a20:51ff:fe5e:728%en0", tvV6 = "fe80::82f:e557:372d:c208%en0"
+    private let onlyV6 = "fe80::5ad8:12ff:fe5e:166e%en0"
 
     private func entry(_ address: String, _ mac: String) -> IPv6NeighborEntry {
         IPv6NeighborEntry(address: IPv6Address(address)!, mac: MACAddress(mac)!, isPermanent: false)

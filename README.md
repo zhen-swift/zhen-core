@@ -9,10 +9,10 @@ scanners get wrong — tells you plainly what it could *not* work out and why.
 ```
 ADDRESS      NAME                     MODEL       HARDWARE           RTT       TTL
 10.10.20.1   —                        —           7O:20:51:74:CB:28  15.06ms   64
-10.10.20.2   Sala de                  AppleTV5,3  C8:69:CD:7F:22:E1  32.04ms   64
-10.10.20.3   —                        —           86:9F:22:F7:9C:B3  268.93ms  32
-10.10.20.8   MacBook Pro              —           52:A1:8A:22:7A:8A  —         —
-10.10.20.12  —                        —           32:37:C0:BC:FC:22  33.41ms   64
+10.10.20.2   Sala de                  AppleTV5,3  C8:69:CD:5E:02:E1  32.04ms   64
+10.10.20.3   —                        —           86:9F:22:5E:14:B3  268.93ms  32
+10.10.20.8   MacBook Pro              —           52:A1:8A:5E:05:8A  —         —
+10.10.20.12  —                        —           32:37:C0:5E:17:22  33.41ms   64
 9 devices · 3109ms · 761 probes, 15 replies · 245 probes/s
 ```
 

@@ -34,10 +34,10 @@ struct EventTests {
 
     @Test("It is pure: the same inputs give the same events, in the same order")
     func deterministic() {
-        let before = [device("10.10.20.1", mac: "30:DE:4B:77:A2:10"),
-                      device("10.10.20.2", mac: "A8:51:AB:2F:19:6C", name: "Sala de entretenimiento")]
-        let after = [device("10.10.20.2", mac: "A8:51:AB:2F:19:6C", name: "Sala de entretenimiento"),
-                     device("10.10.20.5", mac: "6E:F0:9D:3B:C8:52", name: "New thing")]
+        let before = [device("10.10.20.1", mac: "30:DE:4B:5E:03:10"),
+                      device("10.10.20.2", mac: "A8:51:AB:5E:09:6C", name: "Sala de estar principal")]
+        let after = [device("10.10.20.2", mac: "A8:51:AB:5E:09:6C", name: "Sala de estar principal"),
+                     device("10.10.20.5", mac: "6E:F0:9D:5E:0B:52", name: "New thing")]
         // Run it twice with the inputs in a different order; dictionary iteration
         // inside must not leak into the output.
         #expect(derive(before, after) == derive(before.reversed(), after.reversed()))
@@ -46,8 +46,8 @@ struct EventTests {
     @Test("Appearing and disappearing")
     func appearedAndDisappeared() {
         let events = derive(
-            [device("10.10.20.1", mac: "30:DE:4B:77:A2:10")],
-            [device("10.10.20.5", mac: "6E:F0:9D:3B:C8:52", name: "New thing")]
+            [device("10.10.20.1", mac: "30:DE:4B:5E:03:10")],
+            [device("10.10.20.5", mac: "6E:F0:9D:5E:0B:52", name: "New thing")]
         )
         #expect(events.map(\.kind).sorted { $0.rawValue < $1.rawValue }
                 == [.hostAppeared, .hostDisappeared])
@@ -64,8 +64,8 @@ struct EventTests {
     func ipMoved() {
         // The whole reason the join key is not the address.
         let events = derive(
-            [device("10.10.20.20", mac: "30:DE:4B:77:A2:10", name: "Printer")],
-            [device("10.10.20.21", mac: "30:DE:4B:77:A2:10", name: "Printer")]
+            [device("10.10.20.20", mac: "30:DE:4B:5E:03:10", name: "Printer")],
+            [device("10.10.20.21", mac: "30:DE:4B:5E:03:10", name: "Printer")]
         )
         #expect(events.map(\.kind) == [.ipMoved])
         #expect(events[0].details["from"] == "10.10.20.20")
@@ -78,12 +78,12 @@ struct EventTests {
         // The anti-collapse case. If addresses were join keys, this would produce two
         // spurious nameChanged events claiming each device became the other.
         let before = [
-            device("10.10.20.30", mac: "30:DE:4B:77:A2:10", name: "Printer"),
-            device("10.10.20.31", mac: "A8:51:AB:2F:19:6C", name: "Apple TV"),
+            device("10.10.20.30", mac: "30:DE:4B:5E:03:10", name: "Printer"),
+            device("10.10.20.31", mac: "A8:51:AB:5E:09:6C", name: "Apple TV"),
         ]
         let after = [
-            device("10.10.20.31", mac: "30:DE:4B:77:A2:10", name: "Printer"),
-            device("10.10.20.30", mac: "A8:51:AB:2F:19:6C", name: "Apple TV"),
+            device("10.10.20.31", mac: "30:DE:4B:5E:03:10", name: "Printer"),
+            device("10.10.20.30", mac: "A8:51:AB:5E:09:6C", name: "Apple TV"),
         ]
         let events = derive(before, after)
         #expect(events.allSatisfy { $0.kind == .ipMoved })
@@ -94,16 +94,16 @@ struct EventTests {
     @Test("A name arriving is routine; a name changing is a warning")
     func nameChangeSeverity() {
         let arriving = derive(
-            [device("10.10.20.4", mac: "30:DE:4B:77:A2:10")],
-            [device("10.10.20.4", mac: "30:DE:4B:77:A2:10", name: "Mac Studio de Jose")]
+            [device("10.10.20.4", mac: "30:DE:4B:5E:03:10")],
+            [device("10.10.20.4", mac: "30:DE:4B:5E:03:10", name: "Mac Studio de Luis")]
         )
         // mDNS is slower than ICMP; the second run naming what the first only found
         // is the normal sequence, not an incident.
         #expect(arriving.first { $0.kind == .nameChanged }?.severity == .info)
 
         let changing = derive(
-            [device("10.10.20.4", mac: "30:DE:4B:77:A2:10", name: "Mac Studio de Jose")],
-            [device("10.10.20.4", mac: "30:DE:4B:77:A2:10", name: "Something Else")]
+            [device("10.10.20.4", mac: "30:DE:4B:5E:03:10", name: "Mac Studio de Luis")],
+            [device("10.10.20.4", mac: "30:DE:4B:5E:03:10", name: "Something Else")]
         )
         // Either the device was renamed or the identity join is wrong, and the second
         // is the expensive possibility.
@@ -113,8 +113,8 @@ struct EventTests {
     @Test("Only transitions in and out of open are port events")
     func portTransitions() {
         let events = derive(
-            [device("10.10.20.6", mac: "30:DE:4B:77:A2:10", openPorts: [22, 80])],
-            [device("10.10.20.6", mac: "30:DE:4B:77:A2:10", openPorts: [80, 443])]
+            [device("10.10.20.6", mac: "30:DE:4B:5E:03:10", openPorts: [22, 80])],
+            [device("10.10.20.6", mac: "30:DE:4B:5E:03:10", openPorts: [80, 443])]
         )
         let opened = events.filter { $0.kind == .portOpened }
         let closed = events.filter { $0.kind == .portClosed }
@@ -127,12 +127,12 @@ struct EventTests {
         // The host stopped answering; nothing about the service changed. Reporting it
         // would bury the real signal.
         let before = Device(
-            observing: HostFacts(ip: IPv4Address("10.10.20.6")!, mac: MACAddress("30:DE:4B:77:A2:10"),
+            observing: HostFacts(ip: IPv4Address("10.10.20.6")!, mac: MACAddress("30:DE:4B:5E:03:10"),
                                  ports: [PortObservation(port: 22, state: .closed)]),
             in: Self.network, lastSeen: Self.at
         )
         let after = Device(
-            observing: HostFacts(ip: IPv4Address("10.10.20.6")!, mac: MACAddress("30:DE:4B:77:A2:10"),
+            observing: HostFacts(ip: IPv4Address("10.10.20.6")!, mac: MACAddress("30:DE:4B:5E:03:10"),
                                  ports: [PortObservation(port: 22, state: .filtered)]),
             in: Self.network, lastSeen: Self.at
         )
@@ -155,8 +155,8 @@ struct EventTests {
     @Test("Events round-trip through the wire format")
     func eventsRoundTrip() throws {
         let events = derive(
-            [device("10.10.20.20", mac: "30:DE:4B:77:A2:10", name: "Printer", vendor: "HP", openPorts: [9100])],
-            [device("10.10.20.21", mac: "30:DE:4B:77:A2:10", name: "Printer 2", vendor: "HP Inc.")]
+            [device("10.10.20.20", mac: "30:DE:4B:5E:03:10", name: "Printer", vendor: "HP", openPorts: [9100])],
+            [device("10.10.20.21", mac: "30:DE:4B:5E:03:10", name: "Printer 2", vendor: "HP Inc.")]
         )
         #expect(!events.isEmpty)
         let data = try ScanReport.makeEncoder().encode(events)
@@ -166,8 +166,8 @@ struct EventTests {
     @Test("A merge is never derived here — it needs the store's identifier table")
     func mergesAreNotDerivable() {
         let events = derive(
-            [device("10.10.20.3", mac: "DA:5C:22:81:F3:0A"), device("10.10.20.3", mac: "F2:3A:91:6B:0D:44")],
-            [device("10.10.20.3", mac: "DA:5C:22:81:F3:0A", name: "JC's MacBook Pro")]
+            [device("10.10.20.3", mac: "DA:5C:22:5E:08:0A"), device("10.10.20.3", mac: "F2:3A:91:5E:0A:44")],
+            [device("10.10.20.3", mac: "DA:5C:22:5E:08:0A", name: "Alex's MacBook Pro")]
         )
         #expect(!events.contains { $0.kind == .hostsMerged })
     }

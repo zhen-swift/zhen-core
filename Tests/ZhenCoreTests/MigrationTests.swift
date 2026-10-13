@@ -43,7 +43,7 @@ struct MigrationTests {
         let url = directory.appending(path: "history.ndjson")
         let first = Timestamp(millisecondsSinceEpoch: 1_000_000)
         _ = await LogHistoryStore(url: url).record(
-            report([device(ip: "10.10.20.2", mac: "C8:69:CD:7F:33:E1", at: first)], at: first))
+            report([device(ip: "10.10.20.2", mac: "C8:69:CD:5E:01:E1", at: first)], at: first))
         let text = try String(contentsOf: url, encoding: .utf8)
         try (text + line + "\n").write(to: url, atomically: true, encoding: .utf8)
 
@@ -51,7 +51,7 @@ struct MigrationTests {
         let store = LogHistoryStore(url: url, compactionThreshold: 1)
         let later = Timestamp(millisecondsSinceEpoch: 2_000_000)
         _ = await store.record(
-            report([device(ip: "10.10.20.2", mac: "C8:69:CD:7F:33:E1", at: later)], at: later))
+            report([device(ip: "10.10.20.2", mac: "C8:69:CD:5E:01:E1", at: later)], at: later))
         let after = try String(contentsOf: url, encoding: .utf8)
         #expect(after.split(separator: "\n").count <= 4, "the file was not compacted, so this proves nothing")
         return after

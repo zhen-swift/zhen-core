@@ -92,27 +92,27 @@ struct IdentityHistoryTests {
 
     @Test("Records joined by reconciliation keep both addresses, the absorbed one as a merge")
     func mergeCarriesTheAbsorbedAddress() throws {
-        let old = HostIdentifier.fromMAC(mac("52:A1:8A:E0:7A:8A"))
-        let new = HostIdentifier.fromMAC(mac("D6:0A:97:FE:72:9C"))
-        let name = HostIdentifier.mdnsInstance("jc's macbook pro")
+        let old = HostIdentifier.fromMAC(mac("52:A1:8A:5E:04:8A"))
+        let new = HostIdentifier.fromMAC(mac("D6:0A:97:5E:06:9C"))
+        let name = HostIdentifier.mdnsInstance("alex's macbook pro")
         var ledger = HistoryLedger(
             records: [
                 old: HistoryLedger.Record(
-                    device: device(ip: "10.10.20.88", mac: "52:A1:8A:E0:7A:8A", name: "JC's MacBook Pro", at: day(0)),
+                    device: device(ip: "10.10.20.88", mac: "52:A1:8A:5E:04:8A", name: "Alex's MacBook Pro", at: day(0)),
                     firstSeen: day(0), lastRunID: UUID(), identifiers: [old, name], ordinal: 1
                 ),
                 new: HistoryLedger.Record(
-                    device: device(ip: "10.10.20.131", mac: "D6:0A:97:FE:72:9C", at: day(9)),
+                    device: device(ip: "10.10.20.131", mac: "D6:0A:97:5E:06:9C", at: day(9)),
                     firstSeen: day(9), lastRunID: UUID(), identifiers: [new], ordinal: 7
                 ),
             ],
             log: [], latestRun: report([], at: day(10)).run
         )
-        ledger.fold(report([device(ip: "10.10.20.131", mac: "D6:0A:97:FE:72:9C",
-                                   name: "JC's MacBook Pro", at: day(11))], at: day(11)))
+        ledger.fold(report([device(ip: "10.10.20.131", mac: "D6:0A:97:5E:06:9C",
+                                   name: "Alex's MacBook Pro", at: day(11))], at: day(11)))
 
         let survivor = try #require(ledger.records[old])
-        #expect(survivor.macHistory.map(\.mac) == [mac("52:A1:8A:E0:7A:8A"), mac("D6:0A:97:FE:72:9C")])
+        #expect(survivor.macHistory.map(\.mac) == [mac("52:A1:8A:5E:04:8A"), mac("D6:0A:97:5E:06:9C")])
         let absorbed = try #require(survivor.macHistory.last)
         #expect(absorbed.firstSeen == day(9), "the absorbed record's earlier sighting was lost")
         #expect(absorbed.lastSeen == day(11))

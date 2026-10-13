@@ -118,9 +118,9 @@ struct HistoryLedgerTests {
     func cutoffComesFromTheRun() {
         var ledger = HistoryLedger(retention: .days(30))
         // Two runs a hundred days apart, both of them years in the past.
-        let old = device(ip: "10.10.20.2", mac: "C8:69:CD:7F:33:E1", at: day(0))
+        let old = device(ip: "10.10.20.2", mac: "C8:69:CD:5E:01:E1", at: day(0))
         ledger.fold(report([old], at: day(0)))
-        ledger.fold(report([old, device(ip: "10.10.20.3", mac: "C8:69:CD:7F:33:E2", at: day(1))],
+        ledger.fold(report([old, device(ip: "10.10.20.3", mac: "C8:69:CD:5E:01:E2", at: day(1))],
                            at: day(1)))
         #expect(ledger.events().count == 1, "the second run derived no event to prune")
 
@@ -132,7 +132,7 @@ struct HistoryLedgerTests {
         // empty a log that a person asked to keep.
         var forever = HistoryLedger(retention: .forever)
         forever.fold(report([old], at: day(0)))
-        forever.fold(report([old, device(ip: "10.10.20.4", mac: "C8:69:CD:7F:33:E3", at: day(1))],
+        forever.fold(report([old, device(ip: "10.10.20.4", mac: "C8:69:CD:5E:01:E3", at: day(1))],
                             at: day(1)))
         forever.fold(report([old], at: day(100_000)))
         #expect(forever.events().count == 2, "'forever' dropped an event")
@@ -144,8 +144,8 @@ struct HistoryLedgerTests {
     @Test("A fold reports how many events it pruned, because a deletion is not an append")
     func foldReportsThePrune() {
         var ledger = HistoryLedger(retention: .days(30))
-        let old = device(ip: "10.10.20.2", mac: "C8:69:CD:7F:33:E1", at: day(0))
-        let second = device(ip: "10.10.20.3", mac: "C8:69:CD:7F:33:E2", at: day(1))
+        let old = device(ip: "10.10.20.2", mac: "C8:69:CD:5E:01:E1", at: day(0))
+        let second = device(ip: "10.10.20.3", mac: "C8:69:CD:5E:01:E2", at: day(1))
         #expect(ledger.fold(report([old], at: day(0))).prunedEvents == 0)
         #expect(ledger.fold(report([old, second], at: day(1))).prunedEvents == 0)
 
@@ -311,19 +311,19 @@ struct HistoryLedgerTests {
         // device used to have and carrying its mDNS name, and a younger one keyed by the
         // MAC it has now and carrying nothing else, because the scan that minted it had
         // no naming stage to give it anything else.
-        let old = HostIdentifier.fromMAC(MACAddress("52:A1:8A:E0:7A:8A")!)
-        let new = HostIdentifier.fromMAC(MACAddress("D6:0A:97:FE:72:9C")!)
-        let name = HostIdentifier.mdnsInstance("jc's macbook pro")
+        let old = HostIdentifier.fromMAC(MACAddress("52:A1:8A:5E:04:8A")!)
+        let new = HostIdentifier.fromMAC(MACAddress("D6:0A:97:5E:06:9C")!)
+        let name = HostIdentifier.mdnsInstance("alex's macbook pro")
         var ledger = HistoryLedger(
             records: [
                 old: HistoryLedger.Record(
-                    device: named(ip: "10.10.20.88", mac: "52:A1:8A:E0:7A:8A",
-                                  name: "JC's MacBook Pro", at: day(0)),
+                    device: named(ip: "10.10.20.88", mac: "52:A1:8A:5E:04:8A",
+                                  name: "Alex's MacBook Pro", at: day(0)),
                     firstSeen: day(0), lastRunID: UUID(),
                     identifiers: [old, name], ordinal: 1
                 ),
                 new: HistoryLedger.Record(
-                    device: device(ip: "10.10.20.131", mac: "D6:0A:97:FE:72:9C", at: day(9)),
+                    device: device(ip: "10.10.20.131", mac: "D6:0A:97:5E:06:9C", at: day(9)),
                     firstSeen: day(9), lastRunID: UUID(),
                     identifiers: [new], ordinal: 7
                 ),
@@ -333,8 +333,8 @@ struct HistoryLedgerTests {
 
         // The full scan that proves it: one device, both the name and the current MAC.
         ledger.fold(report(
-            [named(ip: "10.10.20.131", mac: "D6:0A:97:FE:72:9C",
-                   name: "JC's MacBook Pro", at: day(11))],
+            [named(ip: "10.10.20.131", mac: "D6:0A:97:5E:06:9C",
+                   name: "Alex's MacBook Pro", at: day(11))],
             at: day(11)
         ))
 
@@ -409,17 +409,17 @@ struct HistoryLedgerTests {
         // that evidence is the collapse `resolve` defers ipLease to avoid, and a
         // wrong merge is the one thing here that cannot be undone.
         let lease = HostIdentifier.ipLease(IPv4Address("10.10.20.117")!, in: Self.network)
-        let universal = HostIdentifier.fromMAC(MACAddress("20:1C:3A:91:9E:54")!)
-        let randomized = HostIdentifier.fromMAC(MACAddress("BE:C4:1B:56:9B:16")!)
+        let universal = HostIdentifier.fromMAC(MACAddress("20:1C:3A:5E:0C:54")!)
+        let randomized = HostIdentifier.fromMAC(MACAddress("BE:C4:1B:5E:0D:16")!)
         var ledger = HistoryLedger(
             records: [
                 universal: HistoryLedger.Record(
-                    device: device(ip: "10.10.20.117", mac: "20:1C:3A:91:9E:54", at: day(0)),
+                    device: device(ip: "10.10.20.117", mac: "20:1C:3A:5E:0C:54", at: day(0)),
                     firstSeen: day(0), lastRunID: UUID(),
                     identifiers: [universal, lease], ordinal: 1
                 ),
                 randomized: HistoryLedger.Record(
-                    device: device(ip: "10.10.20.118", mac: "BE:C4:1B:56:9B:16", at: day(5)),
+                    device: device(ip: "10.10.20.118", mac: "BE:C4:1B:5E:0D:16", at: day(5)),
                     firstSeen: day(5), lastRunID: UUID(),
                     identifiers: [randomized, lease], ordinal: 2
                 ),
@@ -427,7 +427,7 @@ struct HistoryLedgerTests {
             log: [], latestRun: report([], at: day(10)).run
         )
         let fold = ledger.fold(report(
-            [device(ip: "10.10.20.117", mac: "20:1C:3A:91:9E:54", at: day(11))], at: day(11)
+            [device(ip: "10.10.20.117", mac: "20:1C:3A:5E:0C:54", at: day(11))], at: day(11)
         ))
 
         #expect(ledger.devices().count == 2, "two devices merged on a shared DHCP lease")
@@ -437,8 +437,8 @@ struct HistoryLedgerTests {
     @Test("A policy set after the ledger exists applies at the next fold")
     func policyCanChange() {
         var ledger = HistoryLedger()
-        let old = device(ip: "10.10.20.2", mac: "C8:69:CD:7F:33:E1", at: day(0))
-        let second = device(ip: "10.10.20.3", mac: "C8:69:CD:7F:33:E2", at: day(1))
+        let old = device(ip: "10.10.20.2", mac: "C8:69:CD:5E:01:E1", at: day(0))
+        let second = device(ip: "10.10.20.3", mac: "C8:69:CD:5E:01:E2", at: day(1))
         ledger.fold(report([old], at: day(0)))
         ledger.fold(report([old, second], at: day(1)))
         #expect(ledger.events().count == 1)

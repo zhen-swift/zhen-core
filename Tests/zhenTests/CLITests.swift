@@ -118,8 +118,8 @@ struct OptionTests {
 func sampleReport(outcome: Outcome = .complete) -> ScanReport {
     let network = IPv4Network("10.10.20.0/24")!
     let devices = [
-        HostFacts(ip: IPv4Address("10.10.20.1")!, mac: MACAddress("78:20:51:74:CB:28"),
-                  allNames: [NameCandidate(value: "JC\u{2019}s MacBook Pro", source: .mdns)],
+        HostFacts(ip: IPv4Address("10.10.20.1")!, mac: MACAddress("78:20:51:5E:07:28"),
+                  allNames: [NameCandidate(value: "Alex\u{2019}s MacBook Pro", source: .mdns)],
                   ttl: 64, rtt: RTTSample(measured: .microseconds(412)),
                   discoveredVia: [.probeReply]),
         // Deliberately the other kind: a host the neighbour table knows and that never
@@ -194,7 +194,7 @@ struct JSONFixtureTests {
     /// is additive and backwards compatible, and this was still the test that noticed
     /// the wire format had moved. Updating it is the deliberate half of that change.
     static let expected = #"""
-    {"degradations":[{"reason":"Bonjour is phase three.","recoverable":true,"stage":"naming"}],"devices":[{"addresses":["10.10.20.1"],"discovered_via":["probe_reply"],"first_seen":1756700000000,"identification":"identified","identification_evidence":{"has_distinct_name":true,"has_model":false,"has_os_hint":true,"has_vendor":false,"independent_sources":1,"name_source_is_self_sufficient":true},"identity_stability":"strong","last_seen":1756700000000,"mac":"78:20:51:74:CB:28","names":[{"rank":0,"source":"mdns","value":"JC’s MacBook Pro"}],"ports":[],"rtt":{"millis":0.412,"samples":1},"ttl":64},{"addresses":["10.10.20.8"],"discovered_via":["neighbor_table"],"first_seen":1756700000000,"identification":"minimal","identification_evidence":{"has_distinct_name":false,"has_model":false,"has_os_hint":false,"has_vendor":false,"independent_sources":0,"name_source_is_self_sufficient":false},"identity_stability":"ephemeral","last_seen":1756700000000,"names":[],"ports":[]}],"run":{"engine":{"capabilities":["arp_sweep","icmp_sweep"],"kind":"unprivileged","name":"darwin-unprivileged"},"finished_at":1756700000240,"id":"3F2504E0-4F89-11D3-9A0C-0305E82C3301","interface":"en0","mode":"full","outcome":"complete","started_at":1756700000000,"target":"10.10.20.0/24","timing":{"effective_probes_per_second":1058.3333333333333,"peak_concurrency":512,"probes_sent":254,"replies_seen":2,"stages":[{"elapsed_millis":240,"probes_sent":254,"replies_seen":2,"stage":"discovery"}]}},"schema":3}
+    {"degradations":[{"reason":"Bonjour is phase three.","recoverable":true,"stage":"naming"}],"devices":[{"addresses":["10.10.20.1"],"discovered_via":["probe_reply"],"first_seen":1756700000000,"identification":"identified","identification_evidence":{"has_distinct_name":true,"has_model":false,"has_os_hint":true,"has_vendor":false,"independent_sources":1,"name_source_is_self_sufficient":true},"identity_stability":"strong","last_seen":1756700000000,"mac":"78:20:51:5E:07:28","names":[{"rank":0,"source":"mdns","value":"Alex’s MacBook Pro"}],"ports":[],"rtt":{"millis":0.412,"samples":1},"ttl":64},{"addresses":["10.10.20.8"],"discovered_via":["neighbor_table"],"first_seen":1756700000000,"identification":"minimal","identification_evidence":{"has_distinct_name":false,"has_model":false,"has_os_hint":false,"has_vendor":false,"independent_sources":0,"name_source_is_self_sufficient":false},"identity_stability":"ephemeral","last_seen":1756700000000,"names":[],"ports":[]}],"run":{"engine":{"capabilities":["arp_sweep","icmp_sweep"],"kind":"unprivileged","name":"darwin-unprivileged"},"finished_at":1756700000240,"id":"3F2504E0-4F89-11D3-9A0C-0305E82C3301","interface":"en0","mode":"full","outcome":"complete","started_at":1756700000000,"target":"10.10.20.0/24","timing":{"effective_probes_per_second":1058.3333333333333,"peak_concurrency":512,"probes_sent":254,"replies_seen":2,"stages":[{"elapsed_millis":240,"probes_sent":254,"replies_seen":2,"stage":"discovery"}]}},"schema":3}
     """#
 
     @Test("The document is byte-identical to the committed fixture")
@@ -234,7 +234,7 @@ struct JSONFixtureTests {
         let produced = Out.capturing {
             JSONRenderer(quiet: true, color: false).finish(sampleReport())
         }.out
-        #expect(produced.contains("JC\u{2019}s MacBook Pro"))
+        #expect(produced.contains("Alex\u{2019}s MacBook Pro"))
         #expect(!produced.lowercased().contains("\\u2019"))
     }
 
@@ -310,7 +310,7 @@ struct TextRendererTests {
             TextRenderer(quiet: true, color: false, progressColor: false).finish(sampleReport())
         }.out
         #expect(out.contains("10.10.20.1"))
-        #expect(out.contains("JC\u{2019}s MacBook Pro"))
+        #expect(out.contains("Alex\u{2019}s MacBook Pro"))
         // The unidentified device is an ordinary row, not an error and not omitted.
         #expect(out.contains("10.10.20.8"))
         #expect(out.contains("2 devices"))
@@ -676,10 +676,10 @@ struct HistoryReadbackTests {
         let (store, directory) = try store()
         defer { try? FileManager.default.removeItem(at: directory) }
         _ = await store.record(report([
-            device(ip: "10.10.20.2", mac: "C8:69:CD:7F:33:E1"),
-            device(ip: "10.10.20.8", mac: "52:A1:8A:E0:7A:8A"),
+            device(ip: "10.10.20.2", mac: "C8:69:CD:5E:01:E1"),
+            device(ip: "10.10.20.8", mac: "52:A1:8A:5E:04:8A"),
         ]))
-        _ = await store.record(report([device(ip: "10.10.20.2", mac: "C8:69:CD:7F:33:E1")]))
+        _ = await store.record(report([device(ip: "10.10.20.2", mac: "C8:69:CD:5E:01:E1")]))
 
         let devices = await store.devices()
         let events = await store.events()
@@ -695,9 +695,9 @@ struct HistoryReadbackTests {
 
     @Test("A query matches an address, a MAC, or part of a name")
     func matching() {
-        let named = device(ip: "10.10.20.2", mac: "C8:69:CD:7F:33:E1", name: "Kitchen Speaker")
+        let named = device(ip: "10.10.20.2", mac: "C8:69:CD:5E:01:E1", name: "Kitchen Speaker")
         #expect(HistoryRendering.matches(named, query: "10.10.20.2"))
-        #expect(HistoryRendering.matches(named, query: "c8:69:cd:7f:33:e1"))
+        #expect(HistoryRendering.matches(named, query: "c8:69:cd:5e:01:e1"))
         #expect(HistoryRendering.matches(named, query: "kitchen"))
         #expect(!HistoryRendering.matches(named, query: "10.10.20.3"))
         #expect(!HistoryRendering.matches(named, query: "bathroom"))
@@ -718,7 +718,7 @@ struct HistoryReadbackTests {
     func jsonViewsAgree() async throws {
         let (store, directory) = try store()
         defer { try? FileManager.default.removeItem(at: directory) }
-        _ = await store.record(report([device(ip: "10.10.20.2", mac: "C8:69:CD:7F:33:E1")]))
+        _ = await store.record(report([device(ip: "10.10.20.2", mac: "C8:69:CD:5E:01:E1")]))
         let devices = await store.devices()
 
         let fromHosts = HistoryRendering.json(devices: devices)

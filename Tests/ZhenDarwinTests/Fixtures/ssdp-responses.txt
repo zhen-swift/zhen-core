@@ -12,14 +12,14 @@ EXT:
 LOCATION: http://10.10.20.14:8060/dial/dd.xml
 SERVER: Roku/12.0.0 UPnP/1.0 Roku/12.0.0
 ST: upnp:rootdevice
-USN: uuid:roku:ecp:1GU48T017973::upnp:rootdevice
+USN: uuid:roku:ecp:1GU00Z000001::upnp:rootdevice
 ---
 HTTP/1.1 200 OK
 Cache-Control: max-age=100
 Location: http://10.10.20.31:80/description.xml
 Server: Linux/4.4 UPnP/1.0 IpBridge/1.65.0
 St: upnp:rootdevice
-Usn: uuid:2f402f80-da50-11e1-9b23-001788102201::upnp:rootdevice
+Usn: uuid:2f402f80-da50-11e1-9b23-0017885e1d01::upnp:rootdevice
 ---
 NOTIFY * HTTP/1.1
 HOST: 239.255.255.250:1900

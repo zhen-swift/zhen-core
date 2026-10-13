@@ -78,7 +78,7 @@ ports underneath instead. `--ports-view matrix|long|auto` overrides the choice.
 ```
 ADDRESS       NAME                      22   80  443
 10.10.20.1    —                          ·    ●    ●
-10.10.20.5    Sala de entretenimiento    ○    ○    ·
+10.10.20.5    Sala de estar principal    ○    ○    ·
 
 ● open   ○ closed   · filtered   ◐ open or filtered   – not probed
 ```

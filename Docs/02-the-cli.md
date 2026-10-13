@@ -318,7 +318,7 @@ differ from the last and defeat diffing a scan against yesterday's.
 
 *Containment:* `.sortedKeys` on the encoder, plus `.withoutEscapingSlashes`. Numbers
 are integers wherever possible — never a locale-formatted string. And the non-ASCII
-apostrophe in a name like `JC's MacBook Pro` must survive unescaped; verify with a
+apostrophe in a name like `Alex's MacBook Pro` must survive unescaped; verify with a
 fixture, because this is exactly the sort of thing that quietly breaks in a
 round trip.
 

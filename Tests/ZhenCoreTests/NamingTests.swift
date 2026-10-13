@@ -6,11 +6,11 @@ struct NamingTests {
     @Test("A deliberately assigned name beats one the device advertises about itself")
     func administrativeWinsOverMDNS() {
         let candidates = [
-            NameCandidate(value: "JCs-MacBook-Pro.local", source: .mdns),
-            NameCandidate(value: "JC's MacBook Pro", source: .administrative),
-            NameCandidate(value: "JCS-MBP", source: .netbios),
+            NameCandidate(value: "Alexs-MacBook-Pro.local", source: .mdns),
+            NameCandidate(value: "Alex's MacBook Pro", source: .administrative),
+            NameCandidate(value: "ALEX-MBP", source: .netbios),
         ]
-        #expect(candidates.best?.value == "JC's MacBook Pro")
+        #expect(candidates.best?.value == "Alex's MacBook Pro")
         #expect(candidates.alternates.map(\.source) == [.mdns, .netbios])
     }
 
@@ -19,10 +19,10 @@ struct NamingTests {
         // The same device advertises a clean name on one service type and a
         // prefixed one on another.
         let candidates = [
-            NameCandidate(value: "70-35-60-63.1 Sala de entretenimiento", source: .mdns, rank: 9),
-            NameCandidate(value: "Sala de entretenimiento", source: .mdns, rank: 1),
+            NameCandidate(value: "70-35-60-63.1 Sala de estar principal", source: .mdns, rank: 9),
+            NameCandidate(value: "Sala de estar principal", source: .mdns, rank: 1),
         ]
-        #expect(candidates.best?.value == "Sala de entretenimiento")
+        #expect(candidates.best?.value == "Sala de estar principal")
     }
 
     @Test("Source priority dominates rank")
@@ -46,11 +46,11 @@ struct NamingTests {
         let host = HostFacts(
             ip: IPv4Address(raw: 0x0A0A1402),
             allNames: [
-                NameCandidate(value: "Sala de entretenimiento", source: .administrative),
-                NameCandidate(value: "Sala de entretenimiento", source: .mdns, rank: 1, model: "AppleTV5,3"),
+                NameCandidate(value: "Sala de estar principal", source: .administrative),
+                NameCandidate(value: "Sala de estar principal", source: .mdns, rank: 1, model: "AppleTV5,3"),
             ]
         )
-        #expect(host.displayName == "Sala de entretenimiento")
+        #expect(host.displayName == "Sala de estar principal")
         #expect(host.displayModel == "AppleTV5,3")
     }
 }

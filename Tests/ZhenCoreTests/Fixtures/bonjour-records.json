@@ -15,36 +15,36 @@
     {
       "provenance": "spec",
       "service_type": "_raop._tcp",
-      "raw": "AA0F330127A2@Mac Studio de Jose._raop._tcp.local.",
-      "clean": "Mac Studio de Jose",
+      "raw": "5E0A1B2C3D4E@Mac Studio de Luis._raop._tcp.local.",
+      "clean": "Mac Studio de Luis",
       "note": "Fullname form: a hardware-address prefix AND a service suffix, both cut."
     },
     {
       "provenance": "captured",
       "service_type": "_raop._tcp",
-      "raw": "860C282994FB@Sala de entretenimiento",
-      "clean": "Sala de entretenimiento",
+      "raw": "5E0B1C2D3E4F@Sala de estar principal",
+      "clean": "Sala de estar principal",
       "note": "Instance-label form, as a browse reply delivers it."
     },
     {
       "provenance": "spec",
       "service_type": "_sleep-proxy._udp",
-      "raw": "70-35-60-63.1 Sala de entretenimiento",
-      "clean": "Sala de entretenimiento",
+      "raw": "70-35-60-63.1 Sala de estar principal",
+      "clean": "Sala de estar principal",
       "note": "The same device as the _companion-link entry below, named differently."
     },
     {
       "provenance": "captured",
       "service_type": "_companion-link._tcp",
-      "raw": "Sala de entretenimiento",
-      "clean": "Sala de entretenimiento",
+      "raw": "Sala de estar principal",
+      "clean": "Sala de estar principal",
       "note": "Already clean. The rules must leave it alone."
     },
     {
       "provenance": "captured",
       "service_type": "_companion-link._tcp",
-      "raw": "JC’s MacBook Pro",
-      "clean": "JC’s MacBook Pro",
+      "raw": "Alex’s MacBook Pro",
+      "clean": "Alex’s MacBook Pro",
       "note": "Non-ASCII apostrophe U+2019, which must survive intact through to the JSON."
     },
     {
@@ -64,8 +64,8 @@
     {
       "provenance": "constructed",
       "service_type": "_smb._tcp",
-      "raw": "jose@home fileshare",
-      "clean": "jose@home fileshare",
+      "raw": "luis@home fileshare",
+      "clean": "luis@home fileshare",
       "note": "An at-sign in an ordinary name. A loose 'everything before the @' rule would truncate this."
     },
     {
@@ -195,7 +195,7 @@
       "txt": {
         "md": "Chromecast Ultra",
         "fn": "Sala TV",
-        "id": "6f3a1d9c4b2e8a7f"
+        "id": "0a5e1f2b3c4d5e6f"
       },
       "model": "Chromecast Ultra",
       "note": "md IS the model here. Forbidding it globally to dodge the _raop trap silently discarded the real model on every Chromecast, Nest and Android TV."
@@ -233,7 +233,7 @@
     {
       "provenance": "constructed",
       "service_type": "_googlecast._tcp",
-      "instance": "Chromecast-6f3a1d9c4b2e8a7f",
+      "instance": "Chromecast-0a5e1f2b3c4d5e6f",
       "txt": {
         "fn": "Sala TV",
         "md": "Chromecast Ultra"
@@ -244,11 +244,11 @@
     {
       "provenance": "constructed",
       "service_type": "_googlecast._tcp",
-      "instance": "Chromecast-6f3a1d9c4b2e8a7f",
+      "instance": "Chromecast-0a5e1f2b3c4d5e6f",
       "txt": {
         "md": "Chromecast Ultra"
       },
-      "name": "Chromecast-6f3a1d9c4b2e8a7f",
+      "name": "Chromecast-0a5e1f2b3c4d5e6f",
       "note": "With no `fn`, the instance name is all there is and is better than nothing."
     }
   ]

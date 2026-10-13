@@ -6,9 +6,11 @@ import Testing
 //
 // The fixtures are real. `report-schema1.json` is a pilot run from the frozen study,
 // copied rather than referenced so the study stays untouched. `report-schema2.json` was
-// captured from JC's network by the build immediately before this change, and committed
-// with it, so the migration is checked against what the old writer actually wrote rather
-// than against what this code expects it to have written.
+// captured from the development network by the build immediately before this change, and
+// committed with it, so the migration is checked against what the old writer actually wrote
+// rather than against what this code expects it to have written. Before the repository went
+// public its device names and hardware addresses were replaced with synthetic values of the
+// same shape — vendor prefixes, address classes and lengths kept — and nothing structural.
 
 private let network = IPv4Network("10.10.20.0/24")!
 private let at = Timestamp(millisecondsSinceEpoch: 1_790_000_000_000)
@@ -193,7 +195,7 @@ struct FusionTests {
 
 // ── The real store ──────────────────────────────────────────────────────────────────
 //
-// Opt-in, because the store is JC's and lives outside the repository. Point the
+// Opt-in, because the store is the maintainer's own and lives outside the repository. Point the
 // variables at COPIES:
 //
 //   ZHEN_VERIFY_STORES=/path/a.ndjson:/path/b.ndjson

@@ -59,7 +59,7 @@ private func portsReport(
             + udp.map { PortObservation(port: $0, proto: .udp, state: state($0, index),
                                         service: nil, rtt: rtt($0)) }
         facts.append(
-            HostFacts(ip: address, mac: MACAddress("78:20:51:74:CB:\(String(format: "%02X", index))"),
+            HostFacts(ip: address, mac: MACAddress("78:20:51:5E:07:\(String(format: "%02X", index))"),
                       ttl: 64, rtt: RTTSample(measured: .microseconds(412)),
                       ports: observations, discoveredVia: [.probeReply])
         )
@@ -69,7 +69,7 @@ private func portsReport(
     for offset in 0..<unprobedHosts {
         facts.append(
             HostFacts(ip: IPv4Address("10.10.20.\(200 + offset)")!,
-                      mac: MACAddress("D6:0A:97:FE:72:9C"),
+                      mac: MACAddress("D6:0A:97:5E:06:9C"),
                       ports: [], discoveredVia: [.neighborTable])
         )
     }

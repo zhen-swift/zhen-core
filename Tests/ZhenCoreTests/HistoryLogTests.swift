@@ -73,20 +73,20 @@ struct HistoryLogTests {
         do {
             let store = LogHistoryStore(url: url)
             _ = await store.record(
-                report([device(ip: "10.10.20.2", mac: "C8:69:CD:7F:33:E1", at: early)], at: early)
+                report([device(ip: "10.10.20.2", mac: "C8:69:CD:5E:01:E1", at: early)], at: early)
             )
         }
 
         let reopened = LogHistoryStore(url: url)
         #expect(await reopened.devices().count == 1)
         #expect(await reopened.latestRun() != nil)
-        let facts = HostFacts(ip: IPv4Address("10.10.20.2")!, mac: MACAddress("C8:69:CD:7F:33:E1"))
+        let facts = HostFacts(ip: IPv4Address("10.10.20.2")!, mac: MACAddress("C8:69:CD:5E:01:E1"))
         let seen = await reopened.firstSeen(for: [facts], in: IPv4Network("10.10.20.0/24")!)
         #expect(seen[IPv4Address("10.10.20.2")!] == early, "first-seen was rewritten by the reopen")
 
         // The device was here before the restart, so it did not "appear" after it.
         let events = await reopened.record(
-            report([device(ip: "10.10.20.2", mac: "C8:69:CD:7F:33:E1", at: later)], at: later)
+            report([device(ip: "10.10.20.2", mac: "C8:69:CD:5E:01:E1", at: later)], at: later)
         )
         #expect(!events.contains { $0.kind == .appeared })
         #expect(await reopened.devices().count == 1)
@@ -113,13 +113,13 @@ struct HistoryLogTests {
         do {
             let store = LogHistoryStore(url: url)
             _ = await store.record(report(
-                [device(ip: "10.10.20.88", mac: "52:A1:8A:E0:7A:8A", name: "Mac", at: t1)], at: t1
+                [device(ip: "10.10.20.88", mac: "52:A1:8A:5E:04:8A", name: "Mac", at: t1)], at: t1
             ))
             // A different address as well as a different MAC. On the SAME address the
             // `ipLease` fallback joins the two runs and no second record is ever minted,
             // which is correct behaviour and makes this test prove nothing.
             _ = await store.record(report(
-                [device(ip: "10.10.20.131", mac: "D6:0A:97:FE:72:9C", at: t2)], at: t2
+                [device(ip: "10.10.20.131", mac: "D6:0A:97:5E:06:9C", at: t2)], at: t2
             ))
             #expect(await store.devices().count == 2, "the split this test needs did not happen")
         }
@@ -127,7 +127,7 @@ struct HistoryLogTests {
         // A full scan carrying both the name and the rotated MAC is the evidence.
         let reopened = LogHistoryStore(url: url)
         let events = await reopened.record(report(
-            [device(ip: "10.10.20.131", mac: "D6:0A:97:FE:72:9C", name: "Mac", at: t3)], at: t3
+            [device(ip: "10.10.20.131", mac: "D6:0A:97:5E:06:9C", name: "Mac", at: t3)], at: t3
         ))
         #expect(await reopened.devices().count == 1, "the two records did not join")
         #expect(events.contains { $0.kind == .merged }, "the join was not reported")
@@ -161,10 +161,10 @@ struct HistoryLogTests {
         do {
             let store = LogHistoryStore(url: url)
             _ = await store.record(report(
-                [device(ip: "10.10.20.88", mac: "52:A1:8A:E0:7A:8A", name: "Mac", at: t1)], at: t1
+                [device(ip: "10.10.20.88", mac: "52:A1:8A:5E:04:8A", name: "Mac", at: t1)], at: t1
             ))
             _ = await store.record(report(
-                [device(ip: "10.10.20.131", mac: "D6:0A:97:FE:72:9C", at: t2)], at: t2
+                [device(ip: "10.10.20.131", mac: "D6:0A:97:5E:06:9C", at: t2)], at: t2
             ))
             #expect(await store.devices().count == 2, "the split this test needs did not happen")
         }
@@ -175,12 +175,12 @@ struct HistoryLogTests {
         // name, so its PRIMARY key is the mDNS instance and not the address at all —
         // which is the whole reason the rotation split the device in the first place.
         let older = try #require(
-            lines.last { $0.contains("\"type\":\"device\"") && $0.contains("52:A1:8A:E0:7A:8A") },
+            lines.last { $0.contains("\"type\":\"device\"") && $0.contains("52:A1:8A:5E:04:8A") },
             "the older record's line was not found to operate on"
         )
         let patched = older.replacingOccurrences(
             of: "\"identifiers\":[",
-            with: "\"identifiers\":[\"randomized_mac|D6:0A:97:FE:72:9C\","
+            with: "\"identifiers\":[\"randomized_mac|D6:0A:97:5E:06:9C\","
         )
         #expect(patched != older, "the surgery did not change anything")
         lines.append(patched)
@@ -210,13 +210,13 @@ struct HistoryLogTests {
         do {
             let store = LogHistoryStore(url: url)
             _ = await store.record(report(
-                [device(ip: "10.10.20.9", mac: "52:A1:8A:E0:7A:8A", name: "Mac", at: t1)], at: t1
+                [device(ip: "10.10.20.9", mac: "52:A1:8A:5E:04:8A", name: "Mac", at: t1)], at: t1
             ))
         }
 
         let reopened = LogHistoryStore(url: url)
         let events = await reopened.record(report(
-            [device(ip: "10.10.20.8", mac: "52:A1:8A:E0:7A:8A", name: "Mac", at: t2)], at: t2
+            [device(ip: "10.10.20.8", mac: "52:A1:8A:5E:04:8A", name: "Mac", at: t2)], at: t2
         ))
         #expect(await reopened.devices().count == 1, "the device split in two across the reopen")
         #expect(events.contains { $0.kind == .ipChanged })
@@ -233,11 +233,11 @@ struct HistoryLogTests {
         do {
             let store = LogHistoryStore(url: url)
             _ = await store.record(
-                report([device(ip: "10.10.20.2", mac: "C8:69:CD:7F:33:E1", at: t1)], at: t1)
+                report([device(ip: "10.10.20.2", mac: "C8:69:CD:5E:01:E1", at: t1)], at: t1)
             )
             _ = await store.record(report([
-                device(ip: "10.10.20.2", mac: "C8:69:CD:7F:33:E1", at: t2),
-                device(ip: "10.10.20.8", mac: "52:A1:8A:E0:7A:8A", at: t2),
+                device(ip: "10.10.20.2", mac: "C8:69:CD:5E:01:E1", at: t2),
+                device(ip: "10.10.20.8", mac: "52:A1:8A:5E:04:8A", at: t2),
             ], at: t2))
         }
 
@@ -263,8 +263,8 @@ struct HistoryLogTests {
             let at = Timestamp(millisecondsSinceEpoch: Int64(1_000_000 + index * 1_000))
             if index == 0 { expectedFirstSeen = at }
             _ = await store.record(report([
-                device(ip: "10.10.20.2", mac: "C8:69:CD:7F:33:E1", at: at),
-                device(ip: "10.10.20.8", mac: "52:A1:8A:E0:7A:8A", at: at),
+                device(ip: "10.10.20.2", mac: "C8:69:CD:5E:01:E1", at: at),
+                device(ip: "10.10.20.8", mac: "52:A1:8A:5E:04:8A", at: at),
             ], at: at))
         }
 
@@ -273,7 +273,7 @@ struct HistoryLogTests {
 
         let reopened = LogHistoryStore(url: url)
         #expect(await reopened.devices().count == 2, "compaction lost a device")
-        let facts = HostFacts(ip: IPv4Address("10.10.20.2")!, mac: MACAddress("C8:69:CD:7F:33:E1"))
+        let facts = HostFacts(ip: IPv4Address("10.10.20.2")!, mac: MACAddress("C8:69:CD:5E:01:E1"))
         let seen = await reopened.firstSeen(for: [facts], in: IPv4Network("10.10.20.0/24")!)
         #expect(seen[IPv4Address("10.10.20.2")!] == expectedFirstSeen,
                 "compaction rewrote first-seen")
@@ -293,8 +293,8 @@ struct HistoryLogTests {
         do {
             let store = LogHistoryStore(url: url)
             _ = await store.record(report([
-                device(ip: "10.10.20.2", mac: "C8:69:CD:7F:33:E1", at: at),
-                device(ip: "10.10.20.8", mac: "52:A1:8A:E0:7A:8A", at: at),
+                device(ip: "10.10.20.2", mac: "C8:69:CD:5E:01:E1", at: at),
+                device(ip: "10.10.20.8", mac: "52:A1:8A:5E:04:8A", at: at),
             ], at: at))
         }
 
@@ -337,7 +337,7 @@ struct HistoryLogTests {
             let store = LogHistoryStore(url: url, compactionThreshold: 12)
             let first = Timestamp(millisecondsSinceEpoch: 1_000_000)
             _ = await store.record(report([
-                device(ip: "10.10.20.2", mac: "C8:69:CD:7F:33:E1", at: first),
+                device(ip: "10.10.20.2", mac: "C8:69:CD:5E:01:E1", at: first),
             ], at: first))
             let text = try String(contentsOf: url, encoding: .utf8)
             try (text + fromTheFuture + "\n").write(to: url, atomically: true, encoding: .utf8)
@@ -348,8 +348,8 @@ struct HistoryLogTests {
             for index in 1..<14 {
                 let at = Timestamp(millisecondsSinceEpoch: Int64(1_000_000 + index * 1_000))
                 _ = await reopened.record(report([
-                    device(ip: "10.10.20.2", mac: "C8:69:CD:7F:33:E1", at: at),
-                    device(ip: "10.10.20.8", mac: "52:A1:8A:E0:7A:8A", at: at),
+                    device(ip: "10.10.20.2", mac: "C8:69:CD:5E:01:E1", at: at),
+                    device(ip: "10.10.20.8", mac: "52:A1:8A:5E:04:8A", at: at),
                 ], at: at))
             }
         }
@@ -374,7 +374,7 @@ struct HistoryLogTests {
         let at = Timestamp(millisecondsSinceEpoch: 1_000_000)
         let store = LogHistoryStore(url: url)
         _ = await store.record(
-            report([device(ip: "10.10.20.2", mac: "C8:69:CD:7F:33:E1", at: at)], at: at)
+            report([device(ip: "10.10.20.2", mac: "C8:69:CD:5E:01:E1", at: at)], at: at)
         )
 
         let text = try String(contentsOf: url, encoding: .utf8)
@@ -383,7 +383,7 @@ struct HistoryLogTests {
             #expect((try? JSONSerialization.jsonObject(with: Data(line.utf8))) != nil,
                     "a line was not a self-contained JSON object")
         }
-        #expect(text.contains("C8:69:CD:7F:33:E1"), "the MAC should be greppable in the log")
+        #expect(text.contains("C8:69:CD:5E:01:E1"), "the MAC should be greppable in the log")
     }
 
     // ── Sharing the file with something else that has it open ───────────────────
@@ -496,13 +496,13 @@ struct HistoryLogTests {
         // never seen.
         let terminal = LogHistoryStore(url: url)
         _ = await terminal.record(
-            report([device(ip: "10.10.20.2", mac: "C8:69:CD:7F:33:E1", at: t1)], at: t1)
+            report([device(ip: "10.10.20.2", mac: "C8:69:CD:5E:01:E1", at: t1)], at: t1)
         )
 
         // The app scans, crosses its threshold, and rewrites the file from what it knows.
         // What it knows has to include the terminal's run, or the rewrite is a deletion.
         _ = await app.record(
-            report([device(ip: "10.10.20.8", mac: "52:A1:8A:E0:7A:8A", at: t2)], at: t2)
+            report([device(ip: "10.10.20.8", mac: "52:A1:8A:5E:04:8A", at: t2)], at: t2)
         )
 
         let reopened = LogHistoryStore(url: url)
@@ -634,7 +634,7 @@ struct HistoryLogTests {
         // rename — the operation that would strand a lock taken on the log itself.
         let store = LogHistoryStore(url: url, compactionThreshold: 1)
         _ = await store.record(
-            report([device(ip: "10.10.20.2", mac: "C8:69:CD:7F:33:E1", at: at)], at: at)
+            report([device(ip: "10.10.20.2", mac: "C8:69:CD:5E:01:E1", at: at)], at: at)
         )
 
         let lock = url.appendingPathExtension("lock")
@@ -642,7 +642,7 @@ struct HistoryLogTests {
         let before = try FileManager.default.attributesOfItem(atPath: lock.path)[.systemFileNumber]
             as? Int
         _ = await store.record(
-            report([device(ip: "10.10.20.3", mac: "C8:69:CD:7F:33:E2", at: at)], at: at)
+            report([device(ip: "10.10.20.3", mac: "C8:69:CD:5E:01:E2", at: at)], at: at)
         )
         let after = try FileManager.default.attributesOfItem(atPath: lock.path)[.systemFileNumber]
             as? Int
@@ -678,8 +678,8 @@ struct HistoryLogTests {
 
         let clock = TestClock(day(101))
         let store = LogHistoryStore(url: url, retention: .days(30), clock: { clock.now })
-        let first = device(ip: "10.10.20.2", mac: "C8:69:CD:7F:33:E1", at: day(100))
-        let second = device(ip: "10.10.20.8", mac: "52:A1:8A:E0:7A:8A", at: day(101))
+        let first = device(ip: "10.10.20.2", mac: "C8:69:CD:5E:01:E1", at: day(100))
+        let second = device(ip: "10.10.20.8", mac: "52:A1:8A:5E:04:8A", at: day(101))
         _ = await store.record(report([first], at: day(100)))
         _ = await store.record(report([first, second], at: day(101)))
         #expect(await store.events().count == 1, "the second device should have appeared")
@@ -695,7 +695,7 @@ struct HistoryLogTests {
         #expect(await reopened.events().isEmpty, "the pruned event came back on reopen")
         #expect(await reopened.devices().count == 2,
                 "retention took a device record with it: that device comes back as new")
-        let facts = HostFacts(ip: IPv4Address("10.10.20.2")!, mac: MACAddress("C8:69:CD:7F:33:E1"))
+        let facts = HostFacts(ip: IPv4Address("10.10.20.2")!, mac: MACAddress("C8:69:CD:5E:01:E1"))
         let seen = await reopened.firstSeen(for: [facts], in: IPv4Network("10.10.20.0/24")!)
         #expect(seen[IPv4Address("10.10.20.2")!] == day(100), "first-seen was pruned away")
     }
@@ -713,8 +713,8 @@ struct HistoryLogTests {
 
         // Written with no retention at all, so the file genuinely holds the events.
         let writer = LogHistoryStore(url: url)
-        let first = device(ip: "10.10.20.2", mac: "C8:69:CD:7F:33:E1", at: day(100))
-        let second = device(ip: "10.10.20.8", mac: "52:A1:8A:E0:7A:8A", at: day(101))
+        let first = device(ip: "10.10.20.2", mac: "C8:69:CD:5E:01:E1", at: day(100))
+        let second = device(ip: "10.10.20.8", mac: "52:A1:8A:5E:04:8A", at: day(101))
         _ = await writer.record(report([first], at: day(100)))
         _ = await writer.record(report([first, second], at: day(101)))
         #expect(await writer.events().count == 1)
@@ -744,8 +744,8 @@ struct HistoryLogTests {
         // No retention argument: this is the command line, which has no such setting and
         // must not acquire one.
         let store = LogHistoryStore(url: url)
-        let first = device(ip: "10.10.20.2", mac: "C8:69:CD:7F:33:E1", at: day(0))
-        let second = device(ip: "10.10.20.8", mac: "52:A1:8A:E0:7A:8A", at: day(1))
+        let first = device(ip: "10.10.20.2", mac: "C8:69:CD:5E:01:E1", at: day(0))
+        let second = device(ip: "10.10.20.8", mac: "52:A1:8A:5E:04:8A", at: day(1))
         _ = await store.record(report([first], at: day(0)))
         _ = await store.record(report([first, second], at: day(1)))
         _ = await store.record(report([first, second], at: day(10_000)))

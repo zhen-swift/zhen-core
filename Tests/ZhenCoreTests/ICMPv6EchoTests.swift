@@ -1,8 +1,8 @@
 import Testing
 @testable import ZhenCore
 
-// A reply captured off JC's network on 2026-09-26: the Apple TV at
-// fe80::82f:e557:372d:c208 (MAC c8:69:cd:7f:33:e1) answering an echo request from this
+// A reply captured off the development network on 2026-09-26: the Apple TV at
+// fe80::82f:e557:372d:c208 (MAC c8:69:cd:5e:01:e1) answering an echo request from this
 // Mac's en0 link-local address. Its checksum was computed by the Apple TV's stack, not by
 // anything in this repository, which is what makes it a test of the pseudo-header rather
 // than of this code agreeing with itself. 21 bytes, so the odd-length padding rule is in

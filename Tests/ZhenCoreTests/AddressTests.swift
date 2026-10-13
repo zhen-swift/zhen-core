@@ -13,8 +13,8 @@ struct MACAddressTests {
 
     @Test("Hyphen separators parse")
     func hyphenSeparators() throws {
-        let mac = try MACAddress.required("30-DE-4B-77-A2-10")
-        #expect(mac.description == "30:DE:4B:77:A2:10")
+        let mac = try MACAddress.required("30-DE-4B-5E-03-10")
+        #expect(mac.description == "30:DE:4B:5E:03:10")
     }
 
     @Test("Malformed input is rejected")
@@ -29,11 +29,11 @@ struct MACAddressTests {
     @Test("The locally administered bit is what separates a rotating MAC from a stable one")
     func locallyAdministered() throws {
         // Real gateway hardware address — globally administered.
-        let stable = try MACAddress.required("30:DE:4B:77:A2:10")
+        let stable = try MACAddress.required("30:DE:4B:5E:03:10")
         #expect(stable.isLocallyAdministered == false)
 
         // Private Wi-Fi addresses observed on this network.
-        for rotating in ["DA:5C:22:81:F3:0A", "F2:3A:91:6B:0D:44", "6E:F0:9D:3B:C8:52"] {
+        for rotating in ["DA:5C:22:5E:08:0A", "F2:3A:91:5E:0A:44", "6E:F0:9D:5E:0B:52"] {
             let mac = try #require(MACAddress(rotating))
             #expect(mac.isLocallyAdministered, "\(rotating) should read as locally administered")
         }
@@ -41,8 +41,8 @@ struct MACAddressTests {
 
     @Test("Bytes round-trip")
     func byteRoundTrip() throws {
-        let mac = try MACAddress.required("A8:51:AB:2F:19:6C")
-        #expect(mac.bytes == [0xA8, 0x51, 0xAB, 0x2F, 0x19, 0x6C])
+        let mac = try MACAddress.required("A8:51:AB:5E:09:6C")
+        #expect(mac.bytes == [0xA8, 0x51, 0xAB, 0x5E, 0x09, 0x6C])
         #expect(MACAddress(bytes: mac.bytes) == mac)
     }
 }

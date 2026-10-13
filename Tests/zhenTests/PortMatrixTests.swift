@@ -31,12 +31,12 @@ private func portedReport(
     var facts = [
         // Every state on one host, so the three probed glyphs cannot be confused with
         // one host being wholly one thing.
-        HostFacts(ip: IPv4Address("10.10.20.1")!, mac: MACAddress("78:20:51:74:CB:28"),
+        HostFacts(ip: IPv4Address("10.10.20.1")!, mac: MACAddress("78:20:51:5E:07:28"),
                   ttl: 64, rtt: RTTSample(measured: .microseconds(412)),
                   ports: observations([.filtered, .open, .closed]),
                   discoveredVia: [.probeReply]),
-        HostFacts(ip: IPv4Address("10.10.20.103")!, mac: MACAddress("C8:69:CD:7F:33:E1"),
-                  allNames: [NameCandidate(value: "Sala de entretenimiento", source: .mdns)],
+        HostFacts(ip: IPv4Address("10.10.20.103")!, mac: MACAddress("C8:69:CD:5E:01:E1"),
+                  allNames: [NameCandidate(value: "Sala de estar principal", source: .mdns)],
                   ttl: 64, rtt: RTTSample(measured: .microseconds(51680)),
                   ports: observations([.closed, .closed, .open]),
                   discoveredVia: [.probeReply]),
@@ -44,7 +44,7 @@ private func portedReport(
     // The fourth state: a host the port stage never reached. Routine, not exotic —
     // discovery can find a host after the stage has taken its slice of the budget.
     facts.append(
-        HostFacts(ip: IPv4Address("10.10.20.124")!, mac: MACAddress("D6:0A:97:FE:72:9C"),
+        HostFacts(ip: IPv4Address("10.10.20.124")!, mac: MACAddress("D6:0A:97:5E:06:9C"),
                   ports: probeLastHost ? observations([.filtered, .filtered, .filtered]) : [],
                   discoveredVia: [.neighborTable])
     )

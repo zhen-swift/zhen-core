@@ -3,6 +3,6 @@
   <device>
     <deviceType>urn:schemas-upnp-org:device:InternetGatewayDevice:1</deviceType>
     <friendlyName>   </friendlyName>
-    <modelName>ER7206</modelName>
+    <modelName>GW1000</modelName>
   </device>
 </root>

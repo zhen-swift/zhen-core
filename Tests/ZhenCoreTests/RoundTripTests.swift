@@ -24,8 +24,8 @@ struct RoundTripTests {
 
     @Test("An address round-trips as readable text, not as a packed integer")
     func addressesEncodeAsText() throws {
-        let mac = try MACAddress.required("30:DE:4B:77:A2:10")
-        #expect(try encodedText(mac) == "\"30:DE:4B:77:A2:10\"")
+        let mac = try MACAddress.required("30:DE:4B:5E:03:10")
+        #expect(try encodedText(mac) == "\"30:DE:4B:5E:03:10\"")
         #expect(try roundTrip(mac) == mac)
 
         let ip = try #require(IPv4Address("10.10.20.112"))
@@ -93,15 +93,15 @@ struct RoundTripTests {
 
     @Test("A fully populated device round-trips, apostrophe and all")
     func populatedDeviceRoundTrips() throws {
-        // The non-ASCII apostrophe in "JC's MacBook Pro" is a real value from the
+        // The non-ASCII apostrophe in "Alex's MacBook Pro" is a real value from the
         // real network and it must not be escaped or mangled on the way out.
         let facts = HostFacts(
             ip: try #require(IPv4Address("10.10.20.2")),
-            mac: try MACAddress.required("A8:51:AB:2F:19:6C"),
+            mac: try MACAddress.required("A8:51:AB:5E:09:6C"),
             allNames: [
-                NameCandidate(value: "Sala de entretenimiento", source: .mdns, rank: 1, model: "AppleTV5,3"),
-                NameCandidate(value: "70-35-60-63.1 Sala de entretenimiento", source: .mdns, rank: 9),
-                NameCandidate(value: "JC's MacBook Pro", source: .administrative),
+                NameCandidate(value: "Sala de estar principal", source: .mdns, rank: 1, model: "AppleTV5,3"),
+                NameCandidate(value: "70-35-60-63.1 Sala de estar principal", source: .mdns, rank: 9),
+                NameCandidate(value: "Alex's MacBook Pro", source: .administrative),
             ],
             vendor: "Apple, Inc.",
             reverseDNS: "appletv.lan",
@@ -121,7 +121,7 @@ struct RoundTripTests {
         #expect(try roundTrip(facts) == facts)
 
         let json = try encodedText(device)
-        #expect(json.contains("JC's MacBook Pro"))
+        #expect(json.contains("Alex's MacBook Pro"))
         #expect(!json.contains("\\u"))
     }
 
@@ -195,7 +195,7 @@ struct RoundTripTests {
             .stageFinished(StageTiming(stage: .discovery, elapsedMillis: 12.5, probesSent: 254, repliesSeen: 6)),
             .hostFound(HostFacts(ip: try #require(IPv4Address("10.10.20.3")))),
             .hostUpdated(HostFacts(ip: try #require(IPv4Address("10.10.20.3")),
-                                   allNames: [NameCandidate(value: "JC's MacBook Pro", source: .mdns)])),
+                                   allNames: [NameCandidate(value: "Alex's MacBook Pro", source: .mdns)])),
             .degraded(Degradation(stage: .naming, reason: "no mDNS responder", recoverable: true)),
         ]
         for event in events {

@@ -46,7 +46,7 @@ I said Linux first two days ago. That was wrong, for a reason specific to this t
 That middle row is the product win, **with its coverage claim withdrawn as measured
 2026-09-26.** One multicast packet is faster than a 254-address ARP sweep, quieter, and
 works on a /64 where enumeration is impossible by construction. It does **not** reach every
-host: on JC's network one solicitation found 6-7 hosts against the sweep's 10, five trials
+host: on the development network one solicitation found 6-7 hosts against the sweep's 10, five trials
 of five, because four hosts answer no ICMPv6 echo at all. "Every modern host self-assigns a
 link-local address" is true; "therefore one packet reaches all of them" does not follow from
 it, and that inference was this document's mistake.

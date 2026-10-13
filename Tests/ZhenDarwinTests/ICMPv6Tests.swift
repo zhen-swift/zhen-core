@@ -21,7 +21,7 @@ struct ICMPv6EchoSocketTests {
     }
 
     // No loopback "answers" test, deliberately. With the application firewall in
-    // stealth mode and blocking all incoming — JC's machine — nothing local answers an
+    // stealth mode and blocking all incoming — the development machine — nothing local answers an
     // echo: `ping6 ::1` itself loses 2 of 2. A test that needs a permissive firewall
     // would fail on the machine that matters or be skipped everywhere. The answering path
     // is proved against a real neighbour by the opt-in test below.

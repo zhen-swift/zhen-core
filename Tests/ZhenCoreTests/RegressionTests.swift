@@ -14,8 +14,8 @@ struct DeviceIdentityReproducibilityTests {
     func deviceMatchesFacts() throws {
         let facts = HostFacts(
             ip: try #require(IPv4Address("10.10.20.4")),
-            mac: try MACAddress.required("F2:3A:91:6B:0D:44"),
-            allNames: [NameCandidate(value: "Mac Studio de Jose", source: .mdns, rank: 1)],
+            mac: try MACAddress.required("F2:3A:91:5E:0A:44"),
+            allNames: [NameCandidate(value: "Mac Studio de Luis", source: .mdns, rank: 1)],
             reverseDNS: "mac-studio.lan",
             dhcpHostname: "mac-studio"
         )
@@ -32,8 +32,8 @@ struct DeviceIdentityReproducibilityTests {
     func keysSurviveEncoding() throws {
         let facts = HostFacts(
             ip: try #require(IPv4Address("10.10.20.4")),
-            mac: try MACAddress.required("F2:3A:91:6B:0D:44"),
-            allNames: [NameCandidate(value: "Mac Studio de Jose", source: .mdns, rank: 1)],
+            mac: try MACAddress.required("F2:3A:91:5E:0A:44"),
+            allNames: [NameCandidate(value: "Mac Studio de Luis", source: .mdns, rank: 1)],
             reverseDNS: "mac-studio.lan",
             dhcpHostname: "mac-studio"
         )
@@ -61,8 +61,8 @@ struct DeviceIdentityReproducibilityTests {
             ), in: Self.network, lastSeen: Timestamp(millisecondsSinceEpoch: 0))
         }
         let events = deriveEvents(
-            previous: [device(mac: try MACAddress.required("DA:5C:22:81:F3:0A"))],
-            current: [device(mac: try MACAddress.required("6E:F0:9D:3B:C8:52"))],
+            previous: [device(mac: try MACAddress.required("DA:5C:22:5E:08:0A"))],
+            current: [device(mac: try MACAddress.required("6E:F0:9D:5E:0B:52"))],
             at: Timestamp(millisecondsSinceEpoch: 0), run: UUID(), network: Self.network
         )
         #expect(!events.contains { $0.kind == .hostAppeared })
@@ -416,7 +416,7 @@ private extension Array {
 @Suite("A dual-homed device stays in the diff")
 struct DualHomedTests {
     static let network = IPv4Network("10.10.20.0/24")!
-    static let mac = "30:DE:4B:77:A2:10"
+    static let mac = "30:DE:4B:5E:03:10"
 
     private func device(_ ip: String, name: String? = nil, openPorts: [UInt16] = []) -> Device {
         Device(observing: HostFacts(
