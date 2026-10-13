@@ -65,6 +65,12 @@ follow the app's `CFBundleShortVersionString`.
   stale registration. `HelperClient.probeTimeout` now bounds the question "is anybody
   there"; a scan's own acquisitions keep `acquisitionTimeout`. Once the check fails the
   privileged engines are not built, so nothing waits again until the next build.
+- **The Local Network remedy is worded for an app when it is read in one.**
+  `ProbePermissionAdvice.appleLocalNetworkInApp` gives the same grant without the sentence
+  telling a command-line build its permission may be listed under the terminal — true for
+  `zhen`, wrong in an app, and something the app was cutting out of core's text at runtime.
+  The sweep and the naming stage pick it themselves, from whether the running bundle is an
+  `.app` (`ProbePermissionAdvice.appleForThisProcess`); the command line's text is unchanged.
 - **A `zhen-helper` product.** The privileged helper was an executable target with no
   product, so it never crossed the package boundary: the app could not embed it from the
   version it pins and built it by hand from a checkout. Declaring it changes no scheme
