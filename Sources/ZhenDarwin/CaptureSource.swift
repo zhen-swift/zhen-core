@@ -48,10 +48,13 @@ public enum CapturePolicy: Sendable, Hashable {
 
 /// A way to obtain a configured capture device.
 public struct CaptureSource: Sendable {
-    private let acquire: @Sendable (String, [bpf_insn]) async -> Result<BPFDevice, BPFUnavailable>
+    private let acquire: @Sendable (String, [bpf_insn], Duration) async -> Result<BPFDevice, BPFUnavailable>
 
-    private init(
-        acquire: @escaping @Sendable (String, [bpf_insn]) async -> Result<BPFDevice, BPFUnavailable>
+    /// Internal rather than private so a test can build a source that records the bound
+    /// it was handed, which is the only way to see which one `probe` passes without a
+    /// helper to time.
+    init(
+        acquire: @escaping @Sendable (String, [bpf_insn], Duration) async -> Result<BPFDevice, BPFUnavailable>
     ) {
         self.acquire = acquire
     }
@@ -61,17 +64,21 @@ public struct CaptureSource: Sendable {
     /// Internal, because `BPFDevice` is. Outside this module a `CaptureSource` is an
     /// opaque token you hand to an engine, which is all a caller should be able to do
     /// with one.
+    ///
+    /// - Parameter timeout: how long a helper may take to answer. The acquisition bound
+    ///   unless the caller is only asking whether one is there; a direct open ignores it.
     func open(
-        interface: String, filter: [bpf_insn]
+        interface: String, filter: [bpf_insn],
+        timeout: Duration = HelperClient.acquisitionTimeout
     ) async throws(BPFUnavailable) -> BPFDevice {
-        switch await acquire(interface, filter) {
+        switch await acquire(interface, filter, timeout) {
         case .success(let device): return device
         case .failure(let error): throw error
         }
     }
 
     /// `/dev/bpf*` in this process.
-    public static let direct = CaptureSource { interface, filter in
+    public static let direct = CaptureSource { interface, filter, _ in
         do {
             return .success(try BPFDevice.open(interface: interface, filter: filter))
         } catch let error as BPFUnavailable {
@@ -82,9 +89,10 @@ public struct CaptureSource: Sendable {
     }
 
     /// The privileged helper, and nothing else. Used once a direct open has been tried.
-    public static let helper = CaptureSource { interface, filter in
+    public static let helper = CaptureSource { interface, filter, timeout in
         do {
-            return .success(try await BPFDevice.openViaHelper(interface: interface, filter: filter))
+            return .success(try await BPFDevice.openViaHelper(
+                interface: interface, filter: filter, timeout: timeout))
         } catch let error as BPFUnavailable {
             return .failure(error)
         } catch {
@@ -98,12 +106,13 @@ public struct CaptureSource: Sendable {
     /// unprivileged app the direct open always fails with `.notPrivileged`, which is
     /// both true and useless — "you are not root" is not what a person who installed a
     /// helper needs to read. What went wrong with the helper is.
-    public static let preferred = CaptureSource { interface, filter in
+    public static let preferred = CaptureSource { interface, filter, timeout in
         if let device = try? BPFDevice.open(interface: interface, filter: filter) {
             return .success(device)
         }
         do {
-            return .success(try await BPFDevice.openViaHelper(interface: interface, filter: filter))
+            return .success(try await BPFDevice.openViaHelper(
+                interface: interface, filter: filter, timeout: timeout))
         } catch let error as BPFUnavailable {
             return .failure(error)
         } catch {
@@ -126,9 +135,15 @@ public struct CaptureSource: Sendable {
     /// which is the same argument that rejected `geteuid()` — and it now covers the
     /// helper too, because "is a helper installed and approved" has exactly as many
     /// wrong answers available to a check that does not try.
+    ///
+    /// The helper gets `HelperClient.probeTimeout` here, not the acquisition bound: this
+    /// asks whether anybody is there, and a registration launchd cannot start never says
+    /// no — it just never answers. See `probeTimeout` for the 3.2 s that cost.
     func probe(interface: String) async -> BPFUnavailable? {
         do {
-            let device = try await open(interface: interface, filter: BPFFilter.arp())
+            let device = try await open(
+                interface: interface, filter: BPFFilter.arp(),
+                timeout: HelperClient.probeTimeout)
             // Closed rather than kept: the composition root runs long before the sweep,
             // and holding an exclusive-open node across a naming stage would lock out
             // the very packet capture somebody is running to check this engine's work.

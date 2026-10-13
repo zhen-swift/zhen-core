@@ -58,6 +58,13 @@ follow the app's `CFBundleShortVersionString`.
 - **`ScanRunner.probePorts(_:spec:budget:progress:)`.** Probes known addresses and keeps
   the result through `recordPorts`: no discovery, no naming, no run. What an app needs to
   scan one device's ports without taking the rest of the network offline.
+- **The helper check at scanner build is bounded at 750 ms.** Building a scanner under
+  `.helperThenDirect` asks whether a helper answers, and a registration launchd cannot
+  start accepts the connection and never does. That check waited out the full 3 s
+  acquisition timeout — 3.2 s on every engine build, measured in the app on a Mac with a
+  stale registration. `HelperClient.probeTimeout` now bounds the question "is anybody
+  there"; a scan's own acquisitions keep `acquisitionTimeout`. Once the check fails the
+  privileged engines are not built, so nothing waits again until the next build.
 - **A `zhen-helper` product.** The privileged helper was an executable target with no
   product, so it never crossed the package boundary: the app could not embed it from the
   version it pins and built it by hand from a checkout. Declaring it changes no scheme

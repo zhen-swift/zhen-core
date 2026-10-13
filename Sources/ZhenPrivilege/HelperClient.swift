@@ -30,13 +30,36 @@ public enum HelperClient {
     /// that is not going to.
     public static let timeoutMilliseconds = 3_000
 
+    /// The bound on an acquisition the scan itself makes — the sweep opening its device.
+    public static let acquisitionTimeout: Duration = .milliseconds(timeoutMilliseconds)
+
+    /// The bound on the composition-time check: whether a helper answers at all.
+    ///
+    /// ── Why the check has a bound of its own ────────────────────────────────────
+    ///
+    /// Building a scanner asks whether a capture device can be had, and under
+    /// `.helperThenDirect` that means asking the helper. A registration launchd cannot
+    /// start — a build that has since been deleted is the case measured — accepts the
+    /// connection and never answers, and the check waited out the full acquisition
+    /// timeout: 3.2 s on every engine build, which the app paid on every launch. A
+    /// helper that is there answers in milliseconds, launch included; and once this check
+    /// fails, the privileged engines are not built, so nothing waits again until the next
+    /// build. So the question "is anybody there" gets a fraction of the patience a real
+    /// acquisition does.
+    public static let probeTimeout: Duration = .milliseconds(750)
+
     /// Asks the helper for a configured capture device.
     ///
+    /// - Parameter timeout: how long to wait for an answer. The acquisition timeout
+    ///   unless the caller is only asking whether anyone is there.
     /// - Returns: the descriptor, which the caller owns and must close.
     public static func openCaptureDevice(
-        interface: String, filter: [BPFInstruction]
+        interface: String, filter: [BPFInstruction], timeout: Duration = acquisitionTimeout
     ) async throws(BPFUnavailable) -> AcquiredDevice {
-        let outcome = await withCheckedContinuation { (continuation: CheckedContinuation<Result<AcquiredDevice, BPFUnavailable>, Never>) in
+        let outcome: Result<AcquiredDevice, BPFUnavailable> = await answer(
+            within: timeout,
+            otherwise: .failure(.helperRefused("the helper did not answer within \(timeout.spokenMilliseconds)"))
+        ) { done in
             let connection = NSXPCConnection(
                 machServiceName: HelperIdentity.label, options: .privileged
             )
@@ -55,7 +78,7 @@ public enum HelperClient {
             // reply, an error handler, an invalidation, or the timeout. NSXPC will call
             // more than one of these in ordinary operation — an interrupted connection
             // is also invalidated — and resuming a continuation twice is a crash.
-            let done = Resumption(continuation)
+            //
             // Absent, not refused. An invalidation before any reply is what a Mach
             // service nobody is listening on looks like, and that is the ordinary state
             // of a machine with no helper installed rather than something to report.
@@ -72,7 +95,7 @@ public enum HelperClient {
             guard let proxy else {
                 done.finish(.failure(.helperRefused("the helper does not implement the expected interface")))
                 connection.invalidate()
-                return
+                return {}
             }
 
             proxy.openCaptureDevice(
@@ -102,15 +125,11 @@ public enum HelperClient {
                 )))
             }
 
-            // The timeout. A helper that is registered but awaiting approval accepts the
-            // connection and never answers, which without this would hang the scan
-            // rather than degrade it.
+            // What the timeout does when it wins: a helper that is registered but
+            // awaiting approval accepts the connection and never answers, which without
+            // this would hang the scan rather than degrade it.
             let box = ConnectionBox(connection: connection)
-            DispatchQueue.global().asyncAfter(deadline: .now() + .milliseconds(timeoutMilliseconds)) {
-                if done.finish(.failure(.helperRefused("the helper did not answer within \(timeoutMilliseconds)ms"))) {
-                    box.connection.invalidate()
-                }
-            }
+            return { box.connection.invalidate() }
         }
 
         switch outcome {
@@ -125,7 +144,7 @@ public enum HelperClient {
     /// from `SMAppService.status`, which reports what was registered rather than what
     /// will answer.
     public static func version() async -> String? {
-        await withCheckedContinuation { (continuation: CheckedContinuation<String?, Never>) in
+        await answer(within: .seconds(2), otherwise: nil) { done in
             let connection = NSXPCConnection(
                 machServiceName: HelperIdentity.label, options: .privileged
             )
@@ -133,7 +152,6 @@ public enum HelperClient {
             if #available(macOS 13.0, *) {
                 connection.setCodeSigningRequirement(CodeRequirement.helper)
             }
-            let done = Resumption(continuation)
             connection.invalidationHandler = { done.finish(nil) }
             connection.interruptionHandler = { done.finish(nil) }
             connection.resume()
@@ -146,10 +164,41 @@ public enum HelperClient {
                 done.finish(version)
             }
             let box = ConnectionBox(connection: connection)
-            DispatchQueue.global().asyncAfter(deadline: .now() + .seconds(2)) {
-                if done.finish(nil) { box.connection.invalidate() }
+            return { box.connection.invalidate() }
+        }
+    }
+
+    /// The first answer `ask` gives, or `fallback` once `bound` has passed.
+    ///
+    /// The shape every call to the helper has: several callbacks that may each fire, one
+    /// of which must win, and a bound after which nobody is listening. Pulled out of the
+    /// two calls that had it inline so the bound can be shown to hold without a helper —
+    /// the XPC half cannot be faked, and the timing half does not need it.
+    ///
+    /// - Parameter ask: starts the request, offers answers to the `Resumption` it is
+    ///   given, and returns what to do if the bound wins (invalidate the connection).
+    static func answer<Value: Sendable>(
+        within bound: Duration,
+        otherwise fallback: Value,
+        _ ask: (Resumption<Value>) -> @Sendable () -> Void
+    ) async -> Value {
+        await withCheckedContinuation { (continuation: CheckedContinuation<Value, Never>) in
+            let done = Resumption(continuation)
+            let giveUp = ask(done)
+            let (seconds, attoseconds) = bound.components
+            let nanoseconds = Int(seconds) * 1_000_000_000 + Int(attoseconds / 1_000_000_000)
+            DispatchQueue.global().asyncAfter(deadline: .now() + .nanoseconds(nanoseconds)) {
+                if done.finish(fallback) { giveUp() }
             }
         }
+    }
+}
+
+extension Duration {
+    /// "750ms", as the refusal sentence has always spelled its bound.
+    fileprivate var spokenMilliseconds: String {
+        let (seconds, attoseconds) = components
+        return "\(seconds * 1_000 + attoseconds / 1_000_000_000_000_000)ms"
     }
 }
 
@@ -168,7 +217,7 @@ private struct ConnectionBox: @unchecked Sendable {
 /// connection is also invalidated, and a timeout can fire while a reply is in flight.
 /// Resuming a checked continuation twice is a crash, so the guard has to be here rather
 /// than in the shape of the callbacks.
-private final class Resumption<Value: Sendable>: @unchecked Sendable {
+final class Resumption<Value: Sendable>: @unchecked Sendable {
     private let lock = NSLock()
     private var continuation: CheckedContinuation<Value, Never>?
 
