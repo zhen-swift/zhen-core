@@ -6,18 +6,18 @@ nothing is released yet.
 The format is loosely [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions
 follow the app's `CFBundleShortVersionString`.
 
-## [Unreleased]
+## [0.7.0] — 2026-10-12 — ports in history
 
-### Fixed
-- **A merge is logged once.** A run that proved two records were one device logged the
-  `merged` event twice, same id — once by the join and again by the fold. Found by the
-  0.6.0 history fixture, which holds exactly that pair. Existing duplicates in a store are
-  left as they are: removing them would be rewriting history to tidy it.
-- **A line this build understands only in part is kept, not dropped.** An event whose kind
-  it does not know, or a device whose key kind it does not know, decoded as a line and was
-  then skipped — and erased at the next compaction. They are now kept verbatim, like a line
-  that does not decode at all. This is the fault that lets a 0.6.0 build erase 0.7.0's port
-  events; fixed here so 0.7.0 cannot do the same to whatever comes next.
+Ports reach history. A port scan can be kept without being a run, a port opening or
+closing is an event, and a device's hardware addresses are kept one row each — the three
+things the app was working around. The privileged helper is a product the app can embed,
+its check is bounded, and the Local Network advice reads right inside an app.
+
+**Upgrading.** Source-breaking for anyone conforming to `HistoryStore` (one new
+requirement), switching exhaustively over `DerivedEvent.Kind` (two new cases), or calling
+`ScanRunner.run(…deepScan:…)` (now `ports: PortStage`). `ScanReport.schemaVersion` stays 3:
+nothing in `Model/` changed. Once 0.7.0 has written a history store, do not point a 0.6.0
+build at it — see the entry on hardware addresses below.
 
 ### Added
 - **A port scan can be kept in history without being a run.**
@@ -89,6 +89,17 @@ follow the app's `CFBundleShortVersionString`.
   the same on Linux and is tested there. The tests reproduce the 100 pairs the app's
   previous palette measured, against all three of the surfaces it drew text on. That
   palette was derived by hand against one of them and was wrong on the other two.
+
+### Fixed
+- **A merge is logged once.** A run that proved two records were one device logged the
+  `merged` event twice, same id — once by the join and again by the fold. Found by the
+  0.6.0 history fixture, which holds exactly that pair. Existing duplicates in a store are
+  left as they are: removing them would be rewriting history to tidy it.
+- **A line this build understands only in part is kept, not dropped.** An event whose kind
+  it does not know, or a device whose key kind it does not know, decoded as a line and was
+  then skipped — and erased at the next compaction. They are now kept verbatim, like a line
+  that does not decode at all. This is the fault that lets a 0.6.0 build erase 0.7.0's port
+  events; fixed here so 0.7.0 cannot do the same to whatever comes next.
 
 ## [0.6.0] — 2026-10-05 — the former name, retired
 
