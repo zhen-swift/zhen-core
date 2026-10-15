@@ -271,7 +271,8 @@ public struct ICMPSweepEngine: HostDiscovery {
             attempts: attempts,
             counters: counters,
             spacing: spacing,
-            budgets: budgets
+            budgets: budgets,
+            reach: target.reach
         )
         let replies = await socket.replies()
 
@@ -358,7 +359,25 @@ public struct ICMPSweepEngine: HostDiscovery {
         // nothing: it is sent INTO this window rather than before it, so the instant
         // the sweep stops listening is the instant it would have stopped anyway. See
         // SweepSpacing for the measurement.
-        if let tailEnd = await state.declarationInstant() {
+        if await state.extendsWaits {
+            // ── Change 4: each address waits its own wait ─────────────────────────
+            //
+            // Addresses on the learned path are done when the tail window above runs
+            // out; extended ones when they show evidence or their own deadline passes.
+            // So the sweep ends at the latest per-address deadline, or earlier: once
+            // every expected address has answered and every other address's wait has
+            // run out. With no learned-path transmissions at all — a first scan, or a
+            // fixed wait — only the deadlines decide.
+            let tailEnd = await state.declarationInstant()
+            while !Task.isCancelled, !deadline.isExpired {
+                if await state.everyoneAnswered { break }
+                let now = MonotonicInstant.now
+                let pending = await state.pendingExtended(now: now)
+                let learnedDone = tailEnd.map { now >= $0 } ?? true
+                if learnedDone, pending == 0 { break }
+                try? await Task.sleep(for: .milliseconds(10))
+            }
+        } else if let tailEnd = await state.declarationInstant() {
             while !Task.isCancelled, !deadline.isExpired, MonotonicInstant.now < tailEnd {
                 if await state.everyoneAnswered { break }
                 try? await Task.sleep(for: .milliseconds(10))
@@ -535,6 +554,13 @@ actor SweepState {
         var cold: Bool?
         /// From `firstSentAt` to the first evidence of any kind, once there is some.
         var firstContact: Duration?
+        /// How many transmissions this address gets: the sweep's own count, or the plan's.
+        var attempts: Int
+        /// The plan's own wait for this address, from its first transmission. Zero is the
+        /// learned path: study 1's schedule, ended by the network-wide tail.
+        var planWait: Duration = .zero
+
+        init(attempts: Int) { self.attempts = attempts }
 
         /// Notes evidence arriving at `instant`, if it is the first since the first
         /// transmission.
@@ -550,6 +576,15 @@ actor SweepState {
 
     private var hosts: [IPv4Address: Host] = [:]
     private var order: [IPv4Address]
+    /// The plan, when it extends any wait. Nil is study 1's schedule exactly, which is
+    /// what `.learned` and an absent plan both get.
+    private let reach: ReachPlan?
+    /// Each extended address's deadline — its first transmission plus its wait — until it
+    /// shows evidence. Change 8's queue, so the end-of-sweep check pops what is due
+    /// rather than walking every address.
+    private var reachDeadlines = ExpiryQueue<IPv4Address>()
+    /// Extended addresses whose wait ran out with no evidence, in the order it did.
+    private(set) var reachExpired: [IPv4Address] = []
     /// Every transmission still matchable, live and expired alike.
     ///
     /// Looked up by token and never walked by the send loop: what is due and what is
@@ -623,7 +658,8 @@ actor SweepState {
         attempts: Int,
         counters: ProbeCounters,
         spacing: SweepSpacing = .spreadIntoTail,
-        budgets: SweepBudgets = .split
+        budgets: SweepBudgets = .split,
+        reach: ReachPlan? = nil
     ) {
         self.spacing = spacing
         self.clock = SweepClock(budgets: budgets)
@@ -632,7 +668,19 @@ actor SweepState {
         self.neighbors = neighbors
         self.attempts = attempts
         self.counters = counters
-        for address in pending { hosts[address] = Host() }
+        let plan = reach.flatMap { $0.extendsAnyWait ? $0 : nil }
+        self.reach = plan
+        for address in pending {
+            var host = Host(attempts: attempts)
+            if let plan {
+                let wait = plan.wait(for: address)
+                if wait > .zero {
+                    host.planWait = wait
+                    host.attempts = plan.attempts(for: address)
+                }
+            }
+            hosts[address] = host
+        }
     }
 
     /// Whether every address has either answered or exhausted its attempts.
@@ -780,6 +828,62 @@ actor SweepState {
         return spread * spacing.scatter(for: address)
     }
 
+    /// How long an extended address's transmission `index` waits before the next one.
+    ///
+    /// Change 4: the transmissions are spread evenly across the address's own wait, a
+    /// slot of `wait / attempts` each, so the last goes out about one slot before the
+    /// deadline and still has a slot for its reply. To an address with no neighbour
+    /// entry every transmission is an ARP trigger, so this spreads the ARP attempts
+    /// across the wait instead of spending them in its first few hundred milliseconds.
+    /// It is C8's spread-into-tail carried to each address's own window: the gap that
+    /// leads to the final transmission is scattered per host, by the same deterministic
+    /// factor, and never shorter than the retransmit interval.
+    ///
+    /// The final transmission's own window is the retransmit interval: nothing follows
+    /// it, and the address's deadline — not this — is what the sweep waits on.
+    func extendedGap(afterTransmission index: Int, address: IPv4Address,
+                     base: Duration) -> Duration {
+        guard let host = hosts[address], host.planWait > .zero,
+              index < host.attempts - 1 else { return base }
+        let slot = host.planWait / host.attempts
+        let gap = index == host.attempts - 2 ? slot * spacing.scatter(for: address) : slot
+        return max(gap, base)
+    }
+
+    /// Whether the plan extends any address's wait, so the sweep's end is decided by
+    /// per-address deadlines rather than by the network-wide tail alone.
+    var extendsWaits: Bool { reach != nil }
+
+    /// Retires every extended address whose wait has run out by `now`, and returns how
+    /// many are still being waited for.
+    ///
+    /// Under `.history` an extended wait is floored by the learned tail — history only
+    /// lengthens a wait — and the tail is not known until replies arrive, so the floor is
+    /// applied here, when the deadline comes due: an address whose tail-floored deadline
+    /// is still ahead goes back in the queue at that instant. `.fixed` has no floor.
+    func pendingExtended(now: MonotonicInstant = .now) -> Int {
+        guard let reach else { return 0 }
+        let tail = tailBudget()
+        while let address = reachDeadlines.popFirst(dueBy: now) {
+            guard let host = hosts[address], host.facts == nil, let sent = host.firstSentAt else { continue }
+            let floored = sent.advanced(by: reach.wait(for: address, learnedTail: tail))
+            if floored > now {
+                reachDeadlines.schedule(address, at: floored)
+            } else {
+                reachExpired.append(address)
+            }
+        }
+        return reachDeadlines.count
+    }
+
+    /// The addresses history expects that have shown no evidence yet.
+    ///
+    /// Empty without a plan, and on a first scan: nothing is expected then.
+    func expectedMissing() -> [IPv4Address] {
+        guard let reach else { return [] }
+        return order.filter { reach.expected.contains($0) && hosts[$0]?.facts == nil }
+    }
+
     /// Whether every address has answered.
     var everyoneAnswered: Bool { answeredCount == hosts.count }
 
@@ -822,7 +926,7 @@ actor SweepState {
                 host.estimator.recordRetransmission()
             }
             hosts[probe.address] = host
-            if host.transmissions < attempts {
+            if host.transmissions < host.attempts {
                 due.append(assign(probe.address))
             }
         }
@@ -838,7 +942,7 @@ actor SweepState {
         nextToken &+= 1
         let sequence = nextSequence
         nextSequence &+= 1
-        var host = hosts[address] ?? Host()
+        var host = hosts[address] ?? Host(attempts: attempts)
         let transmission = host.transmissions
         host.transmissions += 1
         host.outstanding = token
@@ -868,11 +972,18 @@ actor SweepState {
         // a single reply has taught the estimators anything.
         for (token, instant) in instants {
             guard let assignment = assigned.removeValue(forKey: token) else { continue }
-            let gap = gap(
-                afterTransmission: assignment.transmission,
-                address: assignment.address,
-                base: budget
-            )
+            let planWait = hosts[assignment.address]?.planWait ?? .zero
+            let gap = planWait > .zero
+                ? extendedGap(
+                    afterTransmission: assignment.transmission,
+                    address: assignment.address,
+                    base: budget
+                )
+                : gap(
+                    afterTransmission: assignment.transmission,
+                    address: assignment.address,
+                    base: budget
+                )
             let expiresAt = instant.advanced(by: gap)
             // First contact is timed from here. Cold is judged against what is known
             // NOW — the start snapshot plus anything the watch has seen resolve since —
@@ -881,6 +992,13 @@ actor SweepState {
             if assignment.transmission == 0, hosts[assignment.address]?.firstSentAt == nil {
                 hosts[assignment.address]?.firstSentAt = instant
                 hosts[assignment.address]?.cold = neighbors[assignment.address] == nil
+                // An extended address's wait runs from here, like its first contact —
+                // the plan's wait is a bound on exactly that time. One with evidence
+                // already (its entry resolved before this send was recorded) has nothing
+                // left to wait for.
+                if planWait > .zero, hosts[assignment.address]?.facts == nil {
+                    reachDeadlines.schedule(assignment.address, at: instant.advanced(by: planWait))
+                }
             }
             inFlight[token] = InFlight(
                 address: assignment.address,
@@ -889,10 +1007,15 @@ actor SweepState {
                 expiresAt: expiresAt
             )
             expiries.schedule(token, at: expiresAt)
-            if lastTransmissionAt.map({ instant > $0 }) ?? true { lastTransmissionAt = instant }
-            if assignment.transmission < attempts - 1,
-               lastTightTransmissionAt.map({ instant > $0 }) ?? true {
-                lastTightTransmissionAt = instant
+            // The network-wide tail is anchored on the learned path's transmissions only.
+            // An extended address is waited for by its own deadline, and letting its late
+            // transmissions move the anchor would hold every other address to them.
+            if planWait == .zero {
+                if lastTransmissionAt.map({ instant > $0 }) ?? true { lastTransmissionAt = instant }
+                if assignment.transmission < attempts - 1,
+                   lastTightTransmissionAt.map({ instant > $0 }) ?? true {
+                    lastTightTransmissionAt = instant
+                }
             }
             counters.probeSent()
             // A reply that beat this registration is waiting; fold it in now, with the
@@ -943,7 +1066,7 @@ actor SweepState {
         counters.replySeen()
         counters.probeCompleted()
 
-        var host = hosts[reply.source] ?? Host()
+        var host = hosts[reply.source] ?? Host(attempts: attempts)
         host.outstanding = nil
         host.noteEvidence(at: reply.receivedAt)
 
@@ -977,7 +1100,10 @@ actor SweepState {
         )
         host.facts = facts
         hosts[reply.source] = host
-        if !hadEvidence { answeredCount += 1 }
+        if !hadEvidence {
+            answeredCount += 1
+            reachDeadlines.cancel(reply.source)
+        }
         return hadEvidence ? .hostUpdated(facts) : .hostFound(facts)
     }
 
@@ -1013,6 +1139,7 @@ actor SweepState {
         host.facts = facts
         hosts[address] = host
         answeredCount += 1
+        reachDeadlines.cancel(address)
         return .hostFound(facts)
     }
 

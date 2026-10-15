@@ -41,6 +41,16 @@ follow the app's `CFBundleShortVersionString`.
   as a key on the device line: a 0.7.0 build ignores an unknown key and would drop it on
   compaction, but keeps a line of an unknown type verbatim. A merge keeps both devices'
   samples, the newest 32.
+- **The ICMP sweep honours the plan, and ends early (0.8.0 change 4).** `ScanTarget.reach`
+  carries a `ReachPlan` (not encoded; nil is study 1's schedule). An address the plan
+  extends gets the plan's attempts, spread evenly across its own wait — the gap before the
+  final one scattered per host, as C8 scatters it — and a deadline at its first
+  transmission plus that wait, kept in an `ExpiryQueue`. Under `.history` the learned tail
+  floors that wait when it comes due. The network-wide tail now ends only the addresses on
+  the learned path, and is anchored on their transmissions alone. The sweep ends at the
+  latest per-address deadline, or as soon as every expected address has evidence and every
+  other address's wait has run out. `.learned`, or no plan, runs the 0.7.0 schedule
+  unchanged. The ARP sweep is not changed.
 
 ### Changed
 - **Breaking: `neighbor_table` now means inherited, and the report schema is 4.** Through

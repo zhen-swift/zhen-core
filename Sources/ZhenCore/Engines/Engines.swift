@@ -181,12 +181,24 @@ public struct ScanTarget: Sendable, Hashable, Codable {
     /// network — which is the normal case; this exists for a rescan of specific
     /// hosts.
     public var addresses: [IPv4Address]?
+    /// How long to wait for each address, and how often to ask it. Nil is study 1's
+    /// schedule: one learned tail for the whole network.
+    ///
+    /// On the target rather than on an engine because it is a fact about THIS scan of
+    /// THIS network — built from its history just before the sweep — and an engine is
+    /// configured once and reused. Not encoded: a plan is an input the caller rebuilds,
+    /// and what was used is reported as `run.reach`.
+    public var reach: ReachPlan? = nil
 
     /// Creates a value from its fields. Each one is documented on the property it sets.
-    public init(network: IPv4Network, interface: NetworkInterface, addresses: [IPv4Address]? = nil) {
+    public init(
+        network: IPv4Network, interface: NetworkInterface, addresses: [IPv4Address]? = nil,
+        reach: ReachPlan? = nil
+    ) {
         self.network = network
         self.interface = interface
         self.addresses = addresses
+        self.reach = reach
     }
 
     /// Builds a target covering an interface's own network.
