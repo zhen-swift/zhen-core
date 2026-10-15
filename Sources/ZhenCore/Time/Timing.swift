@@ -90,6 +90,13 @@ public struct StageTiming: Sendable, Hashable, Codable {
     /// mDNS and SSDP run at the same time, so both hold this much of the stage; NetBIOS
     /// takes what is left afterwards.
     public var nameSourceBudgetMillis: Double?
+    /// How many transmissions each address got, for a sweep: the base count, which every
+    /// address on the learned path gets. An address a reach plan extended gets more, and
+    /// how many is in `run.reach`. The cost model in study 2 needs it per stage.
+    public var attempts: Int?
+    /// The in-flight window the stage ran with: the most probes it would have outstanding
+    /// at once. Configured, not measured — `peak_concurrency` is the measurement.
+    public var concurrency: Int?
 
     /// Creates a value from its fields. Each one is documented on the property it sets.
     public init(
@@ -105,7 +112,9 @@ public struct StageTiming: Sendable, Hashable, Codable {
         spreadBudgetMillis: Double? = nil,
         spacingJitter: Double? = nil,
         nameStageBudgetMillis: Double? = nil,
-        nameSourceBudgetMillis: Double? = nil
+        nameSourceBudgetMillis: Double? = nil,
+        attempts: Int? = nil,
+        concurrency: Int? = nil
     ) {
         self.stage = stage
         self.elapsedMillis = elapsedMillis
@@ -120,6 +129,8 @@ public struct StageTiming: Sendable, Hashable, Codable {
         self.spacingJitter = spacingJitter
         self.nameStageBudgetMillis = nameStageBudgetMillis
         self.nameSourceBudgetMillis = nameSourceBudgetMillis
+        self.attempts = attempts
+        self.concurrency = concurrency
     }
 
     /// Explicit keys: renaming the Swift property must never silently rename the
@@ -138,6 +149,8 @@ public struct StageTiming: Sendable, Hashable, Codable {
         case spacingJitter = "spacing_jitter"
         case nameStageBudgetMillis = "name_stage_budget_millis"
         case nameSourceBudgetMillis = "name_source_budget_millis"
+        case attempts
+        case concurrency
     }
 }
 

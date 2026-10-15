@@ -45,6 +45,16 @@ nonisolated struct ScanPipeline {
     /// alternative — refusing to run over a missing home directory — would be the tool
     /// deciding its filing matters more than its job.
     var history: (any HistoryStore)?
+    /// Whether history was read to build the plan, for `run.reach.history_read`.
+    var historyRead: Bool = true
+    /// The build, for `run.tool`. This binary's own unless a test pins it: the commit
+    /// changes with every build, and a byte-for-byte gate cannot compare against that.
+    var tool: RunTool? = ScanPipeline.buildTool
+
+    /// This binary: `zhen`, its version, and the commit it was stamped with.
+    static var buildTool: RunTool {
+        RunTool(name: "zhen", version: Version.current, commit: Version.commit)
+    }
 
     /// What the scan produced.
     struct Completed {
@@ -67,6 +77,8 @@ nonisolated struct ScanPipeline {
         startedAt: Timestamp = .now,
         runID: UUID = UUID()
     ) async -> Completed {
+        // Every host's `found_after_millis` is measured from here.
+        let scanStart = MonotonicInstant.now
         // ── The stages ───────────────────────────────────────────────────────────
         //
         // Each is a function of the context that came before it. Adding a capability —
@@ -136,7 +148,8 @@ nonisolated struct ScanPipeline {
             .map {
                 Device(
                     observing: $0, in: target.network,
-                    firstSeen: firstSeen[$0.ip] ?? finishedAt, lastSeen: finishedAt
+                    firstSeen: firstSeen[$0.ip] ?? finishedAt, lastSeen: finishedAt,
+                    scanStart: scanStart
                 )
             } + ipv6Neighbors.map {
                 Device(neighbor: $0, seen: finishedAt,
@@ -163,8 +176,12 @@ nonisolated struct ScanPipeline {
                 timing: timing,
                 neighborWatch: context.neighborWatch,
                 reach: target.reach.map {
-                    ReachReport(plan: $0, found: Set(devices.flatMap(\.ipv4Addresses)))
-                }
+                    ReachReport(
+                        plan: $0, found: Set(devices.flatMap(\.ipv4Addresses)),
+                        historyRead: historyRead && history != nil
+                    )
+                },
+                tool: tool
             ),
             devices: devices,
             degradations: degradations
@@ -193,6 +210,7 @@ nonisolated struct ScanPipeline {
         settings: ReachSettings, budget: Duration,
         startedAt: Timestamp = .now, runID: UUID = UUID()
     ) async -> Completed {
+        let scanStart = MonotonicInstant.now
         let asked = latest.reach?.expectedMissing.filter(latest.target.contains) ?? []
         let plan = ReachPlan(policy: .fixed(wait), settings: settings, expected: Set(asked))
         var context = ScanContext(
@@ -214,7 +232,8 @@ nonisolated struct ScanPipeline {
             .map {
                 Device(
                     observing: $0, in: latest.target,
-                    firstSeen: firstSeen[$0.ip] ?? finishedAt, lastSeen: finishedAt
+                    firstSeen: firstSeen[$0.ip] ?? finishedAt, lastSeen: finishedAt,
+                    scanStart: scanStart
                 )
             }
             .sorted { $0.primaryAddress < $1.primaryAddress }
@@ -244,8 +263,11 @@ nonisolated struct ScanPipeline {
                     )
                 ),
                 neighborWatch: context.neighborWatch,
-                reach: ReachReport(plan: plan, found: Set(devices.flatMap(\.ipv4Addresses))),
-                extendsRun: latest.id
+                reach: ReachReport(
+                    plan: plan, found: Set(devices.flatMap(\.ipv4Addresses)), historyRead: true
+                ),
+                extendsRun: latest.id,
+                tool: tool
             ),
             devices: devices,
             degradations: context.degradations

@@ -120,6 +120,7 @@ public struct ScanRunner: Sendable {
         settings: ReachSettings = ReachSettings()
     ) async -> CompletedScan {
         let startedAt = Timestamp.now
+        let scanStart = MonotonicInstant.now
         let runID = UUID()
         var target = ScanTarget(network: network ?? interface.network, interface: interface)
         // The plan, from this network's history, before the sweep. Retention governs the
@@ -166,7 +167,7 @@ public struct ScanRunner: Sendable {
                     // A host the sweep never heard from that a name source did. That is
                     // positive evidence of a device; dropping it for tidy stage
                     // boundaries would report the network as emptier than it is.
-                    let host = HostFacts(ip: ip, allNames: Array(candidates))
+                    let host = HostFacts(ip: ip, allNames: Array(candidates), foundAt: .now)
                     facts[ip] = host
                     progress(.hostFound(host))
                 }
@@ -230,7 +231,8 @@ public struct ScanRunner: Sendable {
                     observing: $0,
                     in: target.network,
                     firstSeen: firstSeen[$0.ip] ?? finishedAt,
-                    lastSeen: finishedAt
+                    lastSeen: finishedAt,
+                    scanStart: scanStart
                 )
             })
 
@@ -259,7 +261,7 @@ public struct ScanRunner: Sendable {
                 ),
                 neighborWatch: discovery.neighborWatch,
                 reach: target.reach.map {
-                    ReachReport(plan: $0, found: Set(devices.flatMap(\.ipv4Addresses)))
+                    ReachReport(plan: $0, found: Set(devices.flatMap(\.ipv4Addresses)), historyRead: true)
                 }
             ),
             devices: devices,

@@ -24,7 +24,7 @@ struct Zhen: AsyncParsableCommand {
             that is the system working as designed, and whether a run was complete is a \
             field in the artifact rather than the exit status.
             """,
-        version: Version.current,
+        version: Version.display,
         subcommands: [Scan.self, Ports.self, Hosts.self, Events.self, History.self, Export.self],
         defaultSubcommand: Scan.self
     )
@@ -47,4 +47,17 @@ struct Zhen: AsyncParsableCommand {
 /// Core is the only place the command line and the app can both see.
 nonisolated enum Version {
     static let current = ZhenVersion.current
+
+    /// The commit this binary was built from, stamped at build time by the `StampCommit`
+    /// plugin. Nil when the build could not tell. `-dirty` when the index differed from
+    /// the commit when it was stamped.
+    static let commit: String? = BuildStamp.commit
+
+    /// What `zhen --version` prints: the version and the commit.
+    ///
+    /// Study 2 freezes one build and cites it; a version string alone names a release,
+    /// not the binary, and two builds of one release can differ.
+    static var display: String {
+        "\(current) (\(commit ?? "commit unknown"))"
+    }
 }

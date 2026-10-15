@@ -46,6 +46,69 @@ struct ReachOptions: ParsableArguments {
     )
     var noNeighborWatch = false
 
+    // ── The study's knobs: every constant in `ReachSettings` ─────────────────────
+    //
+    // Study 2 freezes this binary and passes what phase 1 learns as flags, so a constant
+    // that could only move by rebuilding would end the study. Each value used, flagged or
+    // defaulted, is echoed in `run.reach`.
+
+    @Option(name: .long, help: "Wait for every address on a network with too little history, e.g. 1500ms. Default 1.5s.")
+    var firstScanWait: String?
+
+    @Option(name: .long, help: "The longest any expected address waits, e.g. 5s. Default 5s.")
+    var reachCap: String?
+
+    @Option(name: .long, help: "Cold first-contact samples a network needs before history decides its waits. Default 20.")
+    var reachMinSamples: Int?
+
+    @Option(name: .long, help: "Each whole step of wait beyond the first earns one more transmission, e.g. 500ms. Default 500ms.")
+    var expectedAttemptsStep: String?
+
+    @Option(name: .long, help: "The most transmissions any address gets. Default 8.")
+    var expectedAttemptsCap: Int?
+
+    @Flag(
+        name: .long,
+        help: ArgumentHelp(
+            "Neither read nor write history for this scan.",
+            discussion: """
+                The scan runs as though the network had never been scanned, and leaves \
+                no trace. For measuring the first-scan behaviour against a history \
+                that exists; ZHEN_HISTORY points a scan at a different file instead.
+                """
+        )
+    )
+    var noHistory = false
+
+    /// The constants the flags ask for, every one defaulted from `ReachSettings`.
+    func settings() throws(ScanSetupError) -> ReachSettings {
+        var settings = ReachSettings()
+        if let firstScanWait { settings.firstScanWait = try Self.positive(firstScanWait, "--first-scan-wait") }
+        if let reachCap { settings.cap = try Self.positive(reachCap, "--reach-cap") }
+        if let expectedAttemptsStep {
+            settings.attemptsStep = try Self.positive(expectedAttemptsStep, "--expected-attempts-step")
+        }
+        if let reachMinSamples {
+            guard reachMinSamples >= 1 else { throw .badArgument("--reach-min-samples must be at least 1.") }
+            settings.minimumSamples = reachMinSamples
+        }
+        if let expectedAttemptsCap {
+            guard expectedAttemptsCap >= settings.baseAttempts else {
+                throw .badArgument("--expected-attempts-cap must be at least \(settings.baseAttempts), the attempts every address gets.")
+            }
+            settings.attemptsCap = expectedAttemptsCap
+        }
+        return settings
+    }
+
+    private static func positive(_ text: String, _ flag: String) throws(ScanSetupError) -> Duration {
+        guard let value = Duration(humanReadable: text) else {
+            throw .badArgument("\(flag): '\(text)' is not a duration. Try 1500ms or 2s.")
+        }
+        guard value > .zero else { throw .badArgument("\(flag) must be longer than zero.") }
+        return value
+    }
+
     /// The policy the flags ask for.
     ///
     /// `--reach-percentile` is refused with anything but `history` rather than ignored:

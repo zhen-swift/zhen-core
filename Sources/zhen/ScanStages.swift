@@ -268,7 +268,7 @@ nonisolated struct NamingStage: ScanStage {
                 // — a Bonjour address record and an SSDP or NBSTAT datagram are all
                 // positive evidence — and dropping it would report the network as
                 // emptier than it is for the sake of tidy stage boundaries.
-                let host = HostFacts(ip: ip, allNames: Array(candidates))
+                let host = HostFacts(ip: ip, allNames: Array(candidates), foundAt: .now)
                 context.facts[ip] = host
                 renderer.handle(.hostFound(host))
             }

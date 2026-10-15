@@ -241,7 +241,9 @@ extension HostFacts {
             discoveredVia: discoveredVia.union(other.discoveredVia),
             // As a pair: a time from one engine with the other's cold flag is neither.
             firstContact: firstContact ?? other.firstContact,
-            firstContactCold: firstContact != nil ? firstContactCold : other.firstContactCold
+            firstContactCold: firstContact != nil ? firstContactCold : other.firstContactCold,
+            // Found when the first engine found it.
+            foundAt: [foundAt, other.foundAt].compactMap(\.self).min()
         )
     }
 }

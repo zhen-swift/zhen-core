@@ -73,6 +73,12 @@ public struct HostFacts: Sendable, Hashable, Codable {
     /// Whether the address had no complete neighbour entry at its first transmission, so
     /// `firstContact` includes ARP. Nil exactly when `firstContact` is.
     public var firstContactCold: Bool?
+    /// When the engine first had evidence of this host, on the monotonic clock.
+    ///
+    /// Not encoded: a monotonic instant means nothing outside the process that took it.
+    /// The pipeline turns it into `Device.foundAfterMillis`, from the scan's own start,
+    /// which is what the artifact carries.
+    public var foundAt: MonotonicInstant?
 
     /// Creates a value from its fields. Each one is documented on the property it sets.
     public init(
@@ -88,7 +94,8 @@ public struct HostFacts: Sendable, Hashable, Codable {
         osFingerprint: OSFingerprint? = nil,
         discoveredVia: Set<DiscoverySource> = [],
         firstContact: Duration? = nil,
-        firstContactCold: Bool? = nil
+        firstContactCold: Bool? = nil,
+        foundAt: MonotonicInstant? = nil
     ) {
         self.ip = ip
         self.mac = mac
@@ -107,6 +114,7 @@ public struct HostFacts: Sendable, Hashable, Codable {
         self.discoveredVia = discoveredVia
         self.firstContact = firstContact
         self.firstContactCold = firstContact == nil ? nil : firstContactCold
+        self.foundAt = foundAt
     }
 
     /// Decodes, routing through the memberwise initializer so the canonical order is

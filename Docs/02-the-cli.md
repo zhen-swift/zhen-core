@@ -98,7 +98,9 @@ zhen scan      [--cidr <net>] [--iface <name>] [--discovery-only]
                     [--deep] [--ports <spec>]
                     [--retransmit-timeout <duration>] [--shared-budget]
                     [--reach history|learned|<duration>] [--reach-percentile <p>]
-                    [--no-neighbor-watch] [--look-longer]
+                    [--no-neighbor-watch] [--look-longer] [--no-history]
+                    [--first-scan-wait <d>] [--reach-cap <d>] [--reach-min-samples <n>]
+                    [--expected-attempts-step <d>] [--expected-attempts-cap <n>]
 zhen hosts     [--since <duration>] [--json] [--store <path>]
 zhen events    [--since <duration>] [--json] [--store <path>]
 zhen history   <host> [--json] [--store <path>]
@@ -145,7 +147,13 @@ expected address has answered; while only expected addresses remain it says so
 `--reach 3s` waits exactly that. `--look-longer` re-asks the latest scan's
 `expected_missing` for 10 s (or `--reach <duration>`) and adds what answers to that scan
 instead of starting one. `--no-neighbor-watch` is an ablation: with `--reach learned` it
-is 0.7.0's mechanism, which study 2 compares against.
+is 0.7.0's mechanism, which study 2 compares against. Every constant behind the default
+is a flag (`--first-scan-wait`, `--reach-cap`, `--reach-min-samples`,
+`--expected-attempts-step`, `--expected-attempts-cap`), and `--no-history` scans as though
+the network were new without touching the store, because study 2 freezes one build and
+moves these from outside it. The artifact echoes every value used in `run.reach`, names the
+build in `run.tool` (`zhen --version` prints the same commit), and gives each host a
+`found_after_millis` from the scan's start.
 
 **Three output modes, and they are not interchangeable.** `--json` emits one
 `ScanReport` on completion, for a caller that wants the artifact. `--ndjson` emits

@@ -100,6 +100,10 @@ public struct ScanRun: Sendable, Hashable, Codable {
     /// folded into that run in history, not a run of its own: it is never the latest run,
     /// and the devices it does not list were not asked about.
     public var extendsRun: UUID?
+    /// The build that produced this artifact: tool, version, and the commit it was built
+    /// from. Absent when the producer does not know its own build — the app's runner, and
+    /// every document written before 0.8.0.
+    public var tool: RunTool?
 
     /// Creates a value from its fields. Each one is documented on the property it sets.
     public init(
@@ -114,7 +118,8 @@ public struct ScanRun: Sendable, Hashable, Codable {
         timing: Timing,
         neighborWatch: NeighborWatchReport? = nil,
         reach: ReachReport? = nil,
-        extendsRun: UUID? = nil
+        extendsRun: UUID? = nil,
+        tool: RunTool? = nil
     ) {
         self.id = id
         self.startedAt = startedAt
@@ -128,6 +133,7 @@ public struct ScanRun: Sendable, Hashable, Codable {
         self.neighborWatch = neighborWatch
         self.reach = reach
         self.extendsRun = extendsRun
+        self.tool = tool
     }
 
     /// Wire keys, spelled out. Renaming a Swift property is then a refactor; renaming a
@@ -145,6 +151,7 @@ public struct ScanRun: Sendable, Hashable, Codable {
         case neighborWatch = "neighbor_watch"
         case reach
         case extendsRun = "extends_run"
+        case tool
     }
 
     /// Decodes, tolerating a document written before `mode` existed.
@@ -170,7 +177,8 @@ public struct ScanRun: Sendable, Hashable, Codable {
                 NeighborWatchReport.self, forKey: .neighborWatch
             ),
             reach: try container.decodeIfPresent(ReachReport.self, forKey: .reach),
-            extendsRun: try container.decodeIfPresent(UUID.self, forKey: .extendsRun)
+            extendsRun: try container.decodeIfPresent(UUID.self, forKey: .extendsRun),
+            tool: try container.decodeIfPresent(RunTool.self, forKey: .tool)
         )
     }
 }

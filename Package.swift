@@ -177,8 +177,12 @@ let package = Package(
                     "-Xlinker", "__TEXT", "-Xlinker", "__info_plist",
                     "-Xlinker", "\(Context.packageDirectory)/Sources/zhen/Info.plist",
                 ], .when(platforms: [.macOS]))
-            ]
+            ],
+            // `zhen --version` and `run.tool.commit`. See the plugin for why the commit
+            // is stamped at build time rather than read from the manifest.
+            plugins: ["StampCommit"]
         ),
+        .plugin(name: "StampCommit", capability: .buildTool()),
         .testTarget(
             name: "ZhenCoreTests",
             dependencies: ["ZhenCore"],

@@ -541,7 +541,10 @@ struct VersionTests {
     func versionMatchesPlist() throws {
         let plist = try embeddedPlist()
         let bundled = try #require(plist["CFBundleShortVersionString"] as? String)
-        #expect(Zhen.configuration.version == bundled)
+        // `--version` prints the version and then the commit, in parentheses (0.8.0,
+        // change 9); the version part is what the plist must agree with.
+        #expect(Zhen.configuration.version.hasPrefix(bundled + " ("))
+        #expect(Zhen.configuration.version == Version.display)
         #expect(Version.current == bundled)
         // And both of those now come from core, which is the only declaration.
         #expect(Version.current == ZhenVersion.current)

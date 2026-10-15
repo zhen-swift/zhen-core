@@ -202,7 +202,9 @@ public struct ICMPSweepEngine: HostDiscovery {
                 spacingPolicy: retransmitBudget > .zero ? spacing.name : nil,
                 budgetPolicy: retransmitBudget > .zero ? budgets.name : nil,
                 spreadBudgetMillis: retransmitBudget > .zero ? spreadBudget.milliseconds : nil,
-                spacingJitter: retransmitBudget > .zero ? spacing.jitter : nil
+                spacingJitter: retransmitBudget > .zero ? spacing.jitter : nil,
+                attempts: attempts,
+                concurrency: concurrency
             )
             sink(.stageFinished(stage))
             return DiscoveryResult(
@@ -257,8 +259,9 @@ public struct ICMPSweepEngine: HostDiscovery {
                 recoverable: false
             ))
             var hosts: [HostFacts] = []
+            let now = MonotonicInstant.now
             for (ip, mac) in neighborsByIP.sorted(by: { $0.key < $1.key }) {
-                let host = HostFacts(ip: ip, mac: mac)
+                let host = HostFacts(ip: ip, mac: mac, foundAt: now)
                 hosts.append(host)
                 sink(.hostFound(host))
             }
@@ -472,7 +475,9 @@ public struct ICMPSweepEngine: HostDiscovery {
             // Marked, because this host never answered anything. A reader reconciling
             // the artifact against a packet capture will find no frame from it and
             // needs to know that is expected rather than a phantom.
-            let host = HostFacts(ip: ip, mac: mac, discoveredVia: [.neighborTable])
+            // Found when it is reported: the end of the sweep. It was in the table at the
+            // start, but this is the moment the scan says so.
+            let host = HostFacts(ip: ip, mac: mac, discoveredVia: [.neighborTable], foundAt: .now)
             hosts.append(host)
             sink(.hostFound(host))
         }
@@ -1158,7 +1163,9 @@ actor SweepState {
             rtt: host.estimator.sample,
             discoveredVia: [.probeReply],
             firstContact: host.firstContact,
-            firstContactCold: host.cold
+            firstContactCold: host.cold,
+            // Found at the first evidence, which a resolution may have been.
+            foundAt: host.facts?.foundAt ?? reply.receivedAt
         )
         host.facts = facts
         hosts[reply.source] = host
@@ -1196,7 +1203,8 @@ actor SweepState {
         }
         let facts = HostFacts(
             ip: address, mac: mac, discoveredVia: [.neighborResolved],
-            firstContact: host.firstContact, firstContactCold: host.cold
+            firstContact: host.firstContact, firstContactCold: host.cold,
+            foundAt: at ?? .now
         )
         host.facts = facts
         hosts[address] = host

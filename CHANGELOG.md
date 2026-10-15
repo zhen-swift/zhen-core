@@ -76,6 +76,20 @@ follow the app's `CFBundleShortVersionString`.
   (`reach:` and `settings:` parameters, defaulted). `--reach learned --no-neighbor-watch`
   is the mechanism 0.7.0 measured. `--shared-budget` and `--retransmit-timeout` are
   unchanged.
+- **The study contract: every knob a flag, every number in the artifact (0.8.0 change 9).**
+  `--first-scan-wait`, `--reach-cap`, `--reach-min-samples`, `--expected-attempts-step`
+  and `--expected-attempts-cap` move every constant behind the default, and `run.reach`
+  echoes the value used for each whether a flag set it or not (`first_scan_wait_millis`,
+  `cap_millis`, `min_samples`, `attempts_step_millis`, `attempts_cap`, `base_attempts`),
+  with `history_samples` and `history_read`. `--no-history` neither reads nor writes
+  history. Each device has `found_after_millis`, from the scan's start, so time to first
+  host, time to last host and the settling curve can be read from one artifact
+  (`HostFacts.foundAt` carries the instant from the engines; it is not encoded). Each
+  stage in `timing.stages` has `attempts` and `concurrency`. `zhen --version` prints the
+  version and the commit, and `run.tool` is `{name, version, commit}`; the commit is
+  stamped at build time by a new build-tool plugin, `StampCommit`, on the `zhen` target
+  only — the app's libraries do not use it. The two byte-for-byte artifact baselines in
+  `PipelineArtifactGate` gain `run.tool`, deliberately.
 
 ### Changed
 - **Breaking: `neighbor_table` now means inherited, and the report schema is 4.** Through

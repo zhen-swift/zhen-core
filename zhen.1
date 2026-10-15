@@ -32,6 +32,12 @@
 .Op Fl -reach-percentile Ar p
 .Op Fl -no-neighbor-watch
 .Op Fl -look-longer
+.Op Fl -first-scan-wait Ar duration
+.Op Fl -reach-cap Ar duration
+.Op Fl -reach-min-samples Ar n
+.Op Fl -expected-attempts-step Ar duration
+.Op Fl -expected-attempts-cap Ar n
+.Op Fl -no-history
 .Op Fl -json | Fl -ndjson
 .Op Fl -quiet
 .Op Fl -no-color
@@ -234,6 +240,34 @@ What answers is added to that scan rather than starting a new one, so nothing el
 on the network is marked gone.
 The artifact names the scan it extended in
 .Li run.extends_run .
+.It Fl -first-scan-wait Ar duration
+How long every address waits on a network with too little history.
+Defaults to
+.Ar 1.5s .
+.It Fl -reach-cap Ar duration
+The longest any expected address waits, however slow its history.
+Defaults to
+.Ar 5s .
+.It Fl -reach-min-samples Ar n
+How many cold first-contact times a network needs before its history decides the
+waits.
+Defaults to 20.
+.It Fl -expected-attempts-step Ar duration
+Each whole step of wait beyond the first earns an address one more transmission.
+Defaults to
+.Ar 500ms .
+.It Fl -expected-attempts-cap Ar n
+The most transmissions any address gets.
+Defaults to 8.
+.It Fl -no-history
+Neither read nor write history for this scan: it runs as a first scan and leaves
+no trace.
+.Ev ZHEN_HISTORY
+points a scan at a different history file instead.
+.Pp
+These six exist so the waits can be measured from outside a frozen build.
+Every value a scan used, set by a flag or not, is in
+.Li run.reach .
 .It Fl -json
 Emit one scan report as JSON on standard output.
 .It Fl -ndjson

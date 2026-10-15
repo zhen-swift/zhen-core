@@ -139,7 +139,9 @@ public struct BPFDiscoveryEngine: HostDiscovery {
                 hostsFound: hosts.count,
                 retransmitBudgetMillis: retransmitBudget > .zero ? retransmitBudget.milliseconds : nil,
                 tailBudgetMillis: tailBudget > .zero ? tailBudget.milliseconds : nil,
-                budgetPolicy: retransmitBudget > .zero ? budgets.name : nil
+                budgetPolicy: retransmitBudget > .zero ? budgets.name : nil,
+                attempts: attempts,
+                concurrency: concurrency
             )
             sink(.stageFinished(stage))
             return DiscoveryResult(
@@ -310,6 +312,8 @@ actor ARPSweepState {
         var expiresAt: MonotonicInstant?
         var mac: MACAddress?
         var answered = false
+        /// When its first reply was read.
+        var foundAt: MonotonicInstant?
     }
 
     private var hosts: [IPv4Address: Host] = [:]
@@ -475,19 +479,22 @@ actor ARPSweepState {
         let isNew = !host.answered
         host.answered = true
         host.mac = message.senderMAC
+        if isNew { host.foundAt = instant }
         host.expiresAt = nil
         hosts[message.senderIP] = host
         expiries.cancel(message.senderIP)
         if isNew { answeredCount += 1 }
         guard isNew else { return nil }
-        return .hostFound(HostFacts(ip: message.senderIP, mac: message.senderMAC, discoveredVia: [.arpReply]))
+        return .hostFound(HostFacts(
+            ip: message.senderIP, mac: message.senderMAC, discoveredVia: [.arpReply], foundAt: instant
+        ))
     }
 
     /// Everything that answered.
     func discovered() -> [HostFacts] {
         hosts
             .filter { $0.value.answered }
-            .map { HostFacts(ip: $0.key, mac: $0.value.mac, discoveredVia: [.arpReply]) }
+            .map { HostFacts(ip: $0.key, mac: $0.value.mac, discoveredVia: [.arpReply], foundAt: $0.value.foundAt) }
             .sorted { $0.ip < $1.ip }
     }
 }

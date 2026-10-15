@@ -267,6 +267,11 @@ public struct Device: Sendable, Hashable, Codable {
     /// Whether that first contact was cold — the address had no complete neighbour entry,
     /// so the time includes ARP. Nil exactly when `firstContactMillis` is.
     public var firstContactCold: Bool?
+    /// When this run first had evidence of the device, in milliseconds from the start of
+    /// the scan. What study 2 builds time-to-first-host, time-to-last-host and the
+    /// settling curve from. Nil for a device no engine timed, such as one only the IPv6
+    /// cache supplied, and in every document written before 0.8.0.
+    public var foundAfterMillis: Double?
 
     /// Creates a value from its fields. Each one is documented on the property it sets.
     ///
@@ -290,7 +295,8 @@ public struct Device: Sendable, Hashable, Codable {
         firstSeen: Timestamp,
         lastSeen: Timestamp,
         firstContactMillis: Double? = nil,
-        firstContactCold: Bool? = nil
+        firstContactCold: Bool? = nil,
+        foundAfterMillis: Double? = nil
     ) {
         precondition(!addresses.isEmpty, "a Device has at least one address")
         self.addresses = addresses
@@ -318,6 +324,7 @@ public struct Device: Sendable, Hashable, Codable {
         self.lastSeen = lastSeen
         self.firstContactMillis = firstContactMillis
         self.firstContactCold = firstContactMillis == nil ? nil : firstContactCold
+        self.foundAfterMillis = foundAfterMillis
     }
 
     /// Wire keys, spelled out. Renaming a Swift property is then a refactor; renaming a
@@ -342,6 +349,7 @@ public struct Device: Sendable, Hashable, Codable {
         case lastSeen = "last_seen"
         case firstContactMillis = "first_contact_millis"
         case firstContactCold = "first_contact_cold"
+        case foundAfterMillis = "found_after_millis"
     }
 
     /// Keys that only schema 1 and 2 wrote. Read, never written.
@@ -407,7 +415,8 @@ extension Device {
             firstSeen: try container.decode(Timestamp.self, forKey: .firstSeen),
             lastSeen: try container.decode(Timestamp.self, forKey: .lastSeen),
             firstContactMillis: try container.decodeIfPresent(Double.self, forKey: .firstContactMillis),
-            firstContactCold: try container.decodeIfPresent(Bool.self, forKey: .firstContactCold)
+            firstContactCold: try container.decodeIfPresent(Bool.self, forKey: .firstContactCold),
+            foundAfterMillis: try container.decodeIfPresent(Double.self, forKey: .foundAfterMillis)
         )
     }
 
@@ -439,6 +448,7 @@ extension Device {
         try container.encode(lastSeen, forKey: .lastSeen)
         try container.encodeIfPresent(firstContactMillis, forKey: .firstContactMillis)
         try container.encodeIfPresent(firstContactCold, forKey: .firstContactCold)
+        try container.encodeIfPresent(foundAfterMillis, forKey: .foundAfterMillis)
     }
 
     /// The one address to show when there is room for one.
@@ -490,11 +500,14 @@ extension Device {
     ///     which is correct for a first-ever run and wrong afterwards — a caller with
     ///     history must pass the real value.
     ///   - lastSeen: when this observation was made.
+    ///   - scanStart: when the scan began, on the monotonic clock. With it, the device
+    ///     records how long after that the engine found it (`foundAfterMillis`).
     public init(
         observing facts: HostFacts,
         in network: IPv4Network,
         firstSeen: Timestamp? = nil,
-        lastSeen: Timestamp = .now
+        lastSeen: Timestamp = .now,
+        scanStart: MonotonicInstant? = nil
     ) {
         let evidence = IdentificationEvidence(facts: facts)
         let keys = HostIdentifier.candidates(for: facts, in: network)
@@ -522,7 +535,10 @@ extension Device {
             firstSeen: firstSeen ?? lastSeen,
             lastSeen: lastSeen,
             firstContactMillis: facts.firstContact?.milliseconds,
-            firstContactCold: facts.firstContactCold
+            firstContactCold: facts.firstContactCold,
+            foundAfterMillis: scanStart.flatMap { start in
+                facts.foundAt.map { max($0.duration(since: start), .zero).milliseconds }
+            }
         )
     }
 
@@ -673,7 +689,9 @@ extension Device {
             // The v4 sweep is the only thing that times first contact, so the v4 holder
             // has it if anyone does.
             firstContactMillis: ordered.lazy.compactMap(\.firstContactMillis).first,
-            firstContactCold: ordered.lazy.first { $0.firstContactMillis != nil }?.firstContactCold
+            firstContactCold: ordered.lazy.first { $0.firstContactMillis != nil }?.firstContactCold,
+            // Found when its first part was.
+            foundAfterMillis: ordered.compactMap(\.foundAfterMillis).min()
         )
     }
 }

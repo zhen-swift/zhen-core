@@ -116,7 +116,7 @@ struct Scan: AsyncParsableCommand {
         let portSpec = try parsePorts()
         let budgets = try parseBudgets()
         let policy = try reachOptions.policy()
-        let settings = ReachSettings()
+        let settings = try reachOptions.settings()
         if lookLonger {
             try checkLookLonger(policy: policy, network: requestedNetwork)
         }
@@ -137,8 +137,10 @@ struct Scan: AsyncParsableCommand {
 
         // Nowhere to write history is not a reason to refuse to scan. It is reported
         // once, on stderr so the artifact on stdout stays clean, and the scan runs.
-        let historyURL = HistoryLocation.resolve()
-        if historyURL == nil {
+        // `--no-history`: neither read nor written, and no notice — nobody is missing a
+        // store they asked not to use.
+        let historyURL = reachOptions.noHistory ? nil : HistoryLocation.resolve()
+        if historyURL == nil, !reachOptions.noHistory {
             Out.stderr(HistoryOptions.noStoreNotice)
         }
         let history = historyURL.map { LogHistoryStore(url: $0) }
@@ -218,6 +220,9 @@ struct Scan: AsyncParsableCommand {
         }
         if network != nil {
             throw .badArgument("--look-longer asks again on the network the latest scan covered; --cidr does not apply.")
+        }
+        if reachOptions.noHistory {
+            throw .badArgument("--look-longer extends the latest scan in history; --no-history leaves it nothing to extend.")
         }
         switch policy {
         case .fixed: break
