@@ -295,6 +295,25 @@ public actor LogHistoryStore: HistoryStore {
         }
     }
 
+    /// Folds a look-longer sweep into the latest run, under the same exclusive lock.
+    ///
+    /// Written like a port scan: the updated device lines and the events, never a run
+    /// line — the run being extended is already the latest, and a run line is what would
+    /// make something else the latest.
+    public func recordExtension(_ devices: [Device], of run: UUID) async -> [DerivedEvent] {
+        withLock(exclusive: true) {
+            reload()
+            let fold = ledger.foldExtension(devices, of: run)
+            if fold.prunedEvents > 0 || prunedOnLoad > 0 || reconciledOnLoad > 0 {
+                // A deletion cannot be appended; see `record`.
+                compact()
+            } else if fold.updatedRecords > 0 {
+                append(events: fold.events, run: nil)
+            }
+            return fold.events
+        }
+    }
+
     // ── The lock ────────────────────────────────────────────────────────────────
 
     /// Runs `body` with the store locked against every other holder of this file.

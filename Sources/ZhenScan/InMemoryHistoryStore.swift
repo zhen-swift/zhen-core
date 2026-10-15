@@ -56,6 +56,10 @@ public actor InMemoryHistoryStore: HistoryStore {
         ledger.foldPorts(result, targeted: targets, at: at).events
     }
 
+    public func recordExtension(_ devices: [Device], of run: UUID) async -> [DerivedEvent] {
+        ledger.foldExtension(devices, of: run).events
+    }
+
     /// Sets how long events are kept, from the next recorded run onward.
     ///
     /// One line, which is the shape a store's share of retention is supposed to be: the

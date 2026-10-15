@@ -255,6 +255,79 @@ public struct ScanRunner: Sendable {
         return CompletedScan(report: report, events: events)
     }
 
+    /// Sweeps only `addresses`, waiting `wait` for each, and extends the latest run with
+    /// whatever answers.
+    ///
+    /// "Where's my phone?" A scan ends when the addresses history expects have had their
+    /// wait; a phone in deep power save can need longer than any wait worth imposing on
+    /// every scan. This asks again, of those addresses only, for as long as the person is
+    /// willing to wait — and what it finds belongs to the run it extends, not to a new
+    /// one. A new run of six addresses would mark the rest of the network absent, the bug
+    /// `recordPorts` was built to avoid. See `HistoryStore.recordExtension`.
+    ///
+    /// The sweep is the ordinary ICMP sweep with a `.fixed(wait)` plan over the named
+    /// addresses (`ScanTarget.addresses`), so every address gets `wait` and the attempts
+    /// that wait earns, spread across it. No naming, no ports: a found device keeps the
+    /// names and ports history already holds.
+    ///
+    /// - Parameters:
+    ///   - addresses: what to ask again — usually the latest run's `expected_missing`.
+    ///     Addresses outside the latest run's network are ignored.
+    ///   - wait: how long each address is waited for, from its first transmission.
+    ///   - settings: the constants behind the attempt count. The command line passes the
+    ///     ones its flags set.
+    ///   - progress: display only.
+    /// - Returns: what was found, what is still missing, and the events. With no run to
+    ///   extend, nothing is swept and `runID` is nil.
+    public func lookLonger(
+        _ addresses: [IPv4Address],
+        wait: Duration,
+        settings: ReachSettings = ReachSettings(),
+        progress: ProgressSink = .ignore
+    ) async -> CompletedExtension {
+        guard let run = await store.latestRun() else {
+            return CompletedExtension(
+                runID: nil, found: [], missing: addresses, events: [],
+                discovery: DiscoveryResult(hosts: [], degradations: [Degradation(
+                    stage: .setup,
+                    reason: "There is no earlier scan to look longer for, so nothing was swept.",
+                    recoverable: true
+                )], outcome: .complete)
+            )
+        }
+        let asked = Array(Set(addresses.filter(run.target.contains))).sorted()
+        guard !asked.isEmpty else {
+            return CompletedExtension(
+                runID: run.id, found: [], missing: [], events: [],
+                discovery: DiscoveryResult(hosts: [], outcome: .complete)
+            )
+        }
+        let plan = ReachPlan(policy: .fixed(wait), settings: settings)
+        let target = ScanTarget(
+            network: run.target, interface: interface, addresses: asked, reach: plan
+        )
+        // The wait, plus the slack a sweep needs to open its socket and read the table
+        // twice; the plan, not this, is what ends it.
+        let deadline = Deadline(after: wait + .seconds(2))
+        let discovery = await scanner.discovery.discover(target, deadline: deadline, progress: progress)
+        // The sweep reports table-only hosts anywhere in the network; only the asked
+        // addresses are this extension's business.
+        let wanted = Set(asked)
+        let hosts = discovery.hosts.filter { wanted.contains($0.ip) }
+        let firstSeen = await store.firstSeen(for: hosts, in: run.target)
+        let now = Timestamp.now
+        let devices = hosts.map {
+            Device(observing: $0, in: run.target, firstSeen: firstSeen[$0.ip] ?? now, lastSeen: now)
+        }
+        let events = await store.recordExtension(devices, of: run.id)
+        let answered = Set(hosts.map(\.ip))
+        return CompletedExtension(
+            runID: run.id, found: devices,
+            missing: asked.filter { !answered.contains($0) },
+            events: events, discovery: discovery
+        )
+    }
+
     /// Probes ports on addresses already known, and keeps what answered — without a run.
     ///
     /// The other half of `HistoryStore.recordPorts`. A port probe of one device used to go

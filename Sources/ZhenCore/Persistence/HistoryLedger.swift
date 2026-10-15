@@ -426,6 +426,88 @@ public struct HistoryLedger: Sendable {
         )
     }
 
+    // ── Look longer ──────────────────────────────────────────────────────────────
+
+    /// Folds what a look-longer sweep found into the latest run, and nothing else.
+    ///
+    /// ── Why this is not `fold` either ───────────────────────────────────────────
+    ///
+    /// For the reason `foldPorts` is not: a run is a claim about what was present, and a
+    /// sweep of six addresses folded as a run would mark the rest of the network absent.
+    /// Look longer is the same scan carried on for the addresses it was still waiting
+    /// for, so what it finds belongs to the run it extends: a found device gets that
+    /// run's id, and an `appeared` if the run had not seen it. Nothing else changes —
+    /// no other record, no `disappeared`, not the latest run, and no reconciliation,
+    /// which can remove a record and is a run's business.
+    ///
+    /// For a record it does change, the extension updates what the sweep observed — its
+    /// addresses, hardware address, TTL, round trip, sources, first contact and
+    /// `lastSeen` — and keeps what a sweep cannot see: names, ports, fingerprint, vendor.
+    /// A device the run already had is left exactly as it is.
+    ///
+    /// - Parameters:
+    ///   - devices: what the sweep found. Each is matched like a run's device.
+    ///   - runID: the run being extended. Anything but the latest run is refused with an
+    ///     empty fold: extending an older run would rewrite a past that a later run has
+    ///     already superseded.
+    /// - Returns: the events, and how many records changed.
+    @discardableResult
+    public mutating func foldExtension(_ devices: [Device], of runID: UUID) -> Fold {
+        guard let run = latestRun, run.id == runID else {
+            return Fold(events: [], prunedEvents: 0)
+        }
+        let network = run.target
+        var events: [DerivedEvent] = []
+        var updated = 0
+        for device in devices {
+            let at = device.lastSeen
+            let candidates = HostIdentifier.candidates(for: device, in: network)
+            guard let key = candidates.first else { continue }
+            if let match = resolve(candidates), var record = records[match.record] {
+                guard record.lastRunID != runID else { continue }
+                var observed = record.device
+                observed.addresses = device.addresses
+                observed.mac = device.mac ?? observed.mac
+                observed.ttl = device.ttl ?? observed.ttl
+                observed.rtt = device.rtt ?? observed.rtt
+                observed.discoveredVia = device.discoveredVia
+                observed.lastSeen = device.lastSeen
+                observed.firstContactMillis = device.firstContactMillis
+                observed.firstContactCold = device.firstContactCold
+                record.device = observed
+                record.observe(device.mac, at: device.lastSeen, matchedBy: match.by.kind)
+                record.observeFirstContact(of: device)
+                record.lastRunID = runID
+                record.identifiers.formUnion(candidates)
+                records[match.record] = record
+                events.append(DerivedEvent(
+                    at: at, kind: .appeared, subject: Self.display(observed),
+                    detail: "answered again at \(device.primaryAddress)", runID: runID
+                ))
+            } else {
+                var record = Record(
+                    device: device, firstSeen: device.firstSeen,
+                    lastRunID: runID, identifiers: Set(candidates),
+                    ordinal: nextOrdinal,
+                    macHistory: device.mac.map {
+                        [MACSighting(mac: $0, firstSeen: device.lastSeen, lastSeen: device.lastSeen, link: .original)]
+                    } ?? []
+                )
+                record.observeFirstContact(of: device)
+                records[key] = record
+                nextOrdinal += 1
+                events.append(DerivedEvent(
+                    at: at, kind: .appeared, subject: Self.display(device),
+                    detail: "joined at \(device.primaryAddress)", runID: runID
+                ))
+            }
+            updated += 1
+        }
+        log.append(contentsOf: events)
+        let at = devices.map(\.lastSeen).max() ?? run.finishedAt ?? run.startedAt
+        return Fold(events: events, prunedEvents: pruneEvents(asOf: at), updatedRecords: updated)
+    }
+
     // ── Ports ────────────────────────────────────────────────────────────────────
 
     /// Folds a port scan in and reports everything a store has to write down.

@@ -51,6 +51,13 @@ follow the app's `CFBundleShortVersionString`.
   latest per-address deadline, or as soon as every expected address has evidence and every
   other address's wait has run out. `.learned`, or no plan, runs the 0.7.0 schedule
   unchanged. The ARP sweep is not changed.
+- **Look longer (0.8.0 change 5).** `ScanRunner.lookLonger(_:wait:settings:progress:)`
+  sweeps only the named addresses, each for `wait` under a `.fixed` plan, and **extends the
+  latest run** rather than starting one: a found device gets that run's id and an
+  `appeared` if the run had not seen it; nothing else changes — no other record, no
+  `disappeared`, and the latest run stays the latest. The rule is
+  `HistoryLedger.foldExtension(_:of:)`; it keeps what a sweep cannot see (names, ports,
+  fingerprint) and refuses any run but the latest. Returns `CompletedExtension`.
 
 ### Changed
 - **Breaking: `neighbor_table` now means inherited, and the report schema is 4.** Through
@@ -62,6 +69,11 @@ follow the app's `CFBundleShortVersionString`.
   `DiscoverySource` has a new case, so an exhaustive `switch` over it — the app has
   one — no longer compiles until it handles `.neighborResolved`. `NeighborCache` gains a
   `snapshot()` requirement, defaulted, so existing conformances still compile.
+- **Breaking: `HistoryStore` has a new requirement, `recordExtension(_:of:)`** (change 5).
+  Not defaulted, for the reason `recordPorts` is not: a default would let a conformance
+  silently drop what look longer found. A conformance outside this package no longer
+  compiles until it implements it — one line handing the devices to
+  `HistoryLedger.foldExtension`, as `InMemoryHistoryStore` does.
 - **The three retransmitting engines no longer walk every probe on every wake.** The
   ICMP sweep, the ARP sweep and the SYN scan each answered "what is due now" and "when is
   the next one" by a pass over every probe they held, every one to ten milliseconds — and

@@ -195,6 +195,24 @@ public protocol HistoryStore: Sendable {
         _ result: PortScanResult, targeted targets: [IPAddress], at: Timestamp
     ) async -> [DerivedEvent]
 
+    /// Folds what a look-longer sweep found into the run it extends, and returns what
+    /// changed.
+    ///
+    /// **Look longer is not a run**, for the reason a port scan is not one: a run of six
+    /// addresses would mark the rest of the network absent. A found device gets `run`'s
+    /// id, and an `appeared` if that run had not seen it. Nothing else changes: no other
+    /// record, no `disappeared`, and the latest run stays the latest run. Only the latest
+    /// run can be extended; any other id changes nothing. `HistoryLedger.foldExtension`
+    /// holds the rule.
+    ///
+    /// A requirement, not a defaulted extension, for the reason `recordPorts` is one.
+    /// That makes it source-breaking for a conformance outside this package.
+    ///
+    /// - Parameters:
+    ///   - devices: what the look-longer sweep found, built like a run's devices.
+    ///   - run: the id of the run being extended — the latest.
+    func recordExtension(_ devices: [Device], of run: UUID) async -> [DerivedEvent]
+
     /// Sets how long the event log is kept, from now on.
     ///
     /// A requirement rather than a defaulted extension method, and the difference is the
