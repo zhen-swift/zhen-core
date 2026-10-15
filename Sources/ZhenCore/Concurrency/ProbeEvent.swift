@@ -28,6 +28,11 @@ public enum ProbeEvent: Sendable, Hashable, Codable {
     /// Something did not work. Degradations arrive here rather than as thrown errors
     /// so a stream never fails.
     case degraded(Degradation)
+    /// Only addresses history expects are still being waited for: every other address
+    /// has answered or had its wait. "Still listening for 2 you usually have." Emitted
+    /// when the sweep enters that state and again each time the list shrinks; never
+    /// emitted when nothing is expected, as on a first scan.
+    case settling(expectedMissing: [IPv4Address])
 
     private enum CodingKeys: String, CodingKey {
         case event
@@ -37,6 +42,7 @@ public enum ProbeEvent: Sendable, Hashable, Codable {
         case timing
         case host
         case degradation
+        case expectedMissing = "expected_missing"
     }
 
     private enum Tag: String, Codable {
@@ -46,6 +52,7 @@ public enum ProbeEvent: Sendable, Hashable, Codable {
         case hostFound = "host_found"
         case hostUpdated = "host_updated"
         case degraded
+        case settling
     }
 
     /// Encodes to the wire form described above.
@@ -72,6 +79,9 @@ public enum ProbeEvent: Sendable, Hashable, Codable {
         case .degraded(let degradation):
             try container.encode(Tag.degraded, forKey: .event)
             try container.encode(degradation, forKey: .degradation)
+        case .settling(let missing):
+            try container.encode(Tag.settling, forKey: .event)
+            try container.encode(missing, forKey: .expectedMissing)
         }
     }
 
@@ -95,6 +105,8 @@ public enum ProbeEvent: Sendable, Hashable, Codable {
             self = .hostUpdated(try container.decode(HostFacts.self, forKey: .host))
         case .degraded:
             self = .degraded(try container.decode(Degradation.self, forKey: .degradation))
+        case .settling:
+            self = .settling(expectedMissing: try container.decode([IPv4Address].self, forKey: .expectedMissing))
         }
     }
 }

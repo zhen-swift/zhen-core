@@ -60,6 +60,8 @@ nonisolated struct TextRenderer: Renderer {
             progress.draw(stage, completed: completed, total: total, found: found.hosts)
         case .degraded(let degradation):
             progress.degradation(degradation)
+        case .settling(let missing):
+            progress.settling(missing, found: found.hosts)
         default:
             break
         }

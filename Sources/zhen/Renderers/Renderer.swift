@@ -133,6 +133,23 @@ nonisolated struct Progress: Sendable {
         Out.stderr(line)
     }
 
+    /// Says whom the scan is still listening for, once only those history expects remain.
+    ///
+    /// "Still listening for 2 you usually have" — the product's answer to "is it done?".
+    /// Drawn in place of the bar, which has nothing left to say by then.
+    func settling(_ missing: [IPv4Address], found: Int) {
+        guard !quiet, Terminal.stderrIsTTY, !missing.isEmpty else { return }
+        clock.last = .now
+        let dim = color ? "\u{1B}[2m" : ""
+        let reset = color ? "\u{1B}[0m" : ""
+        let shown = missing.prefix(3).map(\.description).joined(separator: ", ")
+            + (missing.count > 3 ? ", …" : "")
+        let line = "\r\(dim)Settling\(reset) still listening for \(missing.count) you usually have (\(shown))  \(found) found"
+        let pad = max(0, clock.lastLength - line.count)
+        clock.lastLength = line.count
+        Out.stderr(line + String(repeating: " ", count: pad))
+    }
+
     /// Clears the progress line so the summary does not land on top of it.
     func clear() {
         guard !quiet, Terminal.stderrIsTTY, clock.lastLength > 0 else { return }

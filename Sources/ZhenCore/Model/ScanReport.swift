@@ -90,6 +90,10 @@ public struct ScanRun: Sendable, Hashable, Codable {
     /// reads of the table cost. Absent for a run whose engine has no watch, and in every
     /// document written before 0.8.0.
     public var neighborWatch: NeighborWatchReport?
+    /// How the sweep decided how long to wait for each address, and which addresses
+    /// history expected that the run did not find. Absent when no plan was built, and in
+    /// every document written before 0.8.0.
+    public var reach: ReachReport?
 
     /// Creates a value from its fields. Each one is documented on the property it sets.
     public init(
@@ -102,7 +106,8 @@ public struct ScanRun: Sendable, Hashable, Codable {
         outcome: Outcome,
         mode: ScanMode = .full,
         timing: Timing,
-        neighborWatch: NeighborWatchReport? = nil
+        neighborWatch: NeighborWatchReport? = nil,
+        reach: ReachReport? = nil
     ) {
         self.id = id
         self.startedAt = startedAt
@@ -114,6 +119,7 @@ public struct ScanRun: Sendable, Hashable, Codable {
         self.mode = mode
         self.timing = timing
         self.neighborWatch = neighborWatch
+        self.reach = reach
     }
 
     /// Wire keys, spelled out. Renaming a Swift property is then a refactor; renaming a
@@ -129,6 +135,7 @@ public struct ScanRun: Sendable, Hashable, Codable {
         case mode
         case timing
         case neighborWatch = "neighbor_watch"
+        case reach
     }
 
     /// Decodes, tolerating a document written before `mode` existed.
@@ -152,7 +159,8 @@ public struct ScanRun: Sendable, Hashable, Codable {
             timing: try container.decode(Timing.self, forKey: .timing),
             neighborWatch: try container.decodeIfPresent(
                 NeighborWatchReport.self, forKey: .neighborWatch
-            )
+            ),
+            reach: try container.decodeIfPresent(ReachReport.self, forKey: .reach)
         )
     }
 }

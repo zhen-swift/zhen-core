@@ -275,6 +275,7 @@ public struct ICMPSweepEngine: HostDiscovery {
             reach: target.reach
         )
         let replies = await socket.replies()
+        let planned = await state.extendsWaits
 
         // One reader for the whole sweep, independent of the sender. Replies to the
         // first attempt keep arriving during the second and must not be discarded
@@ -318,6 +319,14 @@ public struct ICMPSweepEngine: HostDiscovery {
 
         var attempted = 0
         var delivered = 0
+        // Change 6: what the last `settling` event said, so it is emitted on entering the
+        // state and again only when the list shrinks.
+        var settlingSaid: [IPv4Address]?
+        func announceSettling(_ missing: [IPv4Address]?) {
+            guard let missing, missing != settlingSaid else { return }
+            settlingSaid = missing
+            sink(.settling(expectedMissing: missing))
+        }
 
         // ── Phase one: transmit, on the tight budget ────────────────────────────
         //
@@ -329,6 +338,7 @@ public struct ICMPSweepEngine: HostDiscovery {
             let due = await state.dueProbes(limit: concurrency)
             if due.isEmpty {
                 if await state.isSettled { break }
+                if planned { announceSettling(await state.settlingMissing()) }
                 // Nothing is due yet, so sleep until something is — bounded, so a
                 // cancellation or the overall deadline is still noticed promptly.
                 let nap = await state.timeUntilNextExpiry() ?? .milliseconds(5)
@@ -372,6 +382,7 @@ public struct ICMPSweepEngine: HostDiscovery {
             while !Task.isCancelled, !deadline.isExpired {
                 if await state.everyoneAnswered { break }
                 let now = MonotonicInstant.now
+                announceSettling(await state.settlingMissing(now: now))
                 let pending = await state.pendingExtended(now: now)
                 let learnedDone = tailEnd.map { now >= $0 } ?? true
                 if learnedDone, pending == 0 { break }
@@ -585,6 +596,19 @@ actor SweepState {
     private var reachDeadlines = ExpiryQueue<IPv4Address>()
     /// Extended addresses whose wait ran out with no evidence, in the order it did.
     private(set) var reachExpired: [IPv4Address] = []
+    /// The same addresses, for a constant-time membership test.
+    private var reachRetired: Set<IPv4Address> = []
+    /// Expected addresses with no evidence yet. Kept as a set, shrunk on evidence, so
+    /// the settling check does not walk every address on every tick.
+    private var expectedOutstanding: Set<IPv4Address> = []
+    /// What change 6's settling check needs to know without a walk: learned-path
+    /// addresses never yet sent to, live learned-path transmissions, and extended
+    /// addresses history does NOT expect that are still being waited for (a first scan's
+    /// or a fixed wait's). Settling is when all three are zero and the learned tail has
+    /// run out.
+    private var learnedUnsent = 0
+    private var learnedLive = 0
+    private var unexpectedWaiting = 0
     /// Every transmission still matchable, live and expired alike.
     ///
     /// Looked up by token and never walked by the send loop: what is due and what is
@@ -678,8 +702,25 @@ actor SweepState {
                     host.planWait = wait
                     host.attempts = plan.attempts(for: address)
                 }
+                if plan.expected.contains(address) {
+                    expectedOutstanding.insert(address)
+                } else if wait > .zero {
+                    unexpectedWaiting += 1
+                }
             }
+            if host.planWait == .zero { learnedUnsent += 1 }
             hosts[address] = host
+        }
+    }
+
+    /// Notes that an address has shown evidence, for the settling bookkeeping.
+    private func settle(_ address: IPv4Address) {
+        reachDeadlines.cancel(address)
+        if expectedOutstanding.remove(address) == nil,
+           let host = hosts[address], host.planWait > .zero,
+           reach.map({ !$0.expected.contains(address) }) ?? false,
+           !reachRetired.contains(address) {
+            unexpectedWaiting -= 1
         }
     }
 
@@ -871,17 +912,34 @@ actor SweepState {
                 reachDeadlines.schedule(address, at: floored)
             } else {
                 reachExpired.append(address)
+                reachRetired.insert(address)
+                if !reach.expected.contains(address) { unexpectedWaiting -= 1 }
             }
         }
         return reachDeadlines.count
     }
 
-    /// The addresses history expects that have shown no evidence yet.
+    /// The addresses history expects that have shown no evidence yet, in address order.
     ///
-    /// Empty without a plan, and on a first scan: nothing is expected then.
+    /// Empty without a plan that extends a wait.
     func expectedMissing() -> [IPv4Address] {
-        guard let reach else { return [] }
-        return order.filter { reach.expected.contains($0) && hosts[$0]?.facts == nil }
+        expectedOutstanding.sorted()
+    }
+
+    /// The expected addresses still missing, when they are all the sweep is waiting for.
+    ///
+    /// Nil until every learned-path address has been sent its last transmission and had
+    /// it answered or expired, the learned tail has run out, and no address history does
+    /// not expect is still within its own wait. Nil too when nothing expected is missing:
+    /// there is nothing to settle for. Retires due deadlines as a side effect, which is
+    /// idempotent.
+    func settlingMissing(now: MonotonicInstant = .now) -> [IPv4Address]? {
+        guard reach != nil, !expectedOutstanding.isEmpty,
+              learnedUnsent == 0, learnedLive == 0 else { return nil }
+        if let end = declarationInstant(), now < end { return nil }
+        _ = pendingExtended(now: now)
+        guard unexpectedWaiting == 0, !expectedOutstanding.isEmpty else { return nil }
+        return expectedOutstanding.sorted()
     }
 
     /// Whether every address has answered.
@@ -912,6 +970,7 @@ actor SweepState {
             inFlight[token]?.expired = true
             counters.probeCompleted()
             guard var host = hosts[probe.address] else { continue }
+            if host.planWait == .zero { learnedLive -= 1 }
             host.outstanding = nil
             // No backoff on the retransmit interval, and this is the whole point of
             // splitting the budget. Backoff widens a window in response to evidence of
@@ -944,6 +1003,7 @@ actor SweepState {
         nextSequence &+= 1
         var host = hosts[address] ?? Host(attempts: attempts)
         let transmission = host.transmissions
+        if transmission == 0, host.planWait == .zero { learnedUnsent -= 1 }
         host.transmissions += 1
         host.outstanding = token
         hosts[address] = host
@@ -1011,6 +1071,7 @@ actor SweepState {
             // An extended address is waited for by its own deadline, and letting its late
             // transmissions move the anchor would hold every other address to them.
             if planWait == .zero {
+                learnedLive += 1
                 if lastTransmissionAt.map({ instant > $0 }) ?? true { lastTransmissionAt = instant }
                 if assignment.transmission < attempts - 1,
                    lastTightTransmissionAt.map({ instant > $0 }) ?? true {
@@ -1061,6 +1122,7 @@ actor SweepState {
         // crossed, and the symptom was silence: a network whose per-host budgets are
         // too tight looked exactly like one where everything answered promptly.
         if probe.expired { lateReplies += 1 }
+        if !probe.expired, hosts[reply.source]?.planWait == .zero { learnedLive -= 1 }
         inFlight[reply.token] = nil
         expiries.cancel(reply.token)
         counters.replySeen()
@@ -1102,7 +1164,7 @@ actor SweepState {
         hosts[reply.source] = host
         if !hadEvidence {
             answeredCount += 1
-            reachDeadlines.cancel(reply.source)
+            settle(reply.source)
         }
         return hadEvidence ? .hostUpdated(facts) : .hostFound(facts)
     }
@@ -1139,7 +1201,7 @@ actor SweepState {
         host.facts = facts
         hosts[address] = host
         answeredCount += 1
-        reachDeadlines.cancel(address)
+        settle(address)
         return .hostFound(facts)
     }
 

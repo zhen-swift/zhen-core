@@ -58,6 +58,15 @@ follow the app's `CFBundleShortVersionString`.
   `disappeared`, and the latest run stays the latest. The rule is
   `HistoryLedger.foldExtension(_:of:)`; it keeps what a sweep cannot see (names, ports,
   fingerprint) and refuses any run but the latest. Returns `CompletedExtension`.
+- **Settling, while the scan runs and in the report (0.8.0 change 6).** A new event,
+  `ProbeEvent.settling(expectedMissing:)` (`{"event":"settling","expected_missing":[…]}`
+  in `--ndjson`), is emitted when the only addresses the sweep is still waiting for are
+  ones history expects, and again each time that list shrinks; the progress line reads
+  "still listening for 2 you usually have". `run.reach` in the artifact
+  (`ReachReport`: `policy`, `percentile`, `fixed_wait_millis`, `first_scan`,
+  `expected_wait_millis`, `expected_count`, `expected_missing`) says how the waits were
+  decided and which expected addresses the run did not find. **Source-breaking:**
+  `ProbeEvent` has a new case.
 
 ### Changed
 - **Breaking: `neighbor_table` now means inherited, and the report schema is 4.** Through

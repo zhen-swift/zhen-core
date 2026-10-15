@@ -35,6 +35,8 @@ nonisolated struct JSONRenderer: Renderer {
             progress.draw(stage, completed: completed, total: total, found: state.hosts)
         case .degraded(let degradation):
             progress.degradation(degradation)
+        case .settling(let missing):
+            progress.settling(missing, found: state.hosts)
         default:
             break
         }
