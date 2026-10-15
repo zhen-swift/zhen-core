@@ -141,7 +141,9 @@ public struct CompositeDiscoveryEngine: HostDiscovery {
             degradations: degradations,
             usedCapabilities: capabilities,
             outcome: outcome,
-            timing: Self.mergeTiming(results, hostsFound: hosts.count)
+            timing: Self.mergeTiming(results, hostsFound: hosts.count),
+            // Only the unprivileged sweep watches, so at most one part has a report.
+            neighborWatch: results.lazy.compactMap(\.neighborWatch).first
         )
     }
 

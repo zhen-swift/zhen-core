@@ -8,7 +8,30 @@ follow the app's `CFBundleShortVersionString`.
 
 ## Unreleased
 
+### Added
+- **The sweep watches the neighbour table while it runs (0.8.0 change 1).** An entry that
+  goes from absent or incomplete to complete during the sweep is evidence from this run,
+  and the host is reported the moment it is seen, with the new source
+  `discovered_via: neighbor_resolved`. Unprivileged, the wire is gated by kernel ARP, so
+  for a slow host the ARP reply is often the first evidence it exists and for an ARP-only
+  host the only one. macOS 26 does not tell an unprivileged routing socket when an entry
+  resolves (gate G0, measured), so the watch re-reads the table: every 25 ms up to 1,024
+  targets, and proportionally less often above that (a /16 every 1.6 s), because one read
+  is O(table). What the watch did — whether it ran, its interval, reads, largest read in
+  bytes, and how many entries resolved — is `run.neighbor_watch` in the artifact.
+  `ICMPSweepEngine(neighborWatch:)` and `DarwinScanner.make(neighborWatch:)` switch it
+  off; off is study 1's mechanism.
+
 ### Changed
+- **Breaking: `neighbor_table` now means inherited, and the report schema is 4.** Through
+  0.7.0 `neighbor_table` covered every host the table alone supplied, including entries
+  the scan's own probes had just caused to resolve; those are `neighbor_resolved` now, and
+  `neighbor_table` means only an entry that was complete before the sweep started. A
+  schema-3 reader cannot decode the new value, so `ScanReport.schemaVersion` is 4 by the
+  rule in `ScanReport.swift`; `minimumReadableSchema` stays 1. **Source-breaking:**
+  `DiscoverySource` has a new case, so an exhaustive `switch` over it — the app has
+  one — no longer compiles until it handles `.neighborResolved`. `NeighborCache` gains a
+  `snapshot()` requirement, defaulted, so existing conformances still compile.
 - **The three retransmitting engines no longer walk every probe on every wake.** The
   ICMP sweep, the ARP sweep and the SYN scan each answered "what is due now" and "when is
   the next one" by a pass over every probe they held, every one to ten milliseconds — and

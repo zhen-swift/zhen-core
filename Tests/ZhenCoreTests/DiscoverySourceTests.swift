@@ -29,6 +29,21 @@ struct DiscoverySourceTests {
         #expect(!remembered.discoveredVia.answeredThisScan)
     }
 
+    @Test("Resolved during the scan is this run's evidence; inherited is not")
+    func resolvedIsDistinguishedFromInherited() {
+        // 0.8.0 split `neighbor_table` in two. A host whose entry resolved while the
+        // sweep ran answered the kernel's ARP during this scan, so its frames are on the
+        // wire; an inherited entry's may not be.
+        let resolved = HostFacts(ip: Self.ip, discoveredVia: [.neighborResolved])
+        let inherited = HostFacts(ip: Self.ip, discoveredVia: [.neighborTable])
+        #expect(resolved.discoveredVia.answeredThisScan)
+        #expect(!inherited.discoveredVia.answeredThisScan)
+        // Ranked between ARP and the table: weaker than a reply to our own frame,
+        // stronger than memory.
+        #expect(DiscoverySource.arpReply < .neighborResolved)
+        #expect(DiscoverySource.neighborResolved < .neighborTable)
+    }
+
     @Test("This machine's own address is marked, because a capture can never show it")
     func localInterfaceIsMarked() {
         // A probe a host sends to its own address is answered inside the kernel and
@@ -52,7 +67,7 @@ struct DiscoverySourceTests {
         let host = HostFacts(
             ip: Self.ip,
             discoveredVia: Set<DiscoverySource>(
-                [.localInterface, .neighborTable, .probeReply, .arpReply]
+                [.localInterface, .neighborTable, .probeReply, .arpReply, .neighborResolved]
             )
         )
         // `.sortedKeys` because JSONEncoder does not otherwise fix the ORDER OF KEYS —
@@ -68,7 +83,7 @@ struct DiscoverySourceTests {
 
         let text = String(decoding: try encoder.encode(host), as: UTF8.self)
         #expect(text.contains(
-            #""discovered_via":["probe_reply","arp_reply","neighbor_table","local_interface"]"#
+            #""discovered_via":["probe_reply","arp_reply","neighbor_resolved","neighbor_table","local_interface"]"#
         ))
     }
 

@@ -244,7 +244,8 @@ public struct ScanRunner: Sendable {
                         peakConcurrency: peak,
                         inFlight: 0
                     )
-                )
+                ),
+                neighborWatch: discovery.neighborWatch
             ),
             devices: devices,
             degradations: degradations

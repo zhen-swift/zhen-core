@@ -52,6 +52,8 @@ nonisolated struct ScanContext: Sendable {
     var peakConcurrency: Int = 0
     /// Every capability any stage actually exercised, not only discovery's.
     var exercised: EngineCapabilities = []
+    /// What the discovery sweep's neighbour watch did, for `run.neighbor_watch`.
+    var neighborWatch: NeighborWatchReport?
 
     /// The hosts, in the order every stage iterates them.
     var sortedAddresses: [IPv4Address] { facts.keys.sorted() }
@@ -221,6 +223,7 @@ nonisolated struct DiscoveryStage: ScanStage {
         context.outcome = discovery.outcome
         context.peakConcurrency = discovery.timing.peakConcurrency
         context.exercised = discovery.usedCapabilities
+        context.neighborWatch = discovery.neighborWatch
         return context
     }
 }

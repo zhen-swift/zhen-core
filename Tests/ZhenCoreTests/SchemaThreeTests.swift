@@ -102,7 +102,11 @@ struct SchemaMigrationTests {
     func newerIsRefused() throws {
         let data = try fixture("report-schema2")
         var text = try #require(String(data: data, encoding: .utf8))
-        text = text.replacingOccurrences(of: #""schema":2"#, with: #""schema":4"#)
+        // One past whatever this build writes, so the test keeps meaning "newer" across
+        // a bump instead of quietly becoming "current" the day the schema reaches it.
+        text = text.replacingOccurrences(
+            of: #""schema":2"#, with: "\"schema\":\(ScanReport.schemaVersion + 1)"
+        )
         #expect(throws: SchemaError.self) { try ScanReport.decoded(from: Data(text.utf8)) }
     }
 

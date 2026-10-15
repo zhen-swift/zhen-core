@@ -67,11 +67,14 @@ public struct DarwinScanner: Sendable {
     ///   command line does not, because it is the binary study 2 measures and a helper
     ///   probe on the startup path of an unprivileged scan is a change to the thing
     ///   being measured whether or not it finds anything.
+    /// - Parameter neighborWatch: whether the unprivileged sweep watches the neighbour
+    ///   table while it runs. On by default; off is the `--no-neighbor-watch` ablation.
     public static func make(
         concurrencyOverride: Int? = nil,
         budgets: SweepBudgets = .split,
         capture: CapturePolicy = .directOnly,
-        portScanType: PortScanType = .auto
+        portScanType: PortScanType = .auto,
+        neighborWatch: Bool = true
     ) async throws(PlatformError) -> DarwinScanner {
         // Raise first, then derive. The soft limit is the binding constraint on the
         // deep scan — one descriptor per port per host — and both the brief and SPEC
@@ -86,7 +89,9 @@ public struct DarwinScanner: Sendable {
         // would otherwise produce an empty scan and call it a success.
         let primary = try interfaces.primaryInterface()
 
-        let unprivileged = ICMPSweepEngine(concurrency: effective, budgets: budgets)
+        let unprivileged = ICMPSweepEngine(
+            concurrency: effective, budgets: budgets, neighborWatch: neighborWatch
+        )
 
         // ── Which engines exist is decided by attempting, never by asking who we are ─
         //

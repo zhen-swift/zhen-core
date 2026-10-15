@@ -99,6 +99,35 @@ public struct NeighborEntry: Sendable, Hashable, Codable {
 public protocol NeighborCache: Sendable {
     /// Every entry the kernel currently holds.
     func entries() async throws(PlatformError) -> [NeighborEntry]
+
+    /// Every entry, and what reading them cost.
+    ///
+    /// The sweep's neighbour watch reads the table on a timer, and a read is O(table) —
+    /// on a /16 about 9 MB. The study needs that cost in the artifact rather than
+    /// assumed, so a reader that knows its byte count says it. Defaulted to `entries()`
+    /// with no count, so a conformance that cannot say is not obliged to invent one.
+    func snapshot() async throws(PlatformError) -> NeighborSnapshot
+}
+
+extension NeighborCache {
+    /// The entries, with no byte count.
+    public func snapshot() async throws(PlatformError) -> NeighborSnapshot {
+        NeighborSnapshot(entries: try await entries(), byteCount: nil)
+    }
+}
+
+/// One read of the neighbour table.
+public struct NeighborSnapshot: Sendable, Hashable {
+    /// What the table held.
+    public var entries: [NeighborEntry]
+    /// How many bytes the kernel returned for it, where the reader can say.
+    public var byteCount: Int?
+
+    /// Creates a value from its fields. Each one is documented on the property it sets.
+    public init(entries: [NeighborEntry], byteCount: Int?) {
+        self.entries = entries
+        self.byteCount = byteCount
+    }
 }
 
 /// One entry in the IPv6 neighbour cache — NDP's counterpart of an ARP entry.

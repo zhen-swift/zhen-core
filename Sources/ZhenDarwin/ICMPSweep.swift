@@ -107,6 +107,13 @@ public struct ICMPSweepEngine: HostDiscovery {
     /// argues for. The other cases exist so that argument can be tested against the
     /// same scanner with the split removed — see ``SweepBudgets``.
     public var budgets: SweepBudgets
+    /// Whether to watch the neighbour table while sweeping, and report an entry that
+    /// resolves during the sweep as `neighbor_resolved` at the moment it did.
+    ///
+    /// On by default. Off is the `--no-neighbor-watch` ablation: the table is read before
+    /// and after the sweep and nowhere in between, and every host it alone supplies is
+    /// `neighbor_table`, exactly as study 1 measured. See `NeighborWatch`.
+    public var neighborWatch: Bool
 
     /// Creates the engine.
     public init(
@@ -115,7 +122,8 @@ public struct ICMPSweepEngine: HostDiscovery {
         neighbors: any NeighborCache = DarwinNeighborCache(),
         advice: ProbePermissionAdvice = .appleForThisProcess,
         spacing: SweepSpacing = .spreadIntoTail,
-        budgets: SweepBudgets = .split
+        budgets: SweepBudgets = .split,
+        neighborWatch: Bool = true
     ) {
         self.attempts = attempts
         self.concurrency = concurrency
@@ -123,6 +131,7 @@ public struct ICMPSweepEngine: HostDiscovery {
         self.advice = advice
         self.spacing = spacing
         self.budgets = budgets
+        self.neighborWatch = neighborWatch
     }
 
     /// Terminal form, with an optional observer.
@@ -174,6 +183,9 @@ public struct ICMPSweepEngine: HostDiscovery {
         var retransmitBudget = Duration.zero
         var tailBudget = Duration.zero
         var spreadBudget = Duration.zero
+        var watchReport: NeighborWatchReport = neighborWatch
+            ? NeighborWatchReport(enabled: true, mechanism: "poll", polls: 0, resolved: 0)
+            : .disabled
 
         func finished(
             _ hosts: [HostFacts], _ outcome: Outcome
@@ -198,7 +210,8 @@ public struct ICMPSweepEngine: HostDiscovery {
                 degradations: degradations,
                 usedCapabilities: used,
                 outcome: outcome,
-                timing: Timing(stages: [stage], counters: snapshot)
+                timing: Timing(stages: [stage], counters: snapshot),
+                neighborWatch: watchReport
             )
         }
 
@@ -217,8 +230,11 @@ public struct ICMPSweepEngine: HostDiscovery {
         // The neighbour table first: free, instant, needs no permission, and it is the
         // control for the denial heuristic below.
         var neighborsByIP: [IPv4Address: MACAddress] = [:]
+        var largestDump: Int?
         do {
-            for entry in try await neighbors.entries() where entry.isComplete {
+            let first = try await neighbors.snapshot()
+            largestDump = first.byteCount
+            for entry in first.entries where entry.isComplete {
                 guard target.network.contains(entry.ip) else { continue }
                 neighborsByIP[entry.ip] = entry.mac
             }
@@ -267,6 +283,37 @@ public struct ICMPSweepEngine: HostDiscovery {
                 if let event = await state.record(reply) { sink(event) }
             }
         }
+
+        // ── The neighbour watch ───────────────────────────────────────────────────
+        //
+        // Everything complete at the snapshot above is inherited. An entry that becomes
+        // complete after it is this sweep's own ARP being answered, and the moment it
+        // is seen is the first evidence the host exists — often well before its echo
+        // reply, and for a host that ignores echo, the only evidence. See
+        // `NeighborWatch` for why this polls rather than listens.
+        let baseline = Set(neighborsByIP.keys)
+        let interval = NeighborWatch.interval(targets: addresses.count)
+        let watcher: Task<WatchTally, Never>? = neighborWatch ? Task { [neighbors] in
+            var tally = WatchTally()
+            var reported: Set<IPv4Address> = []
+            while !Task.isCancelled {
+                try? await Task.sleep(for: interval)
+                guard !Task.isCancelled, let read = try? await neighbors.snapshot() else { continue }
+                let seenAt = MonotonicInstant.now
+                tally.polls += 1
+                if let bytes = read.byteCount { tally.largestDump = max(tally.largestDump ?? 0, bytes) }
+                for entry in NeighborWatch.newlyResolved(
+                    read.entries, baseline: baseline, reported: reported, in: target.network
+                ) {
+                    reported.insert(entry.ip)
+                    if let event = await state.recordResolution(entry.ip, mac: entry.mac, at: seenAt) {
+                        tally.resolved += 1
+                        sink(event)
+                    }
+                }
+            }
+            return tally
+        } : nil
 
         var attempted = 0
         var delivered = 0
@@ -321,6 +368,14 @@ public struct ICMPSweepEngine: HostDiscovery {
 
         reader.cancel()
         await socket.stop()
+        if let watcher {
+            watcher.cancel()
+            let tally = await watcher.value
+            watchReport.pollIntervalMillis = interval.milliseconds
+            watchReport.polls = tally.polls
+            watchReport.resolved = tally.resolved
+            watchReport.largestDumpBytes = [largestDump, tally.largestDump].compactMap(\.self).max()
+        }
 
         // Re-read the neighbour table now the sweep has finished.
         //
@@ -333,10 +388,22 @@ public struct ICMPSweepEngine: HostDiscovery {
         //
         // Cheap: one sysctl over a table of a few kilobytes, once, after all the
         // probing is done.
-        if let refreshed = try? await neighbors.entries() {
-            for entry in refreshed where entry.isComplete {
+        if let refreshed = try? await neighbors.snapshot() {
+            if let bytes = refreshed.byteCount, neighborWatch {
+                watchReport.largestDumpBytes = max(watchReport.largestDumpBytes ?? 0, bytes)
+            }
+            for entry in refreshed.entries where entry.isComplete {
                 guard target.network.contains(entry.ip) else { continue }
                 neighborsByIP[entry.ip] = entry.mac
+                // Resolved after the last poll. It is still this sweep's evidence, but
+                // the moment is unknown — somewhere in the final interval — so it is
+                // reported without a first-contact time rather than with a guess.
+                if neighborWatch, !baseline.contains(entry.ip) {
+                    if let event = await state.recordResolution(entry.ip, mac: entry.mac, at: nil) {
+                        watchReport.resolved = (watchReport.resolved ?? 0) + 1
+                        sink(event)
+                    }
+                }
             }
         }
 
@@ -364,6 +431,10 @@ public struct ICMPSweepEngine: HostDiscovery {
         // Hosts the ARP cache knows that never answered a probe are still real — a
         // firewalled host ignoring ICMP is exactly what a neighbour-table cross-check
         // is for, and dropping it would report the network as emptier than it is.
+        //
+        // With the watch on, everything that resolved during the sweep is already in
+        // `hosts` as `neighbor_resolved`, so what reaches this loop is inherited. With it
+        // off, this loop is study 1's: every table-only host is `neighbor_table`.
         let answered = Set(hosts.map(\.ip))
         for (ip, mac) in neighborsByIP.sorted(by: { $0.key < $1.key }) {
             guard target.network.contains(ip), ip != target.interface.address else { continue }
@@ -418,6 +489,13 @@ public struct ICMPSweepEngine: HostDiscovery {
             : (deadline.isExpired && !settled ? .deadlineExpired : .complete)
         return finished(hosts, outcome)
     }
+}
+
+/// What the neighbour watch counted, handed back when it is cancelled.
+private struct WatchTally: Sendable {
+    var polls = 0
+    var resolved = 0
+    var largestDump: Int?
 }
 
 /// One outstanding transmission.
@@ -499,7 +577,9 @@ actor SweepState {
     /// sent inside a window the sweep was already going to spend waiting.
     private(set) var lastTightTransmissionAt: MonotonicInstant?
     private var unsent: [IPv4Address]
-    private let neighbors: [IPv4Address: MACAddress]
+    /// The hardware addresses known so far: the snapshot at the start, plus every entry
+    /// the neighbour watch has since seen resolve.
+    private var neighbors: [IPv4Address: MACAddress]
     private let attempts: Int
     private let counters: ProbeCounters
     private let spacing: SweepSpacing
@@ -820,6 +900,8 @@ actor SweepState {
             return nil
         }
         guard probe.address == reply.source else { strayReplies += 1; return nil }
+        // Before anything is mutated, so a duplicate reply leaves the counts alone.
+        let hadEvidence = hosts[reply.source]?.facts != nil
         // Late, but attributed exactly, which is why expired probes are kept in
         // `inFlight` at all. This is the only place that can know: by the time the
         // sweep ends the probe is gone and nothing downstream can tell a prompt reply
@@ -838,7 +920,6 @@ actor SweepState {
 
         var host = hosts[reply.source] ?? Host()
         host.outstanding = nil
-        let isFirstReply = host.facts == nil
 
         // Measured against the instant THIS transmission went out, not the host's most
         // recent send, so a straggler is timed correctly rather than against a probe it
@@ -856,6 +937,9 @@ actor SweepState {
             clock.record(elapsed)
         }
 
+        // `probe_reply` alone, even for a host the watch saw resolve first: the sources
+        // in one sweep are exclusive, strongest wins, as they were before the watch.
+        // The resolution is not lost — it is this host's first contact (change 3).
         let facts = HostFacts(
             ip: reply.source,
             mac: neighbors[reply.source],
@@ -865,8 +949,39 @@ actor SweepState {
         )
         host.facts = facts
         hosts[reply.source] = host
-        if isFirstReply { answeredCount += 1 }
-        return isFirstReply ? .hostFound(facts) : .hostUpdated(facts)
+        if !hadEvidence { answeredCount += 1 }
+        return hadEvidence ? .hostUpdated(facts) : .hostFound(facts)
+    }
+
+    /// Folds in a neighbour entry that resolved during the sweep.
+    ///
+    /// The host is found — `neighbor_resolved` — unless it has already answered a probe,
+    /// which is stronger evidence and keeps the row. Either way its hardware address is
+    /// now known, so a reply that arrives later carries it.
+    ///
+    /// - Parameters:
+    ///   - address: the entry's address. One the sweep was not asked about is ignored.
+    ///   - mac: what it resolved to.
+    ///   - at: when the watch saw it, or nil when it was only seen in the final read and
+    ///     the moment is unknown.
+    /// - Returns: the event to emit, or nil when there is nothing new to say.
+    func recordResolution(
+        _ address: IPv4Address, mac: MACAddress, at: MonotonicInstant?
+    ) -> ProbeEvent? {
+        guard var host = hosts[address] else { return nil }
+        neighbors[address] = mac
+        if var facts = host.facts {
+            guard facts.mac == nil else { return nil }
+            facts.mac = mac
+            host.facts = facts
+            hosts[address] = host
+            return .hostUpdated(facts)
+        }
+        let facts = HostFacts(ip: address, mac: mac, discoveredVia: [.neighborResolved])
+        host.facts = facts
+        hosts[address] = host
+        answeredCount += 1
+        return .hostFound(facts)
     }
 
     /// The expiry each outstanding probe was armed with, keyed by address.

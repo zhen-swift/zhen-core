@@ -292,6 +292,10 @@ public struct DiscoveryResult: Sendable, Hashable {
     public var outcome: Outcome
     /// What it cost.
     public var timing: Timing
+    /// What the neighbour watch did, for an engine that has one. Nil for an engine that
+    /// never watches — the layer-2 sweep, a fixture — which is different from a watch
+    /// that was switched off.
+    public var neighborWatch: NeighborWatchReport?
 
     /// Creates a value from its fields. Each one is documented on the property it sets.
     public init(
@@ -299,13 +303,15 @@ public struct DiscoveryResult: Sendable, Hashable {
         degradations: [Degradation] = [],
         usedCapabilities: EngineCapabilities = [],
         outcome: Outcome = .complete,
-        timing: Timing = Timing()
+        timing: Timing = Timing(),
+        neighborWatch: NeighborWatchReport? = nil
     ) {
         self.hosts = hosts
         self.degradations = degradations
         self.usedCapabilities = usedCapabilities
         self.outcome = outcome
         self.timing = timing
+        self.neighborWatch = neighborWatch
     }
 }
 

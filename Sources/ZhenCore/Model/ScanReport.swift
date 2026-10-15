@@ -86,6 +86,10 @@ public struct ScanRun: Sendable, Hashable, Codable {
     public var mode: ScanMode
     /// What it cost, measured monotonically.
     public var timing: Timing
+    /// What the discovery sweep's neighbour watch did — whether it was on, and what its
+    /// reads of the table cost. Absent for a run whose engine has no watch, and in every
+    /// document written before 0.8.0.
+    public var neighborWatch: NeighborWatchReport?
 
     /// Creates a value from its fields. Each one is documented on the property it sets.
     public init(
@@ -97,7 +101,8 @@ public struct ScanRun: Sendable, Hashable, Codable {
         engine: EngineDescriptor,
         outcome: Outcome,
         mode: ScanMode = .full,
-        timing: Timing
+        timing: Timing,
+        neighborWatch: NeighborWatchReport? = nil
     ) {
         self.id = id
         self.startedAt = startedAt
@@ -108,6 +113,7 @@ public struct ScanRun: Sendable, Hashable, Codable {
         self.outcome = outcome
         self.mode = mode
         self.timing = timing
+        self.neighborWatch = neighborWatch
     }
 
     /// Wire keys, spelled out. Renaming a Swift property is then a refactor; renaming a
@@ -122,6 +128,7 @@ public struct ScanRun: Sendable, Hashable, Codable {
         case outcome
         case mode
         case timing
+        case neighborWatch = "neighbor_watch"
     }
 
     /// Decodes, tolerating a document written before `mode` existed.
@@ -142,7 +149,10 @@ public struct ScanRun: Sendable, Hashable, Codable {
             engine: try container.decode(EngineDescriptor.self, forKey: .engine),
             outcome: try container.decode(Outcome.self, forKey: .outcome),
             mode: try container.decodeIfPresent(ScanMode.self, forKey: .mode) ?? .full,
-            timing: try container.decode(Timing.self, forKey: .timing)
+            timing: try container.decode(Timing.self, forKey: .timing),
+            neighborWatch: try container.decodeIfPresent(
+                NeighborWatchReport.self, forKey: .neighborWatch
+            )
         )
     }
 }
@@ -216,7 +226,22 @@ public struct ScanReport: Sendable, Hashable, Codable {
     /// migration rather than a tolerance. It lives in `Device.init(from:)`, keyed on the
     /// record's shape: the history store holds device records with no report around
     /// them, written by every build there has been, and never rewritten to upgrade them.
-    public static let schemaVersion = 3
+    ///
+    /// Bumped to 4 on 2026-10-15, when `discovered_via` gained `neighbor_resolved`.
+    ///
+    /// By the rule above, and it is the 1 → 2 case again rather than a judgement call.
+    /// `DiscoverySource` decodes strictly, so a schema-3 reader handed a device whose
+    /// `discovered_via` holds the new value fails to decode the device — and with it the
+    /// report — rather than misreading it. That failure is the correct outcome, and the
+    /// alternative is the under-reporting this project refuses: writing a resolved-during-
+    /// the-scan host as `neighbor_table` keeps old readers working by telling them the
+    /// host was merely remembered, when this run saw it answer ARP.
+    ///
+    /// Everything else 0.8.0 adds — `run.neighbor_watch`, `run.reach`, `run.tool`, the
+    /// per-host first-contact and found-after times, `attempts` and `concurrency` on a
+    /// stage — is additive and optional on read, and would not have bumped it alone.
+    /// `minimumReadableSchema` stays 1: nothing was removed or re-meant.
+    public static let schemaVersion = 4
 
     /// The oldest schema this build still reads.
     ///

@@ -160,7 +160,8 @@ nonisolated struct ScanPipeline {
                 ),
                 outcome: outcome,
                 mode: discoveryOnly ? .discoveryOnly : .full,
-                timing: timing
+                timing: timing,
+                neighborWatch: context.neighborWatch
             ),
             devices: devices,
             degradations: degradations

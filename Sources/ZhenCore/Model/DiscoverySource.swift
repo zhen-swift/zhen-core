@@ -42,7 +42,26 @@ public enum DiscoverySource: String, Sendable, Hashable, Codable, CaseIterable, 
     /// Layer 2, so it cannot be firewalled the way ICMP can. Needs a capture device.
     case arpReply = "arp_reply"
 
-    /// The kernel's neighbour table listed it, and it never answered a probe.
+    /// Its neighbour entry went from absent or incomplete to complete WHILE this scan
+    /// was running, and it never answered a probe.
+    ///
+    /// Evidence from this run, not memory. Unprivileged, the wire is gated by kernel ARP:
+    /// a transmission to an address with no complete entry is an ARP trigger, not an
+    /// echo, and a host that answers that ARP and then ignores the echo — or answers the
+    /// echo too late — has still put a reply on the wire during this scan. Study 1 called
+    /// that `neighbor_table` and could not tell it from an entry inherited from an hour
+    /// ago; this is the half that was observed now.
+    ///
+    /// Added in 0.8.0 (schema 4). Under `--no-neighbor-watch` the sweep does not look,
+    /// and every table-only host is `neighbor_table` as it was in study 1.
+    case neighborResolved = "neighbor_resolved"
+
+    /// The kernel's neighbour table listed it before the scan started, and it never
+    /// answered a probe.
+    ///
+    /// **Inherited, since 0.8.0.** Through 0.7.0 this also covered an entry the scan's
+    /// own probes caused to resolve; that is `neighborResolved` now, and this means only
+    /// what the kernel already knew.
     ///
     /// Real evidence and weaker evidence, and the distinction matters in both
     /// directions. A host that ignores ICMP is genuinely present and genuinely found
@@ -74,8 +93,9 @@ public enum DiscoverySource: String, Sendable, Hashable, Codable, CaseIterable, 
             switch $0 {
             case .probeReply: 0
             case .arpReply: 1
-            case .neighborTable: 2
-            case .localInterface: 3
+            case .neighborResolved: 2
+            case .neighborTable: 3
+            case .localInterface: 4
             }
         }
         return rank(lhs) < rank(rhs)
@@ -86,6 +106,7 @@ public enum DiscoverySource: String, Sendable, Hashable, Codable, CaseIterable, 
         switch self {
         case .probeReply: "answered a probe"
         case .arpReply: "answered ARP"
+        case .neighborResolved: "resolved during the scan"
         case .neighborTable: "neighbour table"
         case .localInterface: "this machine"
         }
@@ -100,8 +121,9 @@ extension Set where Element == DiscoverySource {
     ///
     /// The predicate a reader reconciling against a packet capture wants: these are the
     /// hosts whose frames should be on the wire, and the rest are the hosts whose
-    /// absence from it explains itself.
+    /// absence from it explains itself. A neighbour entry that resolved during the scan
+    /// is one of them: the kernel's ARP request and the host's reply are both frames.
     public var answeredThisScan: Bool {
-        contains(.probeReply) || contains(.arpReply)
+        contains(.probeReply) || contains(.arpReply) || contains(.neighborResolved)
     }
 }

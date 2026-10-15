@@ -21,12 +21,18 @@ public struct DarwinNeighborCache: NeighborCache {
     /// because they are evidence of *absence* and a caller that treated them as devices
     /// would invent hosts that are not there.
     public func entries() async throws(PlatformError) -> [NeighborEntry] {
+        try await snapshot().entries
+    }
+
+    /// The entries, and the size of the dump they were decoded from.
+    public func snapshot() async throws(PlatformError) -> NeighborSnapshot {
         let bytes = try RouteSysctl.fetch(
             [CTL_NET, PF_ROUTE, 0, AF_INET, NET_RT_FLAGS, RTF_LLINFO]
         )
         // SAFETY: borrowing a raw view over a buffer this call owns; the span cannot
         // outlive it.
-        return unsafe Self.decode(bytes.span.bytes)
+        let entries = unsafe Self.decode(bytes.span.bytes)
+        return NeighborSnapshot(entries: entries, byteCount: bytes.count)
     }
 
     /// Decodes a captured `NET_RT_FLAGS` buffer.
