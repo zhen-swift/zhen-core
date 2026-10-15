@@ -31,7 +31,8 @@ public enum ProbeEvent: Sendable, Hashable, Codable {
     /// Only addresses history expects are still being waited for: every other address
     /// has answered or had its wait. "Still listening for 2 you usually have." Emitted
     /// when the sweep enters that state and again each time the list shrinks; never
-    /// emitted when nothing is expected, as on a first scan.
+    /// emitted when history expects nothing on this network. A first scan of a network
+    /// with a little history can emit it, once every other address's 1.5 s has run out.
     case settling(expectedMissing: [IPv4Address])
 
     private enum CodingKeys: String, CodingKey {
