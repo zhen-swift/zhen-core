@@ -529,6 +529,23 @@ actor SweepState {
         var facts: HostFacts?
         /// The token of the transmission currently outstanding, if any.
         var outstanding: UInt32?
+        /// When the first transmission to this address actually went out.
+        var firstSentAt: MonotonicInstant?
+        /// Whether the address had no complete neighbour entry at that moment.
+        var cold: Bool?
+        /// From `firstSentAt` to the first evidence of any kind, once there is some.
+        var firstContact: Duration?
+
+        /// Notes evidence arriving at `instant`, if it is the first since the first
+        /// transmission.
+        ///
+        /// Evidence before the first transmission is not this sweep's doing — an entry
+        /// that resolved because something else on this machine talked to the host — and
+        /// timing it from a send that came later would produce a negative number.
+        mutating func noteEvidence(at instant: MonotonicInstant) {
+            guard firstContact == nil, let sent = firstSentAt, instant >= sent else { return }
+            firstContact = instant.duration(since: sent)
+        }
     }
 
     private var hosts: [IPv4Address: Host] = [:]
@@ -857,6 +874,14 @@ actor SweepState {
                 base: budget
             )
             let expiresAt = instant.advanced(by: gap)
+            // First contact is timed from here. Cold is judged against what is known
+            // NOW — the start snapshot plus anything the watch has seen resolve since —
+            // because that is what the kernel will do with this datagram: resolve first,
+            // or send at once.
+            if assignment.transmission == 0, hosts[assignment.address]?.firstSentAt == nil {
+                hosts[assignment.address]?.firstSentAt = instant
+                hosts[assignment.address]?.cold = neighbors[assignment.address] == nil
+            }
             inFlight[token] = InFlight(
                 address: assignment.address,
                 transmission: assignment.transmission,
@@ -920,6 +945,7 @@ actor SweepState {
 
         var host = hosts[reply.source] ?? Host()
         host.outstanding = nil
+        host.noteEvidence(at: reply.receivedAt)
 
         // Measured against the instant THIS transmission went out, not the host's most
         // recent send, so a straggler is timed correctly rather than against a probe it
@@ -945,7 +971,9 @@ actor SweepState {
             mac: neighbors[reply.source],
             ttl: reply.ttl,
             rtt: host.estimator.sample,
-            discoveredVia: [.probeReply]
+            discoveredVia: [.probeReply],
+            firstContact: host.firstContact,
+            firstContactCold: host.cold
         )
         host.facts = facts
         hosts[reply.source] = host
@@ -970,6 +998,7 @@ actor SweepState {
     ) -> ProbeEvent? {
         guard var host = hosts[address] else { return nil }
         neighbors[address] = mac
+        if let at { host.noteEvidence(at: at) }
         if var facts = host.facts {
             guard facts.mac == nil else { return nil }
             facts.mac = mac
@@ -977,7 +1006,10 @@ actor SweepState {
             hosts[address] = host
             return .hostUpdated(facts)
         }
-        let facts = HostFacts(ip: address, mac: mac, discoveredVia: [.neighborResolved])
+        let facts = HostFacts(
+            ip: address, mac: mac, discoveredVia: [.neighborResolved],
+            firstContact: host.firstContact, firstContactCold: host.cold
+        )
         host.facts = facts
         hosts[address] = host
         answeredCount += 1

@@ -259,6 +259,14 @@ public struct Device: Sendable, Hashable, Codable {
     public var firstSeen: Timestamp
     /// When it was last seen. Wall clock, for display.
     public var lastSeen: Timestamp
+    /// This run's first-contact time with the device, in milliseconds: from the first
+    /// transmission to its address to the first evidence of any kind. See
+    /// `HostFacts.firstContact`. A fact about the RUN that produced this record, so the
+    /// history keeps it as a sample on the ledger's record and not here.
+    public var firstContactMillis: Double?
+    /// Whether that first contact was cold — the address had no complete neighbour entry,
+    /// so the time includes ARP. Nil exactly when `firstContactMillis` is.
+    public var firstContactCold: Bool?
 
     /// Creates a value from its fields. Each one is documented on the property it sets.
     ///
@@ -280,7 +288,9 @@ public struct Device: Sendable, Hashable, Codable {
         discoveredVia: [DiscoverySource] = [],
         vlan: UInt16? = nil,
         firstSeen: Timestamp,
-        lastSeen: Timestamp
+        lastSeen: Timestamp,
+        firstContactMillis: Double? = nil,
+        firstContactCold: Bool? = nil
     ) {
         precondition(!addresses.isEmpty, "a Device has at least one address")
         self.addresses = addresses
@@ -306,6 +316,8 @@ public struct Device: Sendable, Hashable, Codable {
         self.discoveredVia = discoveredVia.sorted()
         self.firstSeen = firstSeen
         self.lastSeen = lastSeen
+        self.firstContactMillis = firstContactMillis
+        self.firstContactCold = firstContactMillis == nil ? nil : firstContactCold
     }
 
     /// Wire keys, spelled out. Renaming a Swift property is then a refactor; renaming a
@@ -328,6 +340,8 @@ public struct Device: Sendable, Hashable, Codable {
         case discoveredVia = "discovered_via"
         case firstSeen = "first_seen"
         case lastSeen = "last_seen"
+        case firstContactMillis = "first_contact_millis"
+        case firstContactCold = "first_contact_cold"
     }
 
     /// Keys that only schema 1 and 2 wrote. Read, never written.
@@ -391,7 +405,9 @@ extension Device {
             discoveredVia: try container.decodeIfPresent([DiscoverySource].self, forKey: .discoveredVia) ?? [],
             vlan: try container.decodeIfPresent(UInt16.self, forKey: .vlan),
             firstSeen: try container.decode(Timestamp.self, forKey: .firstSeen),
-            lastSeen: try container.decode(Timestamp.self, forKey: .lastSeen)
+            lastSeen: try container.decode(Timestamp.self, forKey: .lastSeen),
+            firstContactMillis: try container.decodeIfPresent(Double.self, forKey: .firstContactMillis),
+            firstContactCold: try container.decodeIfPresent(Bool.self, forKey: .firstContactCold)
         )
     }
 
@@ -421,6 +437,8 @@ extension Device {
         try container.encode(discoveredVia, forKey: .discoveredVia)
         try container.encode(firstSeen, forKey: .firstSeen)
         try container.encode(lastSeen, forKey: .lastSeen)
+        try container.encodeIfPresent(firstContactMillis, forKey: .firstContactMillis)
+        try container.encodeIfPresent(firstContactCold, forKey: .firstContactCold)
     }
 
     /// The one address to show when there is room for one.
@@ -502,7 +520,9 @@ extension Device {
             osFingerprint: facts.osFingerprint,
             discoveredVia: facts.discoveredVia.canonical,
             firstSeen: firstSeen ?? lastSeen,
-            lastSeen: lastSeen
+            lastSeen: lastSeen,
+            firstContactMillis: facts.firstContact?.milliseconds,
+            firstContactCold: facts.firstContactCold
         )
     }
 
@@ -649,7 +669,11 @@ extension Device {
             discoveredVia: via.canonical,
             vlan: ordered.lazy.compactMap(\.vlan).first,
             firstSeen: ordered.map(\.firstSeen).min() ?? lead.firstSeen,
-            lastSeen: ordered.map(\.lastSeen).max() ?? lead.lastSeen
+            lastSeen: ordered.map(\.lastSeen).max() ?? lead.lastSeen,
+            // The v4 sweep is the only thing that times first contact, so the v4 holder
+            // has it if anyone does.
+            firstContactMillis: ordered.lazy.compactMap(\.firstContactMillis).first,
+            firstContactCold: ordered.lazy.first { $0.firstContactMillis != nil }?.firstContactCold
         )
     }
 }

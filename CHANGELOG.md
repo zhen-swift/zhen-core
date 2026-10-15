@@ -31,6 +31,16 @@ follow the app's `CFBundleShortVersionString`.
   the learned tail and three. A network with fewer than 20 cold samples waits 1.5 s
   everywhere, once. Every constant is in `ReachSettings` so the command line can move it.
   `StoredDevice` gains `firstContactSamples`, defaulted in its initialiser.
+- **First-contact time on every host the sweep times, and its history (0.8.0 change 3).**
+  `HostFacts.firstContact` runs from the first transmission to an address to the first
+  evidence of any kind from it — an echo reply or its neighbour entry resolving — and
+  `firstContactCold` says whether the address had no complete neighbour entry then, so
+  the time includes ARP. In the artifact they are `first_contact_millis` and
+  `first_contact_cold` per host, and on `Device` too. History keeps each device's last 32
+  as `first_contact_samples`, on a line of its own type in the log (`"first_contact"`), not
+  as a key on the device line: a 0.7.0 build ignores an unknown key and would drop it on
+  compaction, but keeps a line of an unknown type verbatim. A merge keeps both devices'
+  samples, the newest 32.
 
 ### Changed
 - **Breaking: `neighbor_table` now means inherited, and the report schema is 4.** Through

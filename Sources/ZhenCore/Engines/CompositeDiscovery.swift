@@ -238,7 +238,10 @@ extension HostFacts {
             // routes is the strongest statement a composition can make, and keeping
             // only one of them would throw away the agreement.
             osFingerprint: osFingerprint ?? other.osFingerprint,
-            discoveredVia: discoveredVia.union(other.discoveredVia)
+            discoveredVia: discoveredVia.union(other.discoveredVia),
+            // As a pair: a time from one engine with the other's cold flag is neither.
+            firstContact: firstContact ?? other.firstContact,
+            firstContactCold: firstContact != nil ? firstContactCold : other.firstContactCold
         )
     }
 }

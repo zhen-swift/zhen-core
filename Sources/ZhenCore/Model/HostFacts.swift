@@ -61,6 +61,18 @@ public struct HostFacts: Sendable, Hashable, Codable {
     /// not say, which is the honest reading of an older artifact rather than a claim
     /// that the host was found by nothing.
     public var discoveredVia: Set<DiscoverySource>
+    /// From the first transmission to this address to the first evidence of any kind
+    /// from it — an echo reply, or its neighbour entry resolving. Nil when the engine did
+    /// not time it: a host only the neighbour table or a name source supplied, or one
+    /// whose resolution was seen only after the sweep.
+    ///
+    /// Not `rtt`. A round trip is one echo's flight; this is how long the host took to be
+    /// reachable at all, and for an address with no neighbour entry it includes ARP —
+    /// which is the part a cold scan has to wait out.
+    public var firstContact: Duration?
+    /// Whether the address had no complete neighbour entry at its first transmission, so
+    /// `firstContact` includes ARP. Nil exactly when `firstContact` is.
+    public var firstContactCold: Bool?
 
     /// Creates a value from its fields. Each one is documented on the property it sets.
     public init(
@@ -74,7 +86,9 @@ public struct HostFacts: Sendable, Hashable, Codable {
         rtt: RTTSample? = nil,
         ports: [PortObservation] = [],
         osFingerprint: OSFingerprint? = nil,
-        discoveredVia: Set<DiscoverySource> = []
+        discoveredVia: Set<DiscoverySource> = [],
+        firstContact: Duration? = nil,
+        firstContactCold: Bool? = nil
     ) {
         self.ip = ip
         self.mac = mac
@@ -91,6 +105,8 @@ public struct HostFacts: Sendable, Hashable, Codable {
         self.ports = ports.sorted { ($0.port, $0.proto.rawValue) < ($1.port, $1.proto.rawValue) }
         self.osFingerprint = osFingerprint
         self.discoveredVia = discoveredVia
+        self.firstContact = firstContact
+        self.firstContactCold = firstContact == nil ? nil : firstContactCold
     }
 
     /// Decodes, routing through the memberwise initializer so the canonical order is
@@ -110,7 +126,10 @@ public struct HostFacts: Sendable, Hashable, Codable {
             osFingerprint: try container.decodeIfPresent(OSFingerprint.self, forKey: .osFingerprint),
             discoveredVia: Set(
                 try container.decodeIfPresent([DiscoverySource].self, forKey: .discoveredVia) ?? []
-            )
+            ),
+            firstContact: try container.decodeIfPresent(Double.self, forKey: .firstContactMillis)
+                .map { .milliseconds($0) },
+            firstContactCold: try container.decodeIfPresent(Bool.self, forKey: .firstContactCold)
         )
     }
 
@@ -148,6 +167,8 @@ public struct HostFacts: Sendable, Hashable, Codable {
         case ports
         case osFingerprint = "os_fingerprint"
         case discoveredVia = "discovered_via"
+        case firstContactMillis = "first_contact_millis"
+        case firstContactCold = "first_contact_cold"
     }
 
     /// Encodes, writing `discovered_via` in its canonical order.
@@ -169,6 +190,8 @@ public struct HostFacts: Sendable, Hashable, Codable {
         try container.encode(ports, forKey: .ports)
         try container.encodeIfPresent(osFingerprint, forKey: .osFingerprint)
         try container.encode(discoveredVia.canonical, forKey: .discoveredVia)
+        try container.encodeIfPresent(firstContact?.milliseconds, forKey: .firstContactMillis)
+        try container.encodeIfPresent(firstContactCold, forKey: .firstContactCold)
     }
 }
 

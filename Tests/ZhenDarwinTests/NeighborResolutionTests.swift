@@ -81,6 +81,63 @@ struct NeighborResolutionTests {
         #expect(await state.recordResolution(host, mac: Self.mac, at: .now) == nil)
     }
 
+    // ── Change 3: first contact ──────────────────────────────────────────────────
+
+    @Test("First contact runs from the first transmission to the echo, and is cold with no entry")
+    func coldEchoIsTimed() async {
+        let host = Self.ip(20)
+        let (state, due, sentAt) = await sentState([host])
+        _ = await state.record(ICMPReply(
+            source: host, sequence: due[0].sequence, token: due[0].token,
+            receivedAt: sentAt.advanced(by: .milliseconds(990)), ttl: 64
+        ))
+        let facts = await state.discovered().first
+        #expect(facts?.firstContact == .milliseconds(990))
+        #expect(facts?.firstContactCold == true)
+    }
+
+    @Test("An address with a complete entry at its first transmission is warm")
+    func warmIsWarm() async {
+        let host = Self.ip(21)
+        let state = SweepState(pending: [host], neighbors: [host: Self.mac], attempts: 3, counters: ProbeCounters())
+        let due = await state.dueProbes(limit: 8)
+        let sentAt = MonotonicInstant.now
+        _ = await state.recordSends([due[0].token: sentAt])
+        _ = await state.record(ICMPReply(
+            source: host, sequence: due[0].sequence, token: due[0].token,
+            receivedAt: sentAt.advanced(by: .milliseconds(3)), ttl: 64
+        ))
+        let facts = await state.discovered().first
+        #expect(facts?.firstContact == .milliseconds(3))
+        #expect(facts?.firstContactCold == false)
+    }
+
+    @Test("A resolution is first contact when it comes first, and the echo after it keeps the time")
+    func resolutionIsFirstContact() async {
+        let host = Self.ip(22)
+        let (state, due, sentAt) = await sentState([host])
+        _ = await state.recordResolution(host, mac: Self.mac, at: sentAt.advanced(by: .milliseconds(480)))
+        _ = await state.record(ICMPReply(
+            source: host, sequence: due[0].sequence, token: due[0].token,
+            receivedAt: sentAt.advanced(by: .milliseconds(990)), ttl: 64
+        ))
+        let facts = await state.discovered().first
+        #expect(facts?.discoveredVia == [.probeReply])
+        #expect(facts?.firstContact == .milliseconds(480))
+        #expect(facts?.firstContactCold == true)
+    }
+
+    @Test("A resolution seen only in the final read is reported untimed rather than guessed")
+    func lateResolutionIsUntimed() async {
+        let host = Self.ip(23)
+        let (state, _, _) = await sentState([host])
+        _ = await state.recordResolution(host, mac: Self.mac, at: nil)
+        let facts = await state.discovered().first
+        #expect(facts?.discoveredVia == [.neighborResolved])
+        #expect(facts?.firstContact == nil)
+        #expect(facts?.firstContactCold == nil)
+    }
+
     @Test("An address the sweep was not asked about is ignored")
     func outsideTheSweepIsIgnored() async {
         let (state, _, _) = await sentState([Self.ip(1)])

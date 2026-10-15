@@ -401,6 +401,8 @@ public actor LogHistoryStore: HistoryStore {
         var log: [DerivedEvent] = []
         var latest: ScanRun?
         var lines = 0
+        // By stored key, last line wins, like the device lines.
+        var contacts: [HostIdentifier: [FirstContactSample]] = [:]
 
         for line in data.split(separator: UInt8(ascii: "\n")) where !line.isEmpty {
             lines += 1
@@ -441,7 +443,32 @@ public actor LogHistoryStore: HistoryStore {
                 ))
             case .run(let run):
                 latest = run
+            case .firstContact(let stored):
+                guard let key = stored.key.identifier else {
+                    unreadable.append(Data(line))
+                    continue
+                }
+                contacts[key] = stored.samples
             }
+        }
+
+        // Joined to their records after every line is read, because a device line can
+        // follow its samples: a build older than 0.8.0 that compacted this file put the
+        // samples lines it could not read after the snapshot it wrote. A record that one
+        // of those builds merged is keyed differently from its samples now, so a key with
+        // no record goes to the oldest record that carries it as an identifier — the rule
+        // `HistoryLedger.match` states.
+        for (key, samples) in contacts.sorted(by: { $0.key < $1.key }) {
+            let holder = records[key] != nil ? key : records
+                .filter { $0.value.identifiers.contains(key) }
+                .min { ($0.value.ordinal, $0.key) < ($1.value.ordinal, $1.key) }?
+                .key
+            guard let holder, var record = records[holder] else { continue }
+            record.firstContactSamples = Array(
+                ((holder == key ? [] : record.firstContactSamples) + samples)
+                    .suffix(FirstContactSample.retained)
+            )
+            records[holder] = record
         }
 
         lineCount = lines
@@ -489,6 +516,11 @@ public actor LogHistoryStore: HistoryStore {
                 ordinal: record.ordinal,
                 macHistory: record.macHistory.map(StoredMACSighting.init)
             ))))
+            if !record.firstContactSamples.isEmpty {
+                lines.append(Line(payload: .firstContact(StoredFirstContactLine(
+                    key: StoredKey(key), samples: record.firstContactSamples
+                ))))
+            }
         }
         lines += events.map {
             Line(payload: .event(StoredEventLine(
@@ -528,6 +560,11 @@ public actor LogHistoryStore: HistoryStore {
                 ordinal: record.ordinal,
                 macHistory: record.macHistory.map(StoredMACSighting.init)
             ))))
+            if !record.firstContactSamples.isEmpty {
+                lines.append(Line(payload: .firstContact(StoredFirstContactLine(
+                    key: StoredKey(key), samples: record.firstContactSamples
+                ))))
+            }
         }
         lines += ledger.log.map {
             Line(payload: .event(StoredEventLine(
@@ -724,6 +761,29 @@ extension LogHistoryStore {
         }
     }
 
+    /// A device's first-contact samples, as a line of its own.
+    ///
+    /// ── Why not a key on the device line, the way `mac_history` is ─────────────────
+    ///
+    /// Because of what an older build does with each. A 0.7.0 reader decodes a device
+    /// line and ignores keys it does not know, so a compaction by 0.7.0 — the app pinned
+    /// to it shares this file with the command line — would write the line back without
+    /// them and the samples would be gone. A line whose TYPE it does not know it cannot
+    /// decode at all, and 0.7.0 already keeps those verbatim (`unreadable`) and writes
+    /// them back after its snapshot. So a line of its own is the shape an older build
+    /// preserves, and gate G2 checks that with 0.7.0's own store.
+    ///
+    /// Keyed like a device line; `reload` joins them.
+    struct StoredFirstContactLine: Codable, Sendable {
+        var key: StoredKey
+        var samples: [FirstContactSample]
+
+        enum CodingKeys: String, CodingKey {
+            case key
+            case samples = "first_contact_samples"
+        }
+    }
+
     struct StoredEventLine: Codable, Sendable {
         var id: UUID
         var atMillis: Int64
@@ -748,6 +808,7 @@ extension LogHistoryStore {
             case device(StoredDeviceLine)
             case event(StoredEventLine)
             case run(ScanRun)
+            case firstContact(StoredFirstContactLine)
         }
 
         var version: Int = 1
@@ -759,6 +820,7 @@ extension LogHistoryStore {
             case device
             case event
             case run
+            case firstContact = "first_contact"
         }
 
         init(version: Int = 1, payload: Payload) {
@@ -776,6 +838,10 @@ extension LogHistoryStore {
                 payload = .event(try container.decode(StoredEventLine.self, forKey: .event))
             case "run":
                 payload = .run(try container.decode(ScanRun.self, forKey: .run))
+            case "first_contact":
+                payload = .firstContact(
+                    try container.decode(StoredFirstContactLine.self, forKey: .firstContact)
+                )
             default:
                 throw DecodingError.dataCorruptedError(
                     forKey: .type, in: container, debugDescription: "unknown line type"
@@ -796,6 +862,9 @@ extension LogHistoryStore {
             case .run(let value):
                 try container.encode("run", forKey: .type)
                 try container.encode(value, forKey: .run)
+            case .firstContact(let value):
+                try container.encode("first_contact", forKey: .type)
+                try container.encode(value, forKey: .firstContact)
             }
         }
     }

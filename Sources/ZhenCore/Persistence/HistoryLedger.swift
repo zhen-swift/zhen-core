@@ -104,6 +104,14 @@ public struct HistoryLedger: Sendable {
         /// the span it was seen over and how it joined. See `MACSighting` for why this is
         /// here and not on `Device`.
         public var macHistory: [MACSighting]
+        /// This device's recent first-contact times, oldest first, at most
+        /// `FirstContactSample.retained` of them.
+        ///
+        /// Here and not on `Device`, by the argument `macHistory` made: a first-contact
+        /// time is a fact about one run, the device carries the latest run's, and the
+        /// record is where a series of runs is remembered. `ReachPlan` reads the cold
+        /// ones to learn how long this network takes to answer when nothing is cached.
+        public var firstContactSamples: [FirstContactSample] = []
 
         /// Creates a record. Each field is documented on the property it sets.
         ///
@@ -166,6 +174,13 @@ public struct HistoryLedger: Sendable {
             macHistory.sort { ($0.firstSeen, $0.mac.raw) < ($1.firstSeen, $1.mac.raw) }
         }
 
+        /// Appends a run's first-contact time, keeping the newest `retained`.
+        mutating func observeFirstContact(of device: Device) {
+            guard let millis = device.firstContactMillis, let cold = device.firstContactCold else { return }
+            firstContactSamples.append(FirstContactSample(millis: millis, cold: cold))
+            firstContactSamples = Array(firstContactSamples.suffix(FirstContactSample.retained))
+        }
+
         /// The addresses this device presented before its current one, oldest first.
         public var priorMACs: [MACSighting] {
             macHistory.filter { $0.mac != device.mac }
@@ -220,7 +235,8 @@ public struct HistoryLedger: Sendable {
             .map {
                 StoredDevice(
                     device: $0.device, isPresent: $0.lastRunID == currentRun,
-                    macHistory: $0.macHistory
+                    macHistory: $0.macHistory,
+                    firstContactSamples: $0.firstContactSamples
                 )
             }
             .sorted { $0.device.primaryAddress < $1.device.primaryAddress }
@@ -341,12 +357,13 @@ public struct HistoryLedger: Sendable {
                 observed.ports = ports.ports
                 record.device = observed
                 record.observe(device.mac, at: device.lastSeen, matchedBy: match.by.kind)
+                record.observeFirstContact(of: device)
                 record.lastRunID = report.run.id
                 record.identifiers.formUnion(candidates)
                 records[existing] = record
                 seenNow.insert(existing)
             } else {
-                records[key] = Record(
+                var record = Record(
                     device: device, firstSeen: device.firstSeen,
                     lastRunID: report.run.id, identifiers: Set(candidates),
                     ordinal: nextOrdinal,
@@ -354,6 +371,8 @@ public struct HistoryLedger: Sendable {
                         [MACSighting(mac: $0, firstSeen: device.lastSeen, lastSeen: device.lastSeen, link: .original)]
                     } ?? []
                 )
+                record.observeFirstContact(of: device)
+                records[key] = record
                 nextOrdinal += 1
                 seenNow.insert(key)
                 // Not an event on the first run ever: everything is new then, and eight
@@ -646,6 +665,12 @@ public struct HistoryLedger: Sendable {
                 survivor.identifiers.insert(key)
                 survivor.firstSeen = min(survivor.firstSeen, loser.firstSeen)
                 survivor.absorb(loser.macHistory, sharing: shared.kind)
+                // The loser's samples are older than anything the survivor learned after
+                // they split, which is not known; put them first and keep the newest.
+                survivor.firstContactSamples = Array(
+                    (loser.firstContactSamples + survivor.firstContactSamples)
+                        .suffix(FirstContactSample.retained)
+                )
                 // The most recent observation wins the device and the run it came from,
                 // so a merge never rolls a device's address or name backwards.
                 if loser.device.lastSeen > survivor.device.lastSeen {
