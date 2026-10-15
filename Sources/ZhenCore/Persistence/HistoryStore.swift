@@ -142,12 +142,20 @@ public struct StoredDevice: Sendable, Hashable {
     /// Every hardware address the device has presented, oldest first, with the span each
     /// was seen over. History, like `isPresent`, and for the same reason not on `Device`.
     public var macHistory: [MACSighting]
+    /// The device's recent first-contact times, oldest first, at most
+    /// `FirstContactSample.retained` of them. History, for the reason `macHistory` is:
+    /// it is what `ReachPlan` learns a network's waits from.
+    public var firstContactSamples: [FirstContactSample]
 
     /// Creates a value from its fields.
-    public init(device: Device, isPresent: Bool, macHistory: [MACSighting] = []) {
+    public init(
+        device: Device, isPresent: Bool, macHistory: [MACSighting] = [],
+        firstContactSamples: [FirstContactSample] = []
+    ) {
         self.device = device
         self.isPresent = isPresent
         self.macHistory = macHistory
+        self.firstContactSamples = firstContactSamples
     }
 }
 

@@ -21,6 +21,16 @@ follow the app's `CFBundleShortVersionString`.
   bytes, and how many entries resolved — is `run.neighbor_watch` in the artifact.
   `ICMPSweepEngine(neighborWatch:)` and `DarwinScanner.make(neighborWatch:)` switch it
   off; off is study 1's mechanism.
+- **`SweepReach` and `ReachPlan`: how long to wait for each address (0.8.0 change 2).**
+  A pure, portable plan built before the sweep from the target, the network's history and
+  a policy: `.learned` (study 1's single learned tail), `.history(percentile:)` (the
+  default, at 0.97) or `.fixed(Duration)`. Under `.history` an address history expects —
+  a device last seen there inside retention — waits the percentile of this network's
+  *cold* first-contact times, floored by the learned tail and capped at 5 s, with three
+  transmissions plus one per further 500 ms (at most eight); every other address keeps
+  the learned tail and three. A network with fewer than 20 cold samples waits 1.5 s
+  everywhere, once. Every constant is in `ReachSettings` so the command line can move it.
+  `StoredDevice` gains `firstContactSamples`, defaulted in its initialiser.
 
 ### Changed
 - **Breaking: `neighbor_table` now means inherited, and the report schema is 4.** Through
