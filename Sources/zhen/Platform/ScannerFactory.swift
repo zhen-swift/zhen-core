@@ -64,17 +64,21 @@ nonisolated struct PlatformScanner: Sendable {
     /// the startup path of every scan is a change to that path whether or not a helper
     /// is there, so the command line does not do it: `sudo zhen` opens a device
     /// directly exactly as it always has.
+    /// - Parameter neighborWatch: whether the sweep watches the neighbour table while it
+    ///   runs. Off is the `--no-neighbor-watch` ablation.
     static func make(
         concurrencyOverride: Int?,
         budgets: SweepBudgets = .split,
-        portScanType: PortScanType = .auto
+        portScanType: PortScanType = .auto,
+        neighborWatch: Bool = true
     ) async throws(ScanSetupError) -> PlatformScanner {
         #if canImport(Darwin)
         let scanner: DarwinScanner
         do {
             scanner = try await DarwinScanner.make(
                 concurrencyOverride: concurrencyOverride, budgets: budgets,
-                capture: .directOnly, portScanType: portScanType
+                capture: .directOnly, portScanType: portScanType,
+                neighborWatch: neighborWatch
             )
         } catch {
             throw ScanSetupError(error)

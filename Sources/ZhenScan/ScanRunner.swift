@@ -106,17 +106,29 @@ public struct ScanRunner: Sendable {
     ///     only those history has never seen. Was `deepScan: Bool`, which could not say
     ///     the third.
     ///   - progress: display only. Lossy by design, and nothing here is load-bearing.
+    ///   - reach: how long to wait for each address. The default waits longer for what
+    ///     this network's history says usually answers; see `ReachPlan`.
+    ///   - settings: the constants behind `reach`.
     /// - Returns: the artifact and the events it implies. Never throws — a deadline hit
     ///   and a cancellation are both normal returns carrying real partial results.
     public func run(
         network: IPv4Network? = nil,
         budget: Duration,
         ports: PortStage,
-        progress: ProgressSink
+        progress: ProgressSink,
+        reach: SweepReach = .default,
+        settings: ReachSettings = ReachSettings()
     ) async -> CompletedScan {
         let startedAt = Timestamp.now
         let runID = UUID()
-        let target = ScanTarget(network: network ?? interface.network, interface: interface)
+        var target = ScanTarget(network: network ?? interface.network, interface: interface)
+        // The plan, from this network's history, before the sweep. Retention governs the
+        // event log, not devices, so every device the store holds counts — as on the
+        // command line (questions, Q1).
+        target.reach = ReachPlan.make(
+            addresses: target.resolvedAddresses, network: target.network,
+            devices: await store.devices(), policy: reach, settings: settings, now: .now
+        )
         let deadline = Deadline(after: budget)
         var degradations = setupDegradations
         for degradation in degradations { progress(.degraded(degradation)) }
@@ -245,7 +257,10 @@ public struct ScanRunner: Sendable {
                         inFlight: 0
                     )
                 ),
-                neighborWatch: discovery.neighborWatch
+                neighborWatch: discovery.neighborWatch,
+                reach: target.reach.map {
+                    ReachReport(plan: $0, found: Set(devices.flatMap(\.ipv4Addresses)))
+                }
             ),
             devices: devices,
             degradations: degradations

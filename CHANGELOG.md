@@ -67,6 +67,15 @@ follow the app's `CFBundleShortVersionString`.
   `expected_wait_millis`, `expected_count`, `expected_missing`) says how the waits were
   decided and which expected addresses the run did not find. **Source-breaking:**
   `ProbeEvent` has a new case.
+- **`zhen scan` waits per address by default, and can look longer (0.8.0 change 7).**
+  `--reach history` (the default) · `learned` · `<duration>`; `--reach-percentile <0–1>`,
+  only with `history`; `--no-neighbor-watch`; and `zhen scan --look-longer`, which re-asks
+  the latest scan's `expected_missing` for 10 s (or `--reach <duration>`) and extends that
+  scan in history. Its artifact names the run it extended as `run.extends_run`. The plan is
+  built from the history file before the sweep; `ScanRunner.run` builds one the same way
+  (`reach:` and `settings:` parameters, defaulted). `--reach learned --no-neighbor-watch`
+  is the mechanism 0.7.0 measured. `--shared-budget` and `--retransmit-timeout` are
+  unchanged.
 
 ### Changed
 - **Breaking: `neighbor_table` now means inherited, and the report schema is 4.** Through

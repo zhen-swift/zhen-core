@@ -22,6 +22,21 @@ struct Scan: AsyncParsableCommand {
     )
 
     @OptionGroup var options: GlobalOptions
+    @OptionGroup var reachOptions: ReachOptions
+
+    @Flag(
+        name: .long,
+        help: ArgumentHelp(
+            "Ask again, for longer, about the devices the last scan expected and did not find.",
+            discussion: """
+                Sweeps only the latest scan's expected_missing addresses, waiting 10s \
+                for each (or --reach <duration>), and adds what answers to that scan \
+                rather than starting a new one — so nothing else on the network is \
+                marked gone.
+                """
+        )
+    )
+    var lookLonger = false
 
     @Flag(
         name: .long,
@@ -100,11 +115,16 @@ struct Scan: AsyncParsableCommand {
         let requestedNetwork = try options.parsedNetwork()
         let portSpec = try parsePorts()
         let budgets = try parseBudgets()
+        let policy = try reachOptions.policy()
+        let settings = ReachSettings()
+        if lookLonger {
+            try checkLookLonger(policy: policy, network: requestedNetwork)
+        }
         let scanner = try await PlatformScanner.make(
             concurrencyOverride: options.concurrency, budgets: budgets,
-            portScanType: scanType
+            portScanType: scanType, neighborWatch: !reachOptions.noNeighborWatch
         )
-        let target = try resolveTarget(scanner: scanner, network: requestedNetwork)
+        var target = try resolveTarget(scanner: scanner, network: requestedNetwork)
 
         // A target too wide to enumerate is a USAGE error — the user named a network
         // this tool will not sweep in one pass — so it exits 64 and produces no
@@ -121,6 +141,26 @@ struct Scan: AsyncParsableCommand {
         if historyURL == nil {
             Out.stderr(HistoryOptions.noStoreNotice)
         }
+        let history = historyURL.map { LogHistoryStore(url: $0) }
+
+        if lookLonger {
+            return try await executeLookLonger(
+                scanner: scanner, interface: target.interface, history: history,
+                policy: policy, settings: settings, mode: mode, budget: budget
+            )
+        }
+
+        // ── The reach plan ─────────────────────────────────────────────────────
+        //
+        // Built before the sweep, from this network's history. The command line keeps
+        // history for ever, so every device ever seen here is expected (questions,
+        // Q1). With nowhere to keep history there is none to read, and the scan is a
+        // first scan every time — which is what that machine's history says.
+        target.reach = ReachPlan.make(
+            addresses: target.resolvedAddresses, network: target.network,
+            devices: await history?.devices() ?? [],
+            policy: policy, settings: settings, now: .now
+        )
 
         // The deep stage's size, refused before discovery rather than after. A person
         // who typed `--deep --ports all` finds out now, not once the sweep has run and
@@ -150,7 +190,7 @@ struct Scan: AsyncParsableCommand {
             discoveryOnly: discoveryOnly,
             deep: deep,
             ports: portSpec,
-            history: historyURL.map { LogHistoryStore(url: $0) }
+            history: history
         )
 
         // The scan runs in a child task so the signal handler has something to cancel.
@@ -166,6 +206,66 @@ struct Scan: AsyncParsableCommand {
         let completed = await work.value
         // A cancelled run exits 130 whatever else it reported, because the user asked
         // for that and a script should be able to tell.
+        return signals.wasInterrupted ? .interrupted : completed.status
+    }
+
+    /// The flags `--look-longer` cannot be combined with, refused before anything runs.
+    ///
+    /// Internal rather than private so the refusals can be tested without a network.
+    func checkLookLonger(policy: SweepReach, network: IPv4Network?) throws(ScanSetupError) {
+        if deep {
+            throw .badArgument("--look-longer only asks whether the missing devices are there; it does not scan ports. Drop --deep.")
+        }
+        if network != nil {
+            throw .badArgument("--look-longer asks again on the network the latest scan covered; --cidr does not apply.")
+        }
+        switch policy {
+        case .fixed: break
+        case .history, .learned:
+            if reachOptions.reach != nil || reachOptions.reachPercentile != nil {
+                throw .badArgument("--look-longer waits a fixed time for each address; give it as --reach <duration>, e.g. --reach 20s.")
+            }
+        }
+    }
+
+    /// How long `--look-longer` waits for each address when `--reach` does not say.
+    ///
+    /// Ten seconds: twice the longest wait a plan ever imposes on a scan
+    /// (`ReachSettings.cap`), because a person asking "where's my phone?" has already
+    /// decided to wait, and a phone in deep power save answers on its own schedule.
+    /// Questions, Q6.
+    static let lookLongerWait: Duration = .seconds(10)
+
+    private func executeLookLonger(
+        scanner: PlatformScanner, interface: NetworkInterface, history: LogHistoryStore?,
+        policy: SweepReach, settings: ReachSettings, mode: OutputMode, budget: Duration
+    ) async throws(ScanSetupError) -> ExitStatus {
+        guard let history else {
+            throw .badArgument("--look-longer extends the latest scan in history, and there is nowhere history is kept.")
+        }
+        guard let latest = await history.latestRun() else {
+            throw .badArgument("--look-longer extends the latest scan, and history has none yet. Run `zhen scan` first.")
+        }
+        let wait: Duration
+        if case .fixed(let fixed) = policy { wait = fixed } else { wait = Self.lookLongerWait }
+        let pipeline = ScanPipeline(
+            scanner: scanner,
+            renderer: Renderers.make(mode: mode, options: options),
+            discoveryOnly: true, deep: false, ports: .commonServices,
+            history: history
+        )
+        let work = Task {
+            await pipeline.lookLonger(
+                extending: latest, interface: interface, wait: wait, settings: settings,
+                budget: max(budget, wait + .seconds(2))
+            )
+        }
+        let signals = SignalHandler {
+            Out.stderr("\nInterrupted — committing what has been found.\n")
+            work.cancel()
+        }
+        defer { signals.stop() }
+        let completed = await work.value
         return signals.wasInterrupted ? .interrupted : completed.status
     }
 

@@ -161,7 +161,10 @@ nonisolated struct ScanPipeline {
                 outcome: outcome,
                 mode: discoveryOnly ? .discoveryOnly : .full,
                 timing: timing,
-                neighborWatch: context.neighborWatch
+                neighborWatch: context.neighborWatch,
+                reach: target.reach.map {
+                    ReachReport(plan: $0, found: Set(devices.flatMap(\.ipv4Addresses)))
+                }
             ),
             devices: devices,
             degradations: degradations
@@ -172,6 +175,82 @@ nonisolated struct ScanPipeline {
         // timeline as well as a device table would be two commands wearing one name.
         _ = await history?.record(report)
 
+        renderer.finish(report)
+        return Completed(report: report, status: Self.status(for: report))
+    }
+
+    /// Asks again, for `wait`, about the latest run's expected-missing addresses, and
+    /// extends that run with what answers.
+    ///
+    /// Discovery only, through the same stage a scan uses, so the display and the timing
+    /// are a scan's. The artifact is a `ScanReport` of the extension: its own run id,
+    /// `extends_run` naming the run it extended, the devices it found, and `run.reach`
+    /// with `policy: fixed` and whoever is still missing. It is folded into history with
+    /// `recordExtension`, never `record` — it is not a run, and recording it as one would
+    /// mark everyone it did not ask about as gone.
+    func lookLonger(
+        extending latest: ScanRun, interface: NetworkInterface, wait: Duration,
+        settings: ReachSettings, budget: Duration,
+        startedAt: Timestamp = .now, runID: UUID = UUID()
+    ) async -> Completed {
+        let asked = latest.reach?.expectedMissing.filter(latest.target.contains) ?? []
+        let plan = ReachPlan(policy: .fixed(wait), settings: settings, expected: Set(asked))
+        var context = ScanContext(
+            target: ScanTarget(network: latest.target, interface: interface, addresses: asked, reach: plan),
+            deadline: Deadline(after: budget)
+        )
+        if !asked.isEmpty {
+            let stages: [any ScanStage] = [
+                EngineNoticesStage(notices: scanner.notices, renderer: renderer),
+                DiscoveryStage(engine: scanner.discovery, renderer: renderer),
+            ]
+            for stage in stages { context = await stage.run(context) }
+        }
+        let wanted = Set(asked)
+        let facts = context.facts.values.filter { wanted.contains($0.ip) }
+        let finishedAt = Timestamp.now
+        let firstSeen = await history?.firstSeen(for: Array(facts), in: latest.target) ?? [:]
+        let devices = facts
+            .map {
+                Device(
+                    observing: $0, in: latest.target,
+                    firstSeen: firstSeen[$0.ip] ?? finishedAt, lastSeen: finishedAt
+                )
+            }
+            .sorted { $0.primaryAddress < $1.primaryAddress }
+        let stages = context.stages.isEmpty
+            ? [StageTiming(stage: .discovery, elapsedMillis: 0)] : context.stages
+        let report = ScanReport(
+            run: ScanRun(
+                id: runID,
+                startedAt: startedAt,
+                finishedAt: finishedAt,
+                target: latest.target,
+                interface: interface.name,
+                engine: EngineDescriptor(
+                    name: scanner.discovery.descriptor.name,
+                    kind: scanner.discovery.descriptor.kind,
+                    capabilities: context.exercised
+                ),
+                outcome: context.outcome,
+                mode: .discoveryOnly,
+                timing: Timing(
+                    stages: stages,
+                    counters: ProbeCounterSnapshot(
+                        probesSent: stages.reduce(0) { $0 + $1.probesSent },
+                        repliesSeen: stages.reduce(0) { $0 + $1.repliesSeen },
+                        peakConcurrency: context.peakConcurrency,
+                        inFlight: 0
+                    )
+                ),
+                neighborWatch: context.neighborWatch,
+                reach: ReachReport(plan: plan, found: Set(devices.flatMap(\.ipv4Addresses))),
+                extendsRun: latest.id
+            ),
+            devices: devices,
+            degradations: context.degradations
+        )
+        _ = await history?.recordExtension(devices, of: latest.id)
         renderer.finish(report)
         return Completed(report: report, status: Self.status(for: report))
     }

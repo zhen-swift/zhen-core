@@ -8,7 +8,7 @@
 .\" Checked against `Zhen.configuration.subcommands` and each command's `help` output,
 .\" not against memory: every option the parser accepts is here, and nothing is here
 .\" that it does not accept. There is no `--udp` flag; UDP is `U:` in a port spec.
-.Dd October 12, 2026
+.Dd October 15, 2026
 .Dt ZHEN 1
 .Os
 .Sh NAME
@@ -28,6 +28,10 @@
 .Op Fl -yes
 .Op Fl -retransmit-timeout Ar duration
 .Op Fl -shared-budget
+.Op Fl -reach Ar policy
+.Op Fl -reach-percentile Ar p
+.Op Fl -no-neighbor-watch
+.Op Fl -look-longer
 .Op Fl -json | Fl -ndjson
 .Op Fl -quiet
 .Op Fl -no-color
@@ -186,6 +190,50 @@ The artifact records that the interval was imposed.
 Use one budget for both retransmitting and declaring hosts absent, as the scan
 did before the two were separated.
 Slower by construction; exists so the split can be measured against its absence.
+.It Fl -reach Ar policy
+How long to wait for each address:
+.Li history ,
+the default,
+.Li learned ,
+or a duration such as
+.Ar 3s .
+Under
+.Li history
+an address this network's history says usually answers is waited for up to a high
+percentile of how long it took to answer when nothing was cached, capped at 5 s,
+and asked more often; every other address gets the short wait learned from the
+scan's own replies.
+A network with fewer than 20 such times waits 1.5 s everywhere, once, and that
+scan is what makes the next one fast.
+.Li learned
+is the short wait for every address, which is how scans worked before 0.8.0.
+A duration waits exactly that long for every address.
+The artifact records what was used as
+.Li run.reach .
+.It Fl -reach-percentile Ar p
+With
+.Fl -reach Li history
+only: the percentile, between 0 and 1, of past first-contact times to wait for.
+Defaults to 0.97.
+.It Fl -no-neighbor-watch
+Do not watch the neighbour table while sweeping.
+Normally an address that resolves during the sweep is reported at that moment, as
+.Li neighbor_resolved ;
+without the watch the table is read only before and after, and every host only the
+table supplied is
+.Li neighbor_table .
+An ablation: with
+.Fl -reach Li learned
+it is the mechanism zhen 0.7.0 used.
+.It Fl -look-longer
+Ask again, for longer, about the devices the latest scan expected and did not find
+.Pq its Li expected_missing ,
+waiting 10 s for each or
+.Fl -reach Ar duration .
+What answers is added to that scan rather than starting a new one, so nothing else
+on the network is marked gone.
+The artifact names the scan it extended in
+.Li run.extends_run .
 .It Fl -json
 Emit one scan report as JSON on standard output.
 .It Fl -ndjson

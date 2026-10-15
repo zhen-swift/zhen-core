@@ -94,6 +94,12 @@ public struct ScanRun: Sendable, Hashable, Codable {
     /// history expected that the run did not find. Absent when no plan was built, and in
     /// every document written before 0.8.0.
     public var reach: ReachReport?
+    /// The run this artifact extends, when it is a look-longer sweep rather than a run.
+    ///
+    /// Present only then. Such an artifact describes a sweep of a few addresses that was
+    /// folded into that run in history, not a run of its own: it is never the latest run,
+    /// and the devices it does not list were not asked about.
+    public var extendsRun: UUID?
 
     /// Creates a value from its fields. Each one is documented on the property it sets.
     public init(
@@ -107,7 +113,8 @@ public struct ScanRun: Sendable, Hashable, Codable {
         mode: ScanMode = .full,
         timing: Timing,
         neighborWatch: NeighborWatchReport? = nil,
-        reach: ReachReport? = nil
+        reach: ReachReport? = nil,
+        extendsRun: UUID? = nil
     ) {
         self.id = id
         self.startedAt = startedAt
@@ -120,6 +127,7 @@ public struct ScanRun: Sendable, Hashable, Codable {
         self.timing = timing
         self.neighborWatch = neighborWatch
         self.reach = reach
+        self.extendsRun = extendsRun
     }
 
     /// Wire keys, spelled out. Renaming a Swift property is then a refactor; renaming a
@@ -136,6 +144,7 @@ public struct ScanRun: Sendable, Hashable, Codable {
         case timing
         case neighborWatch = "neighbor_watch"
         case reach
+        case extendsRun = "extends_run"
     }
 
     /// Decodes, tolerating a document written before `mode` existed.
@@ -160,7 +169,8 @@ public struct ScanRun: Sendable, Hashable, Codable {
             neighborWatch: try container.decodeIfPresent(
                 NeighborWatchReport.self, forKey: .neighborWatch
             ),
-            reach: try container.decodeIfPresent(ReachReport.self, forKey: .reach)
+            reach: try container.decodeIfPresent(ReachReport.self, forKey: .reach),
+            extendsRun: try container.decodeIfPresent(UUID.self, forKey: .extendsRun)
         )
     }
 }

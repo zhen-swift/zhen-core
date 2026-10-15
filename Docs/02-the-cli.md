@@ -97,6 +97,8 @@ that way; every addition is a supply chain we then own.
 zhen scan      [--cidr <net>] [--iface <name>] [--discovery-only]
                     [--deep] [--ports <spec>]
                     [--retransmit-timeout <duration>] [--shared-budget]
+                    [--reach history|learned|<duration>] [--reach-percentile <p>]
+                    [--no-neighbor-watch] [--look-longer]
 zhen hosts     [--since <duration>] [--json] [--store <path>]
 zhen events    [--since <duration>] [--json] [--store <path>]
 zhen history   <host> [--json] [--store <path>]
@@ -131,6 +133,19 @@ different program cannot isolate anything, since every other difference comes al
 with it. They are mutually exclusive, they refuse rather than pick a winner, and the
 artifact records which policy produced it in `budget_policy`, so a measured 150 ms
 interval and an imposed one are never confusable after the fact.
+
+**How long to wait is a property of the address (0.8.0).** `--reach history`, the
+default, waits longer for the addresses this network's history says usually answer —
+up to the 97th percentile (`--reach-percentile`) of their *cold* first-contact times,
+capped at 5 s, with more attempts — and gives every other address the short wait learned
+from the scan's own replies. A network with fewer than 20 cold samples waits 1.5 s
+everywhere, once. The scan ends at the latest per-address deadline, or as soon as every
+expected address has answered; while only expected addresses remain it says so
+(`settling`). `--reach learned` is the single learned wait for everyone, as before 0.8.0;
+`--reach 3s` waits exactly that. `--look-longer` re-asks the latest scan's
+`expected_missing` for 10 s (or `--reach <duration>`) and adds what answers to that scan
+instead of starting one. `--no-neighbor-watch` is an ablation: with `--reach learned` it
+is 0.7.0's mechanism, which study 2 compares against.
 
 **Three output modes, and they are not interchangeable.** `--json` emits one
 `ScanReport` on completion, for a caller that wants the artifact. `--ndjson` emits
