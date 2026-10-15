@@ -409,6 +409,15 @@ actor SYNScanState {
 
     private var pending: [UInt32: Pending] = [:]
     private var order: [UInt32] = []
+    /// The next key in `order` that has never been handed out.
+    private var cursor = 0
+    /// Deadlines for probes waiting on a retransmission, earliest first. Holds exactly
+    /// the keys whose `expiresAt` is set. A /24 by the 682-port IANA set is 174,592
+    /// probes, and through 0.7.0 every wake walked all of them.
+    private var expiries = ExpiryQueue<UInt32>()
+    /// What the last `dueProbes` call handed out, so a refused send can be put back.
+    private var handedOut: [UInt32] = []
+    private var answeredCount = 0
     private var clock: SweepClock
     private let attempts: Int
     private let counters: ProbeCounters
@@ -446,12 +455,13 @@ actor SYNScanState {
     }
 
     /// Whether every probe has a verdict or has run out of attempts.
+    /// O(1), for the reason `ARPSweepState.isSettled` gives.
     var isSettled: Bool {
-        !pending.values.contains { $0.verdict == nil && ($0.transmissions < attempts || $0.expiresAt != nil) }
+        cursor >= order.count && expiries.isEmpty && handedOut.isEmpty
     }
 
     /// Whether every probe has a verdict, which lets the tail wait end early.
-    var everyoneAnswered: Bool { !pending.values.contains { $0.verdict == nil } }
+    var everyoneAnswered: Bool { answeredCount == pending.count }
 
     /// When the scan may stop listening.
     func declarationInstant() -> MonotonicInstant? {
@@ -461,31 +471,41 @@ actor SYNScanState {
     /// How long until the next outstanding probe is due to be resent.
     func timeUntilNextExpiry() -> Duration? {
         let now = MonotonicInstant.now
-        guard let next = pending.values.compactMap(\.expiresAt).min() else { return nil }
+        guard let next = expiries.nextDeadline() else { return nil }
         return next > now ? next.duration(since: now) : .zero
     }
 
-    /// The probes that should be sent now, in a stable order.
+    /// The probes that should be sent now, in a stable order: retransmissions earliest
+    /// deadline first, then never-sent probes in construction order. O(due · log n).
     func dueProbes(limit: Int) -> [SYNProbe] {
         let now = MonotonicInstant.now
         var due: [SYNProbe] = []
+        var keys: [UInt32] = []
         due.reserveCapacity(min(limit, order.count))
-        for key in order {
-            guard due.count < limit else { break }
-            guard let entry = pending[key], entry.verdict == nil else { continue }
-            guard entry.transmissions < attempts else { continue }
-            if let expiry = entry.expiresAt {
-                if expiry <= now { due.append(entry.probe) }
-            } else if entry.sentAt == nil {
-                due.append(entry.probe)
-            }
+        while due.count < limit, let key = expiries.popFirst(dueBy: now) {
+            guard let entry = pending[key], entry.verdict == nil,
+                  entry.transmissions < attempts else { continue }
+            due.append(entry.probe)
+            keys.append(key)
         }
+        while due.count < limit, cursor < order.count {
+            let key = order[cursor]
+            cursor += 1
+            guard let entry = pending[key], entry.verdict == nil, entry.sentAt == nil else { continue }
+            due.append(entry.probe)
+            keys.append(key)
+        }
+        handedOut = keys
         return due
     }
 
     /// Records which probes actually reached the kernel.
+    ///
+    /// A handed-out probe that is not in `delivered` — refused, or skipped for want of a
+    /// hardware address — is due again at once, as it was under the walk this replaced.
     func recordSends(_ delivered: [SYNProbe], at instant: MonotonicInstant) {
         let window = clock.retransmitBudget()
+        var sent: Set<UInt32> = []
         for probe in delivered {
             let key = IPv4Packet.cookie(target: probe.ip, port: probe.port, salt: salt)
             guard var entry = pending[key], entry.probe == probe else { continue }
@@ -494,9 +514,19 @@ actor SYNScanState {
             entry.expiresAt = entry.transmissions >= attempts
                 ? nil : instant.advanced(by: window)
             pending[key] = entry
+            sent.insert(key)
+            if let expiry = entry.expiresAt {
+                expiries.schedule(key, at: expiry)
+            } else {
+                expiries.cancel(key)
+            }
             counters.probeSent()
             counters.probeCompleted()
         }
+        for key in handedOut where !sent.contains(key) {
+            expiries.schedule(key, at: instant)
+        }
+        handedOut = []
         if !delivered.isEmpty { lastTransmissionAt = instant }
     }
 
@@ -530,6 +560,8 @@ actor SYNScanState {
         counters.replySeen()
         entry.verdict = verdict
         entry.expiresAt = nil
+        expiries.cancel(key)
+        answeredCount += 1
         if let sentAt = entry.sentAt, instant > sentAt {
             let elapsed = instant.duration(since: sentAt)
             entry.rtt = elapsed

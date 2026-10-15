@@ -9,6 +9,21 @@ follow the app's `CFBundleShortVersionString`.
 ## Unreleased
 
 ### Changed
+- **The three retransmitting engines no longer walk every probe on every wake.** The
+  ICMP sweep, the ARP sweep and the SYN scan each answered "what is due now" and "when is
+  the next one" by a pass over every probe they held, every one to ten milliseconds — and
+  the ICMP sweep keeps expired probes for late attribution, so its pass grew with
+  everything ever sent. O(N·k) per wake: free on a /24, about 196,000 entries on a /16,
+  and a SYN scan of a /24 by the IANA set was already 174,592. Because the reply reader
+  shares each engine's actor, the bookkeeping also delayed the reply timestamps the timing
+  learns from. All three now keep their deadlines in `ExpiryQueue`, a min-heap with lazy
+  deletion in `ZhenCore`, and keep "settled" and "everyone answered" as counts: O(log n)
+  per probe that is actually due. Ties break on arming order, so schedules stay
+  reproducible. One ordering change, in the ARP sweep and the SYN scan only:
+  retransmissions now go out before never-sent probes, earliest deadline first, as the
+  ICMP sweep already did, instead of interleaved in address order. Nothing else a sweep
+  sends, or when, changes. The complexity is asserted on Linux by counting comparisons
+  for a /16 at three attempts.
 - **`NOTICE` names the project and where it lives.** Its first lines are what a
   redistributor copies into their acknowledgements, so they now say what this is and where
   it lives: Zhen, by zhen-swift, at `https://github.com/zhen-swift/zhen-core`. A

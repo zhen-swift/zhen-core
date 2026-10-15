@@ -455,7 +455,19 @@ actor SweepState {
 
     private var hosts: [IPv4Address: Host] = [:]
     private var order: [IPv4Address]
+    /// Every transmission still matchable, live and expired alike.
+    ///
+    /// Looked up by token and never walked by the send loop: what is due and what is
+    /// next comes from `expiries`, which holds only the live ones. Walking this table on
+    /// every wake, as the sweep did through 0.7.0, cost O(N·k) per wake because expired
+    /// probes are kept here for late attribution — about 196,000 entries on a /16.
     private var inFlight: [UInt32: InFlight] = [:]
+    /// The live transmissions' deadlines, earliest first. Its count is the number of
+    /// probes the sweep is still waiting on.
+    private var expiries = ExpiryQueue<UInt32>()
+    /// How many addresses have answered, kept as a count so `everyoneAnswered` does not
+    /// recount every host on every tail tick.
+    private var answeredCount = 0
     /// Probes handed to the socket but not yet confirmed sent.
     private var assigned: [UInt32: (address: IPv4Address, transmission: Int)] = [:]
     /// Replies that arrived before their send was recorded.
@@ -532,7 +544,7 @@ actor SweepState {
     /// sweep is not waiting on them, even though they are kept so a late reply can
     /// still be attributed.
     var isSettled: Bool {
-        unsent.isEmpty && !inFlight.values.contains { !$0.expired }
+        unsent.isEmpty && expiries.isEmpty
     }
 
     /// How long an unanswered probe waits before being resent.
@@ -672,12 +684,11 @@ actor SweepState {
     }
 
     /// Whether every address has answered.
-    var everyoneAnswered: Bool { hosts.values.allSatisfy { $0.facts != nil } }
+    var everyoneAnswered: Bool { answeredCount == hosts.count }
 
     /// How long until the earliest outstanding probe expires.
     func timeUntilNextExpiry() -> Duration? {
-        guard let soonest = inFlight.values.filter({ !$0.expired }).map(\.expiresAt).min()
-        else { return nil }
+        guard let soonest = expiries.nextDeadline() else { return nil }
         let now = MonotonicInstant.now
         return soonest > now ? soonest.duration(since: now) : .zero
     }
@@ -685,9 +696,9 @@ actor SweepState {
     /// Probes that should go out now: never-sent addresses, and outstanding probes past
     /// their own expiry that have attempts left.
     ///
-    /// A linear pass over what is outstanding. At a /24 that is a few hundred
-    /// comparisons per tick and free; at a /16 it is the point where the hashed timing
-    /// wheel the bibliography describes starts to matter, and this is where it would go.
+    /// Expired transmissions come off `expiries` earliest first, so the cost is
+    /// O(log n) per probe that is actually due rather than a pass over everything
+    /// outstanding — the pass this comment used to say would need replacing at a /16.
     /// - Parameter now: the moment to judge expiry against. Injectable so a test can
     ///   advance the clock instead of sleeping through a real timeout.
     func dueProbes(limit: Int, now: MonotonicInstant = .now) -> [ProbeAssignment] {
@@ -695,7 +706,8 @@ actor SweepState {
 
         // Expired transmissions first, so a host that lost a frame is retried before
         // the sweep moves on to addresses nobody has looked at yet.
-        for (token, probe) in inFlight where !probe.expired && probe.expiresAt <= now {
+        while due.count < limit, let token = expiries.popFirst(dueBy: now) {
+            guard let probe = inFlight[token] else { continue }
             inFlight[token]?.expired = true
             counters.probeCompleted()
             guard var host = hosts[probe.address] else { continue }
@@ -715,7 +727,6 @@ actor SweepState {
             hosts[probe.address] = host
             if host.transmissions < attempts {
                 due.append(assign(probe.address))
-                if due.count >= limit { return due }
             }
         }
 
@@ -765,12 +776,14 @@ actor SweepState {
                 address: assignment.address,
                 base: budget
             )
+            let expiresAt = instant.advanced(by: gap)
             inFlight[token] = InFlight(
                 address: assignment.address,
                 transmission: assignment.transmission,
                 sentAt: instant,
-                expiresAt: instant.advanced(by: gap)
+                expiresAt: expiresAt
             )
+            expiries.schedule(token, at: expiresAt)
             if lastTransmissionAt.map({ instant > $0 }) ?? true { lastTransmissionAt = instant }
             if assignment.transmission < attempts - 1,
                lastTightTransmissionAt.map({ instant > $0 }) ?? true {
@@ -819,6 +832,7 @@ actor SweepState {
         // too tight looked exactly like one where everything answered promptly.
         if probe.expired { lateReplies += 1 }
         inFlight[reply.token] = nil
+        expiries.cancel(reply.token)
         counters.replySeen()
         counters.probeCompleted()
 
@@ -851,6 +865,7 @@ actor SweepState {
         )
         host.facts = facts
         hosts[reply.source] = host
+        if isFirstReply { answeredCount += 1 }
         return isFirstReply ? .hostFound(facts) : .hostUpdated(facts)
     }
 

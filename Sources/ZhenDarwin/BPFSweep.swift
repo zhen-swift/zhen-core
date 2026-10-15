@@ -314,6 +314,15 @@ actor ARPSweepState {
 
     private var hosts: [IPv4Address: Host] = [:]
     private var order: [IPv4Address]
+    /// The next address in `order` that has never been handed out.
+    private var cursor = 0
+    /// Deadlines for addresses waiting on a retransmission, earliest first — the same
+    /// structure, and for the same reason, as the ICMP sweep's. Holds exactly the
+    /// addresses whose `expiresAt` is set.
+    private var expiries = ExpiryQueue<IPv4Address>()
+    /// What the last `dueProbes` call handed out, so a refused send can be put back.
+    private var handedOut: [IPv4Address] = []
+    private var answeredCount = 0
     private var clock: SweepClock
     private let attempts: Int
     private let counters: ProbeCounters
@@ -338,14 +347,16 @@ actor ARPSweepState {
     func tailBudget() -> Duration { clock.tailBudget() }
 
     /// Whether every address has answered or run out of attempts.
+    ///
+    /// O(1): every address is either never handed out (before `cursor`), waiting in
+    /// `expiries`, answered, or out of attempts — so nothing unhanded and nothing
+    /// scheduled is the same statement as the pass over every host this replaced.
     var isSettled: Bool {
-        !hosts.values.contains { host in
-            !host.answered && (host.transmissions < attempts || host.expiresAt != nil)
-        }
+        cursor >= order.count && expiries.isEmpty && handedOut.isEmpty
     }
 
     /// Whether every address answered, which lets the tail wait end early.
-    var everyoneAnswered: Bool { !hosts.values.contains { !$0.answered } }
+    var everyoneAnswered: Bool { answeredCount == hosts.count }
 
     /// When the sweep may stop listening.
     ///
@@ -375,32 +386,35 @@ actor ARPSweepState {
     /// How long until the next outstanding request is due to be resent.
     func timeUntilNextExpiry() -> Duration? {
         let now = MonotonicInstant.now
-        let next = hosts.values.compactMap(\.expiresAt).min()
-        guard let next else { return nil }
+        guard let next = expiries.nextDeadline() else { return nil }
         return next > now ? next.duration(since: now) : .zero
     }
 
     /// The addresses that should be asked now: never asked, or asked and past their
     /// window.
     ///
-    /// Returned in address order so a sweep is reproducible. Dictionary iteration order
-    /// is not stable across runs, and a schedule that depends on it produced budgets
-    /// that differed between two sweeps of an unchanged network — a bug this codebase
-    /// has already had once, in the ICMP sweep, and has a test for.
+    /// Retransmissions first, earliest deadline first, then never-asked addresses in
+    /// address order — the ICMP sweep's policy. Both orders are reproducible: deadlines
+    /// tie-break on when they were armed, never on dictionary order, a bug this codebase
+    /// has already had once in the ICMP sweep and has a test for.
+    ///
+    /// O(due · log n). Through 0.7.0 this walked every address on every wake.
     func dueProbes(limit: Int) -> [IPv4Address] {
         let now = MonotonicInstant.now
         var due: [IPv4Address] = []
         due.reserveCapacity(min(limit, order.count))
-        for address in order {
-            guard due.count < limit else { break }
-            guard let host = hosts[address], !host.answered else { continue }
-            guard host.transmissions < attempts else { continue }
-            if let expiry = host.expiresAt {
-                if expiry <= now { due.append(address) }
-            } else if host.sentAt == nil {
-                due.append(address)
-            }
+        while due.count < limit, let address = expiries.popFirst(dueBy: now) {
+            guard let host = hosts[address], !host.answered,
+                  host.transmissions < attempts else { continue }
+            due.append(address)
         }
+        while due.count < limit, cursor < order.count {
+            let address = order[cursor]
+            cursor += 1
+            guard let host = hosts[address], !host.answered, host.sentAt == nil else { continue }
+            due.append(address)
+        }
+        handedOut = due
         return due
     }
 
@@ -408,17 +422,31 @@ actor ARPSweepState {
     ///
     /// Only the delivered ones. An address whose frame was refused has not been asked,
     /// and arming a timer for it would count a send that never happened as silence.
+    ///
+    /// A handed-out address that is not in `delivered` was refused, and is due again at
+    /// once — what the walk over every address did implicitly, since a refused address
+    /// was still past its expiry, or still never sent, on the next wake.
     func recordSends(_ delivered: [IPv4Address], at instant: MonotonicInstant) {
         let window = clock.retransmitBudget()
+        let sent = Set(delivered)
         for address in delivered {
             guard var host = hosts[address] else { continue }
             host.transmissions += 1
             host.sentAt = instant
             host.expiresAt = host.transmissions >= attempts ? nil : instant.advanced(by: window)
             hosts[address] = host
+            if let expiry = host.expiresAt {
+                expiries.schedule(address, at: expiry)
+            } else {
+                expiries.cancel(address)
+            }
             counters.probeSent()
             counters.probeCompleted()
         }
+        for address in handedOut where !sent.contains(address) {
+            expiries.schedule(address, at: instant)
+        }
+        handedOut = []
         if !delivered.isEmpty { lastTransmissionAt = instant }
     }
 
@@ -449,6 +477,8 @@ actor ARPSweepState {
         host.mac = message.senderMAC
         host.expiresAt = nil
         hosts[message.senderIP] = host
+        expiries.cancel(message.senderIP)
+        if isNew { answeredCount += 1 }
         guard isNew else { return nil }
         return .hostFound(HostFacts(ip: message.senderIP, mac: message.senderMAC, discoveredVia: [.arpReply]))
     }
