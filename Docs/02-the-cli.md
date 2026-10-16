@@ -151,8 +151,9 @@ beside the cold one. The scan ends at the latest per-address deadline, or as soo
 expected address has answered; while only expected addresses remain it says so
 (`settling`). `--reach learned` is the single learned wait for everyone, as before 0.8.0;
 `--reach 3s` waits exactly that. `--look-longer` re-asks the latest scan's
-`expected_missing` for 10 s (or `--reach <duration>`) and adds what answers to that scan
-instead of starting one. `--no-neighbor-watch` is an ablation: with `--reach learned` it
+`expected_missing` for 10 s (or `--reach <duration>`), on the interface that scan went
+out of (`run.interface`; an `--iface` that disagrees exits 64), and adds what answers to
+that scan instead of starting one. `--no-neighbor-watch` is an ablation: with `--reach learned` it
 is 0.7.0's mechanism, which study 2 compares against. Every constant behind the default
 is a flag (`--first-scan-wait`, `--reach-cap`, `--reach-min-samples`,
 `--expected-attempts-step`, `--expected-attempts-cap`, `--expected-window`). An address is

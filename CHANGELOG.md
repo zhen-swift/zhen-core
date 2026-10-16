@@ -130,6 +130,13 @@ follow the app's `CFBundleShortVersionString`.
   Absent means not recorded. The JSON fixture and the two `PipelineArtifactGate`
   baselines gain the key, deliberately; nothing else in them moves. `zhen.1` now lists
   `neighbor_resolved` too.
+- **Look longer asks on the latest scan's interface (fixes brief, F5).** `zhen scan
+  --look-longer` took the latest run's network but the primary interface, so after a scan
+  of another link it read the wrong neighbour table (questions, Q12). It now uses
+  `run.interface` — recorded on every run since 0.7.0, in the artifact and in history —
+  when `--iface` is absent, refuses with exit 64 when `--iface` names another, and exits
+  69 when that interface is gone. `ScanRunner.lookLonger` refuses the same way, with a
+  degradation, when the runner's interface is not the run's.
 - **Breaking: `neighbor_table` now means inherited, and the report schema is 4.** Through
   0.7.0 `neighbor_table` covered every host the table alone supplied, including entries
   the scan's own probes had just caused to resolve; those are `neighbor_resolved` now, and

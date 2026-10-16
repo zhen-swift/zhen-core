@@ -243,6 +243,9 @@ waiting 10 s for each or
 .Fl -reach Ar duration .
 What answers is added to that scan rather than starting a new one, so nothing else
 on the network is marked gone.
+It asks on the interface that scan went out of;
+.Fl -iface
+naming a different one is refused.
 The artifact names the scan it extended in
 .Li run.extends_run .
 .It Fl -first-scan-wait Ar duration

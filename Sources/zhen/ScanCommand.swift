@@ -124,17 +124,6 @@ struct Scan: AsyncParsableCommand {
             concurrencyOverride: options.concurrency, budgets: budgets,
             portScanType: scanType, neighborWatch: !reachOptions.noNeighborWatch
         )
-        var target = try resolveTarget(scanner: scanner, network: requestedNetwork)
-
-        // A target too wide to enumerate is a USAGE error — the user named a network
-        // this tool will not sweep in one pass — so it exits 64 and produces no
-        // artifact at all. Emitting a report for it, as an earlier version did, meant
-        // publishing a document that said `outcome: complete` over zero probes and zero
-        // devices: a claim of completeness about a scan that never ran.
-        if let refusal = target.resolution.refusal {
-            throw ScanSetupError.badArgument(refusal.reason)
-        }
-
         // Nowhere to write history is not a reason to refuse to scan. It is reported
         // once, on stderr so the artifact on stdout stays clean, and the scan runs.
         // `--no-history`: neither read nor written, and no notice — nobody is missing a
@@ -145,11 +134,24 @@ struct Scan: AsyncParsableCommand {
         }
         let history = historyURL.map { LogHistoryStore(url: $0) }
 
+        // Before the target: look-longer asks where the latest scan asked, so its
+        // interface comes from that run, not from the primary interface (F5).
         if lookLonger {
             return try await executeLookLonger(
-                scanner: scanner, interface: target.interface, history: history,
+                scanner: scanner, history: history,
                 policy: policy, settings: settings, mode: mode, budget: budget
             )
+        }
+
+        var target = try resolveTarget(scanner: scanner, network: requestedNetwork)
+
+        // A target too wide to enumerate is a USAGE error — the user named a network
+        // this tool will not sweep in one pass — so it exits 64 and produces no
+        // artifact at all. Emitting a report for it, as an earlier version did, meant
+        // publishing a document that said `outcome: complete` over zero probes and zero
+        // devices: a claim of completeness about a scan that never ran.
+        if let refusal = target.resolution.refusal {
+            throw ScanSetupError.badArgument(refusal.reason)
         }
 
         // ── The reach plan ─────────────────────────────────────────────────────
@@ -242,8 +244,36 @@ struct Scan: AsyncParsableCommand {
     /// Questions, Q6.
     static let lookLongerWait: Duration = .seconds(10)
 
+    /// The interface `--look-longer` asks on: the one the latest scan went out of.
+    ///
+    /// F5 (questions, Q12). The latest run's network only means something on the link it
+    /// was scanned from: asking about `192.168.64.x` through `en0`'s neighbour table
+    /// finds nothing, and reports that as though it had looked. So `--iface` is not
+    /// needed, and when it names a different interface the two cannot both be meant:
+    /// exit 64. An interface the machine no longer has is the ordinary no-such-interface
+    /// failure.
+    ///
+    /// Internal and pure, so the rule is tested without a network.
+    func lookLongerInterface(
+        latest: ScanRun, available: [NetworkInterface]
+    ) throws(ScanSetupError) -> NetworkInterface {
+        if let asked = options.iface, asked != latest.interface {
+            throw .badArgument(
+                "--look-longer asks again where the latest scan asked, on \(latest.interface); "
+                    + "--iface \(asked) is a different interface. Drop --iface, or scan on \(asked) first."
+            )
+        }
+        guard let match = available.first(where: { $0.name == latest.interface }) else {
+            throw .noInterface(
+                "The latest scan went out of \(latest.interface), which this machine does not have now. "
+                    + "Available: \(available.map(\.name).joined(separator: ", "))."
+            )
+        }
+        return match
+    }
+
     private func executeLookLonger(
-        scanner: PlatformScanner, interface: NetworkInterface, history: LogHistoryStore?,
+        scanner: PlatformScanner, history: LogHistoryStore?,
         policy: SweepReach, settings: ReachSettings, mode: OutputMode, budget: Duration
     ) async throws(ScanSetupError) -> ExitStatus {
         guard let history else {
@@ -252,6 +282,13 @@ struct Scan: AsyncParsableCommand {
         guard let latest = await history.latestRun() else {
             throw .badArgument("--look-longer extends the latest scan, and history has none yet. Run `zhen scan` first.")
         }
+        let available: [NetworkInterface]
+        do {
+            available = try scanner.interfaces.interfaces()
+        } catch {
+            throw ScanSetupError(error)
+        }
+        let interface = try lookLongerInterface(latest: latest, available: available)
         let wait: Duration
         if case .fixed(let fixed) = policy { wait = fixed } else { wait = Self.lookLongerWait }
         let pipeline = ScanPipeline(

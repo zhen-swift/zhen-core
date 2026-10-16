@@ -313,6 +313,20 @@ public struct ScanRunner: Sendable {
                 )], outcome: .complete)
             )
         }
+        // F5 (questions, Q12): the latest run's network only means something on the link
+        // it was scanned from. A runner on another interface would read a neighbour table
+        // that knows nothing of it and report everyone still missing, as though it had
+        // looked. So it says why and sweeps nothing.
+        guard run.interface == interface.name else {
+            return CompletedExtension(
+                runID: run.id, found: [], missing: addresses, events: [],
+                discovery: DiscoveryResult(hosts: [], degradations: [Degradation(
+                    stage: .setup,
+                    reason: "The latest scan went out of \(run.interface), and this one would ask on \(interface.name), which cannot see that network. Nothing was swept.",
+                    recoverable: false
+                )], outcome: .complete)
+            )
+        }
         let asked = Array(Set(addresses.filter(run.target.contains))).sorted()
         guard !asked.isEmpty else {
             return CompletedExtension(

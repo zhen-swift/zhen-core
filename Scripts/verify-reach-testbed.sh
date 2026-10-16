@@ -24,8 +24,9 @@
 #       no address takes the first-scan wait, 10 of 10. Then Q8's case, a warm cache and
 #       no history: the cold addresses take it and no warm address does (first_scan = cold).
 #   G6  .11 (ARP-only) is neighbor_resolved cold and neighbor_table warm.
-#   G7  a VM taken down and brought back: --look-longer finds its addresses, adds them to
-#       the latest run, and nobody else is marked absent.  `g7 netbed3`
+#   G7  a VM taken down and brought back: --look-longer (no --iface; F5 takes the run's)
+#       finds its addresses, adds them to the latest run, and nobody else is marked absent.
+#       `g7 netbed3`
 #   G8  change 8's testbed comparison: three --discovery-only runs, nothing moved.
 #   G9  the study contract on the testbed, one scan per row, including `sudo zhen scan`.
 #
@@ -187,9 +188,10 @@ g7() {
   echo "gone with $vm: [$gone]   expected_missing: $(jq -c '.run.reach.expected_missing' $OUT/g7-down.json)"
   local latest=$(jq -r '.run.id' $OUT/g7-down.json)
   limactl start $vm
-  # --iface: look-longer takes the network from the latest run but not its interface (Q12).
-  $Z scan --look-longer --reach 20s --iface $IFACE --json --quiet > $OUT/g7-look.json
-  echo "look:     $(jq -c '{extends_run: .run.extends_run, found: [.devices[].addresses[0]], still_missing: .run.reach.expected_missing, reach: .run.reach.policy}' $OUT/g7-look.json)"
+  # No --iface: look-longer asks on the latest run's interface (F5). The artifact says which.
+  $Z scan --look-longer --reach 20s --json --quiet > $OUT/g7-look.json
+  echo "look:     $(jq -c '{interface: .run.interface, extends_run: .run.extends_run, found: [.devices[].addresses[0]], still_missing: .run.reach.expected_missing, reach: .run.reach.policy}' $OUT/g7-look.json)"
+  echo "asked on $IFACE: $([[ $(jq -r '.run.interface' $OUT/g7-look.json) == $IFACE ]] && echo yes || echo NO)"
   echo "extends the latest run: $([[ $(jq -r '.run.extends_run' $OUT/g7-look.json) == $latest ]] && echo yes || echo NO)"
   echo "present in history now: $($Z hosts --json | jq '[.devices[] | select(.present)] | length') (baseline $base)"
   echo "events since the down scan: $($Z events --json | jq -c --arg run $latest '[.events[] | select(.run_id == $run) | .kind] | group_by(.) | map({(.[0]): length}) | add')"
