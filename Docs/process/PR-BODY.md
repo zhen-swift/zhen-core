@@ -27,6 +27,7 @@ this from a frozen binary is a flag, and the artifact records it.
 | 7 | **CLI.** `--reach history\|learned\|<duration>`, `--reach-percentile`, `--no-neighbor-watch`, `zhen scan --look-longer` (`run.extends_run`). Both pipelines build the plan from history | `97a79d1` |
 | 9 | **The study contract.** `--first-scan-wait`, `--reach-cap`, `--reach-min-samples`, `--expected-attempts-step`, `--expected-attempts-cap` and `--no-history`, each echoed in `run.reach`. Also per-device `found_after_millis`, per-stage `attempts` and `concurrency`, `run.tool`, and `zhen --version` with the commit, stamped by a build-tool plugin | `ae9c4a8` |
 | — | `Scripts/verify-reach-testbed.sh`: JC's gates in one script; questions Q8, Q9 | `588c6f4` |
+| — | Script fixes found on the testbed (a failed flush stops the run; look-longer's interface; NDP flush; preflight) | `562b90a`, last |
 
 ## Breaking
 
@@ -62,23 +63,34 @@ this from a frozen binary is a flag, and the artifact records it.
 - `Scripts/check-manpage.sh` passes (`scan: 26 options checked`), and so does
   `Scripts/check-docs.sh`.
 - No `unsafe`, `@unchecked` or `nonisolated(unsafe)` was added to `ZhenCore`.
-- **Not run:** G3–G6, G7 live, G8's testbed half and G9's root row. Those are JC's, through
-  `Scripts/verify-reach-testbed.sh`. `swiftlint` and GitHub CI weren't run either; nothing
-  was pushed.
+- **On the testbed** (with JC's sudo, through a temporary sudoers entry with three exact
+  rules, since removed): **G4** 10 of 10, **G8** nothing moved, **G9** every row including
+  root (`composite`, `arp_sweep`), and **G7**'s look-longer half. **G3**'s mechanism matches
+  0.7.0, run alternately on the same testbed: medians 262 vs 267 ms. But the testbed had come
+  back from a reboot **without study 1's impairments**: no slow hosts, `.11` answering echo,
+  and ARP flux between each VM's two NICs. So G3's absolute window, G5, G6 and G7's
+  "comes back" half could not be judged. Evidence and reasons are in the ledger, and in
+  questions Q13 and Q14.
+- `swiftlint` and GitHub CI weren't run, and nothing was pushed.
 
 ## For JC
 
+Restore the testbed's study configuration with the `zhen-study` tooling first. The script's
+preflight warns if `.11` still answers echo. Then:
+
 ```bash
 cd ~/Dev/InfinityCastle/zhen-core && swift build -c release
-limactl start netbed1 netbed2 netbed3 netbed4 netbed5
-Scripts/verify-reach-testbed.sh all          # G3 G4 G5 G6 G8 G9 — asks for sudo
-Scripts/verify-reach-testbed.sh g7 netbed3   # takes one VM down and brings it back
+for v in netbed{1..5}; do limactl start $v; done
+export OUT=$(mktemp -d /tmp/zhen-reach.XXXXXX)
+Scripts/verify-reach-testbed.sh g3; Scripts/verify-reach-testbed.sh g4
+Scripts/verify-reach-testbed.sh g5; Scripts/verify-reach-testbed.sh g6
+Scripts/verify-reach-testbed.sh g7 netbed3   # now flushes NDP too
 ```
 
 ## Known defects and open questions
 
-None of the agent's gates failed. `Docs/process/0.8.0-questions.md` holds eleven questions. The
-ones that change behaviour are these:
+No gate failed for a reason in the code: every miss traces to the testbed's state. `Docs/process/0.8.0-questions.md`
+holds fourteen questions. The ones that change behaviour are these:
 
 - **Q8:** a machine that scans more often than every 20 minutes keeps its ARP cache warm. Its
   history then never gains cold samples, so it pays the 1.5 s first-scan wait every time.
@@ -89,6 +101,11 @@ ones that change behaviour are these:
 - **Q11:** on a dual-stack device, `discovered_via` can hold both `neighbor_resolved` (the v4
   address resolved this scan) and `neighbor_table` (its inherited IPv6 link-local). Seen
   live. The analysis should test membership.
+- **Q13:** a powered-off dual-stack host stays present through its NDP entry, for up to a
+  day, and never gets a `disappeared`. 0.7.0 does the same. Seen on the testbed.
+- **Q14:** a Linux host with two NICs on one subnet (ARP flux) swaps MACs between its
+  addresses. History is keyed by MAC, so its cold samples scatter.
+- **Q12:** `--look-longer` reuses the latest run's network but not its interface.
 - **Q1:** on the command line, history is kept for ever. So is the expected set.
 - **Q5:** XNU may send at most one ARP request per second per entry. That would make the
   extra attempts about half as many ARP attempts as they look. A capture during G4 would

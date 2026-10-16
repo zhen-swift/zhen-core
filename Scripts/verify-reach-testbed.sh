@@ -73,6 +73,15 @@ reference() {
   ZHEN_HISTORY=$OUT/reference-history.ndjson scan --reach 3s > $OUT/reference.json
   echo "reference ($(hosts $OUT/reference.json | wc -w | tr -d ' ') hosts): $(hosts $OUT/reference.json)"
 }
+# The study testbed is impaired: .11 answers ARP but not echo, .12/.13 are delayed, and each VM
+# answers ARP only on its own interface. A rebooted testbed has none of that, and G3's cold half,
+# G5 and G6 then measure nothing (seen 2026-10-15). Warn rather than refuse: the run still shows
+# the mechanism.
+preflight() {
+  if ping -c 1 -t 1 ${IP11:-192.168.64.11} >/dev/null 2>&1; then
+    echo "WARNING: .11 answers echo — the testbed is not in its study configuration; restore it, or read $1 as unjudgeable"
+  fi
+}
 mean() { jq -s 'map(.run.finished_at - .run.started_at) | add / length | floor' "$@" }
 median_discovery() {
   jq -s 'map([.run.timing.stages[] | select(.stage == "discovery") | .elapsed_millis][0]) | sort | .[length / 2 | floor]' "$@"
@@ -80,7 +89,7 @@ median_discovery() {
 
 g3() {
   echo "\n== G3 — --reach learned --no-neighbor-watch. Pass: warm median 330–404 ms; cold misses only .12/.13."
-  reference
+  preflight G3; reference
   local flags=(--reach learned --no-neighbor-watch)
   rm -f $ZHEN_HISTORY; scan $flags > /dev/null
   for i in {1..10}; do scan $flags > $OUT/g3-warm-$i.json; summary $OUT/g3-warm-$i.json; done
@@ -103,7 +112,7 @@ g4() {
 
 g5() {
   echo "\n== G5 — primed history, cold cache, default. Pass: 10 of 10, first_scan false, mean wall below G4's."
-  reference
+  preflight G5; reference
   rm -f $ZHEN_HISTORY
   # Prime: cold default scans into the scratch history until it holds 20 cold samples.
   local total=0
@@ -123,6 +132,7 @@ g5() {
 
 g6() {
   echo "\n== G6 — .11 is neighbor_resolved cold, neighbor_table warm."
+  preflight G6
   local ip=${IP11:-192.168.64.11}
   cold; scan --no-history > $OUT/g6-cold.json
   scan --no-history > $OUT/g6-warm.json
@@ -140,7 +150,9 @@ g7() {
   local base=$($Z hosts --json | jq '[.devices[] | select(.present)] | length')
   echo "baseline: $(summary $OUT/g7-baseline.json) present in history: $base"
   limactl stop $vm
-  cold; scan > $OUT/g7-down.json
+  # The NDP cache too: an entry for the VM's link-local outlives the VM by up to a day and
+  # keeps its device present, so it never goes absent and look-longer has nothing to add (Q13).
+  cold; sudo ndp -c >/dev/null; scan > $OUT/g7-down.json
   echo "down:     $(summary $OUT/g7-down.json)"
   local gone=$(comm -23 <(hosts $OUT/g7-baseline.json | tr ' ' '\n' | sort) <(hosts $OUT/g7-down.json | tr ' ' '\n' | sort) | tr '\n' ' ')
   echo "gone with $vm: [$gone]   expected_missing: $(jq -c '.run.reach.expected_missing' $OUT/g7-down.json)"
