@@ -9,7 +9,7 @@
 #
 # Usage:
 #   swift build -c release
-#   limactl start netbed1 netbed2 netbed3 netbed4 netbed5     # the testbed, if stopped
+#   for v in netbed{1..5}; do limactl start $v; done          # the testbed, if stopped
 #   Scripts/verify-reach-testbed.sh g3|g4|g5|g6|g7 <vm>|g8|g9|all
 #
 # Every gate prints its pass condition first, then one JSON line per run, then a verdict
@@ -43,12 +43,14 @@ case ${1:-} in
   *) echo "usage: $0 g3|g4|g5|g6|g7 <vm>|g8|g9|all"; exit 64 ;;
 esac
 [[ -x $Z ]] || { echo "no binary at $Z — run 'swift build -c release' first"; exit 2; }
-ifconfig $IFACE >/dev/null 2>&1 || { echo "no $IFACE — is the testbed up? (limactl start netbed1 … netbed5)"; exit 2; }
+ifconfig $IFACE >/dev/null 2>&1 || { echo "no $IFACE — is the testbed up? (limactl start netbedN, one at a time)"; exit 2; }
 echo "zhen:    $($Z --version)"
 echo "out:     $OUT"
 echo "history: $ZHEN_HISTORY (scratch)"
 
-cold() { sudo arp -a -d >/dev/null 2>&1 }
+# A cold run that is secretly warm would pass G4 for the wrong reason, so a failed flush stops
+# the script rather than being swallowed.
+cold() { sudo arp -a -d >/dev/null || { echo "sudo arp -a -d failed — refusing to call a warm run cold"; exit 3 } }
 scan() { $Z scan --cidr $CIDR --iface $IFACE --discovery-only --json --quiet "$@" }
 # IPv4 addresses found, in numeric order, one line.
 hosts() {
@@ -144,7 +146,8 @@ g7() {
   echo "gone with $vm: [$gone]   expected_missing: $(jq -c '.run.reach.expected_missing' $OUT/g7-down.json)"
   local latest=$(jq -r '.run.id' $OUT/g7-down.json)
   limactl start $vm
-  $Z scan --look-longer --reach 20s --json --quiet > $OUT/g7-look.json
+  # --iface: look-longer takes the network from the latest run but not its interface (Q12).
+  $Z scan --look-longer --reach 20s --iface $IFACE --json --quiet > $OUT/g7-look.json
   echo "look:     $(jq -c '{extends_run: .run.extends_run, found: [.devices[].addresses[0]], still_missing: .run.reach.expected_missing, reach: .run.reach.policy}' $OUT/g7-look.json)"
   echo "extends the latest run: $([[ $(jq -r '.run.extends_run' $OUT/g7-look.json) == $latest ]] && echo yes || echo NO)"
   echo "present in history now: $($Z hosts --json | jq '[.devices[] | select(.present)] | length') (baseline $base)"
