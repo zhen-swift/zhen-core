@@ -78,13 +78,22 @@ reference() {
   ZHEN_HISTORY=$OUT/reference-history.ndjson scan --reach 3s > $OUT/reference.json
   echo "reference ($(hosts $OUT/reference.json | wc -w | tr -d ' ') hosts): $(hosts $OUT/reference.json)"
 }
-# The study testbed is impaired: .11 answers ARP but not echo, .12/.13 are delayed, and each VM
-# answers ARP only on its own interface. A rebooted testbed has none of that, and G3's cold half,
-# G5 and G6 then measure nothing (seen 2026-10-15). Warn rather than refuse: the run still shows
-# the mechanism.
+# The study testbed is impaired: .11 answers ARP but not echo, .12/.13 are delayed ~500 ms, and
+# each responder sits in its own network namespace (zhen-study's netbed.py, namespace_responders).
+# A reboot wipes the namespaces and the netem qdiscs, and G3's cold half, G4's slow hosts, G5 and
+# G6 then measure nothing (seen 2026-10-15). The fix is the rebuild in the fixes brief
+# (netbed.py up && configure, oracles.py), not sysctls. Warn rather than refuse: the run still
+# shows the mechanism.
 preflight() {
+  local fix="rebuild it (zhen-agents/briefs/core-0.8.0-fixes.md, 'JC's testbed rebuild'), or read $1 as unjudgeable"
   if ping -c 1 -t 1 ${IP11:-192.168.64.11} >/dev/null 2>&1; then
-    echo "WARNING: .11 answers echo — the testbed is not in its study configuration; restore it, or read $1 as unjudgeable"
+    echo "WARNING: .11 answers echo — the testbed's namespaces are not in place; $fix"
+  fi
+  local rtt=$(ping -c 1 -t 3 ${IP12:-192.168.64.12} 2>/dev/null | sed -n 's/.*time=\([0-9.]*\) ms.*/\1/p')
+  if [[ -z $rtt ]]; then
+    echo "WARNING: .12 did not answer echo in 3 s — could not check its delay; $fix"
+  elif (( rtt < 400 )); then
+    echo "WARNING: .12 answers echo in $rtt ms, not ~500 — the netem delays are gone; $fix"
   fi
 }
 mean() { jq -s 'map(.run.finished_at - .run.started_at) | add / length | floor' "$@" }
@@ -106,8 +115,8 @@ g3() {
 }
 
 g4() {
-  echo "\n== G4 — empty history, cold cache, default. Pass: missed is empty in 10 of 10."
-  reference
+  echo "\n== G4 — empty history, cold cache, default, with the 500 ms hosts. Pass: missed is empty in 10 of 10."
+  preflight G4; reference
   for i in {1..10}; do
     cold; scan --no-history > $OUT/g4-$i.json
     echo "$(summary $OUT/g4-$i.json) missed: [$(missing $OUT/g4-$i.json)]"

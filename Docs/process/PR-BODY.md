@@ -67,16 +67,18 @@ this from a frozen binary is a flag, and the artifact records it.
   rules, since removed): **G4** 10 of 10, **G8** nothing moved, **G9** every row including
   root (`composite`, `arp_sweep`), and **G7**'s look-longer half. **G3**'s mechanism matches
   0.7.0, run alternately on the same testbed: medians 262 vs 267 ms. But the testbed had come
-  back from a reboot **without study 1's impairments**: no slow hosts, `.11` answering echo,
-  and ARP flux between each VM's two NICs. So G3's absolute window, G5, G6 and G7's
-  "comes back" half could not be judged. Evidence and reasons are in the ledger, and in
-  questions Q13 and Q14.
+  back from a reboot **without its network namespaces or netem qdiscs**: no slow hosts,
+  `.11` answering echo, and both NICs of each VM back in the root namespace, swapping MACs.
+  So G3's absolute window, G5, G6 and G7's "comes back" half could not be judged. Evidence
+  is in the ledger and in Q13; the cause is corrected in "Q14, a correction".
 - `swiftlint` and GitHub CI weren't run, and nothing was pushed.
 
 ## For JC
 
-Restore the testbed's study configuration with the `zhen-study` tooling first. The script's
-preflight warns if `.11` still answers echo. Then:
+Rebuild the testbed first: `cd ~/Dev/InfinityCastle/zhen-study && python3 testbed/netbed.py up
+&& python3 testbed/netbed.py configure && python3 harness/oracles.py`, then put
+`testbed/manifest.json` and `testbed/gate-0.4.json` back with `git checkout` when the gates
+are done. The script's preflight warns if `.11` still answers echo. Then:
 
 ```bash
 cd ~/Dev/InfinityCastle/zhen-core && swift build -c release
@@ -104,7 +106,8 @@ holds fourteen questions. The ones that change behaviour are these:
 - **Q13:** a powered-off dual-stack host stays present through its NDP entry, for up to a
   day, and never gets a `disappeared`. 0.7.0 does the same. Seen on the testbed.
 - **Q14:** a Linux host with two NICs on one subnet (ARP flux) swaps MACs between its
-  addresses. History is keyed by MAC, so its cold samples scatter.
+  addresses. History is keyed by MAC, so its cold samples scatter. On the testbed the cause
+  was the reboot that wiped its namespaces, not sysctls (Q14, a correction).
 - **Q12:** `--look-longer` reuses the latest run's network but not its interface.
 - **Q1:** on the command line, history is kept for ever. So is the expected set.
 - **Q5:** XNU may send at most one ARP request per second per entry. That would make the
