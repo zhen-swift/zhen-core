@@ -10,7 +10,7 @@
 # Usage:
 #   swift build -c release
 #   for v in netbed{1..5}; do limactl start $v; done          # the testbed, if stopped
-#   Scripts/verify-reach-testbed.sh g3|g4|g5|g6|g7 <vm>|g8|g9|all
+#   Scripts/verify-reach-testbed.sh g3|g4|g5|g5w|g6|g7 <vm>|g8|g9|all
 #
 # Every gate prints its pass condition first, then one JSON line per run, then a verdict
 # line it computed — read the lines, not only the verdict. Artifacts stay in $OUT.
@@ -20,6 +20,9 @@
 #   G4  empty history, cold cache, default: every reference host in 10 of 10 runs.
 #   G5  primed history (≥ 20 cold samples), cold cache, default: 10 of 10, and mean wall
 #       clock below G4's.
+#   G5w F1's warm path, after g5 with the same $OUT: G5 again with the cache left warm —
+#       no address takes the first-scan wait, 10 of 10. Then Q8's case, a warm cache and
+#       no history: the cold addresses take it and no warm address does (first_scan = cold).
 #   G6  .11 (ARP-only) is neighbor_resolved cold and neighbor_table warm.
 #   G7  a VM taken down and brought back: --look-longer finds its addresses, adds them to
 #       the latest run, and nobody else is marked absent.  `g7 netbed3`
@@ -39,8 +42,8 @@ OUT=${OUT:-$(mktemp -d /tmp/zhen-reach.XXXXXX)}
 export ZHEN_HISTORY=$OUT/history.ndjson
 
 case ${1:-} in
-  g3|g4|g5|g6|g7|g8|g9|all) ;;
-  *) echo "usage: $0 g3|g4|g5|g6|g7 <vm>|g8|g9|all"; exit 64 ;;
+  g3|g4|g5|g5w|g6|g7|g8|g9|all) ;;
+  *) echo "usage: $0 g3|g4|g5|g5w|g6|g7 <vm>|g8|g9|all"; exit 64 ;;
 esac
 [[ -x $Z ]] || { echo "no binary at $Z — run 'swift build -c release' first"; exit 2; }
 ifconfig $IFACE >/dev/null 2>&1 || { echo "no $IFACE — is the testbed up? (limactl start netbedN, one at a time)"; exit 2; }
@@ -62,7 +65,8 @@ summary() {
           wall_ms: (.run.finished_at - .run.started_at),
           hosts: ([.devices[].addresses[] | select(test("^[0-9]+(\\.[0-9]+){3}$"))] | length),
           policy: .run.reach.policy, first_scan: .run.reach.first_scan,
-          history_samples: .run.reach.history_samples, watch: .run.neighbor_watch.enabled,
+          history_samples: .run.reach.history_samples, warm_samples: .run.reach.warm_samples,
+          paths: .run.reach.paths, watch: .run.neighbor_watch.enabled,
           expected_missing: .run.reach.expected_missing}' "$1"
 }
 # Reference hosts that a run did not find.
@@ -130,6 +134,31 @@ g5() {
   echo "G5 mean wall_ms: $(mean $OUT/g5-[0-9]*.json)   (G4's: $(ls $OUT/g4-*.json >/dev/null 2>&1 && mean $OUT/g4-*.json || echo 'run g4 first'))"
 }
 
+g5w() {
+  echo "\n== G5w — F1's warm path. Pass: after g5, warm cache, primed history: paths.first_scan 0 and missed empty in 10 of 10, paths.warm > 0; then warm cache, no history: paths.first_scan == paths.cold and paths.warm > 0 in 3 of 3."
+  ls $OUT/g5-[0-9]*.json >/dev/null 2>&1 || { echo "run g5 first, with the same OUT=$OUT"; return 2 }
+  reference
+  # No flush anywhere in this gate: the cache is whatever the scan before left, which is warm.
+  scan > /dev/null
+  local ok=0
+  for i in {1..10}; do
+    scan > $OUT/g5w-$i.json
+    echo "$(summary $OUT/g5w-$i.json) missed: [$(missing $OUT/g5w-$i.json)]"
+    jq -e '.run.reach.paths | .first_scan == 0 and .warm > 0' $OUT/g5w-$i.json >/dev/null \
+      && [[ -z $(missing $OUT/g5w-$i.json) ]] && ok=$((ok + 1))
+  done
+  echo "G5w primed: $ok of 10 with no first-scan wait, a warm cache and every reference host   mean wall_ms: $(mean $OUT/g5w-*.json) (G5's: $(mean $OUT/g5-[0-9]*.json))"
+  # Q8's machine: it has only ever scanned warm, so it has no cold history. Every cold
+  # (dead) address still takes the first-scan wait by the rule; a warm one never may.
+  ok=0
+  for i in 1 2 3; do
+    scan --no-history > $OUT/g5w-empty-$i.json
+    echo "empty $i: $(summary $OUT/g5w-empty-$i.json)"
+    jq -e '.run.reach.paths | .first_scan == .cold and .warm > 0' $OUT/g5w-empty-$i.json >/dev/null && ok=$((ok + 1))
+  done
+  echo "G5w empty history: $ok of 3 where no warm address took the first-scan wait"
+}
+
 g6() {
   echo "\n== G6 — .11 is neighbor_resolved cold, neighbor_table warm."
   preflight G6
@@ -192,7 +221,7 @@ g9() {
 }
 
 case ${1:-} in
-  g3) g3 ;; g4) g4 ;; g5) g5 ;; g6) g6 ;; g7) g7 ${2:-} ;; g8) g8 ;; g9) g9 ;;
-  all) g3; g4; g5; g6; g8; g9; echo "\n(G7 takes a VM down; run it on its own: $0 g7 netbed3)" ;;
-  *) echo "usage: $0 g3|g4|g5|g6|g7 <vm>|g8|g9|all"; exit 64 ;;
+  g3) g3 ;; g4) g4 ;; g5) g5 ;; g5w) g5w ;; g6) g6 ;; g7) g7 ${2:-} ;; g8) g8 ;; g9) g9 ;;
+  all) g3; g4; g5; g5w; g6; g8; g9; echo "\n(G7 takes a VM down; run it on its own: $0 g7 netbed3)" ;;
+  *) echo "usage: $0 g3|g4|g5|g5w|g6|g7 <vm>|g8|g9|all"; exit 64 ;;
 esac

@@ -15,12 +15,22 @@ public struct ReachReport: Sendable, Hashable, Codable {
     public var percentile: Double?
     /// The wait every address got, under `fixed`, in milliseconds.
     public var fixedWaitMillis: Double?
-    /// Whether the network had too little history, so every address waited the
-    /// first-scan wait. Only ever true under `history`.
+    /// Whether any address waited the first-scan wait: it had no complete neighbour
+    /// entry, on a network with too few cold samples. Only ever true under `history`.
+    /// Per address since F1 — `paths.first_scan` says how many.
     public var firstScan: Bool
-    /// What an expected address waited before the learned tail floored it, in
-    /// milliseconds: the percentile, capped. Nil when there was none.
+    /// What an expected COLD address waited before the learned tail floored it, in
+    /// milliseconds: the cold samples' percentile, capped. Nil when there was none.
     public var expectedWaitMillis: Double?
+    /// What an expected WARM address — one whose neighbour entry was complete at the
+    /// start — waited before the learned tail floored it, in milliseconds: the warm
+    /// samples' percentile, capped. Nil when there was none.
+    public var warmWaitMillis: Double?
+    /// How many warm first-contact samples this network's history held.
+    public var warmSamples: Int?
+    /// How many probed addresses were cold and warm, and how many took each path. Nil
+    /// under `learned` and `fixed`, and when the sweep never started.
+    public var paths: ReachPathCounts?
     /// How many addresses history expected.
     public var expectedCount: Int
     /// The expected addresses the run found no device at, in address order.
@@ -56,7 +66,8 @@ public struct ReachReport: Sendable, Hashable, Codable {
         expectedCount: Int = 0, expectedMissing: [IPv4Address] = [],
         firstScanWaitMillis: Double? = nil, capMillis: Double? = nil, minSamples: Int? = nil,
         attemptsStepMillis: Double? = nil, attemptsCap: Int? = nil, baseAttempts: Int? = nil,
-        historySamples: Int? = nil, historyRead: Bool? = nil
+        historySamples: Int? = nil, historyRead: Bool? = nil,
+        warmWaitMillis: Double? = nil, warmSamples: Int? = nil, paths: ReachPathCounts? = nil
     ) {
         self.policy = policy
         self.percentile = percentile
@@ -73,6 +84,9 @@ public struct ReachReport: Sendable, Hashable, Codable {
         self.baseAttempts = baseAttempts
         self.historySamples = historySamples
         self.historyRead = historyRead
+        self.warmWaitMillis = warmWaitMillis
+        self.warmSamples = warmSamples
+        self.paths = paths
     }
 
     /// The report for a plan, given the addresses the run found a device at.
@@ -92,7 +106,8 @@ public struct ReachReport: Sendable, Hashable, Codable {
             policy: plan.policy.name,
             percentile: percentile,
             fixedWaitMillis: fixed,
-            firstScan: plan.firstScan,
+            // Resolved at the sweep's start, the per-address answer; before, the plan's.
+            firstScan: plan.paths.map { $0.firstScan > 0 } ?? plan.firstScan,
             expectedWaitMillis: plan.expectedWait?.milliseconds,
             expectedCount: plan.expected.count,
             expectedMissing: plan.expected.subtracting(found).sorted(),
@@ -103,7 +118,10 @@ public struct ReachReport: Sendable, Hashable, Codable {
             attemptsCap: plan.settings.attemptsCap,
             baseAttempts: plan.settings.baseAttempts,
             historySamples: plan.historySamples,
-            historyRead: historyRead
+            historyRead: historyRead,
+            warmWaitMillis: plan.warmExpectedWait?.milliseconds,
+            warmSamples: plan.warmSamples,
+            paths: plan.paths
         )
     }
 
@@ -125,5 +143,8 @@ public struct ReachReport: Sendable, Hashable, Codable {
         case baseAttempts = "base_attempts"
         case historySamples = "history_samples"
         case historyRead = "history_read"
+        case warmWaitMillis = "warm_wait_millis"
+        case warmSamples = "warm_samples"
+        case paths
     }
 }

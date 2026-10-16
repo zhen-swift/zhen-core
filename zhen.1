@@ -8,7 +8,7 @@
 .\" Checked against `Zhen.configuration.subcommands` and each command's `help` output,
 .\" not against memory: every option the parser accepts is here, and nothing is here
 .\" that it does not accept. There is no `--udp` flag; UDP is `U:` in a port spec.
-.Dd October 15, 2026
+.Dd October 16, 2026
 .Dt ZHEN 1
 .Os
 .Sh NAME
@@ -206,11 +206,14 @@ or a duration such as
 Under
 .Li history
 an address this network's history says usually answers is waited for up to a high
-percentile of how long it took to answer when nothing was cached, capped at 5 s,
-and asked more often; every other address gets the short wait learned from the
-scan's own replies.
-A network with fewer than 20 such times waits 1.5 s everywhere, once, and that
-scan is what makes the next one fast.
+percentile of how long it took to answer, capped at 5 s, and asked more often;
+every other address gets the short wait learned from the scan's own replies.
+Which past times count depends on the address's own neighbour entry when the scan
+starts: with none, the times taken when nothing was cached; with a complete one,
+the times taken when it was.
+A network with fewer than 20 uncached times waits 1.5 s for every address with no
+entry, and that scan is what makes the next one fast; an address with a complete
+entry never waits it.
 .Li learned
 is the short wait for every address, which is how scans worked before 0.8.0.
 A duration waits exactly that long for every address.
@@ -241,7 +244,8 @@ on the network is marked gone.
 The artifact names the scan it extended in
 .Li run.extends_run .
 .It Fl -first-scan-wait Ar duration
-How long every address waits on a network with too little history.
+How long an address with no neighbour entry waits on a network with too little
+history.
 Defaults to
 .Ar 1.5s .
 .It Fl -reach-cap Ar duration
@@ -249,8 +253,8 @@ The longest any expected address waits, however slow its history.
 Defaults to
 .Ar 5s .
 .It Fl -reach-min-samples Ar n
-How many cold first-contact times a network needs before its history decides the
-waits.
+How many first-contact times of a kind, uncached or cached, a network needs before
+they decide the waits of the addresses they describe.
 Defaults to 20.
 .It Fl -expected-attempts-step Ar duration
 Each whole step of wait beyond the first earns an address one more transmission.

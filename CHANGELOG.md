@@ -92,6 +92,19 @@ follow the app's `CFBundleShortVersionString`.
   `PipelineArtifactGate` gain `run.tool`, deliberately.
 
 ### Changed
+- **Cold and warm samples are chosen per address (fixes brief, F1).** The plan judges an
+  address by its own neighbour entry when the sweep takes its baseline. With no complete
+  entry: the cold samples' percentile, or the 1.5 s first-scan wait while the network has
+  fewer than 20 cold samples, as before. With a complete entry: the *warm* samples'
+  percentile, floored by the learned tail, or the learned tail alone with fewer than 20
+  warm samples — never the first-scan wait, which exists to cover an ARP delay a cached
+  address does not have. A machine that scans more often than its ARP cache expires no
+  longer holds its live hosts to 1.5 s (questions, Q8). `ReachPlan` gains
+  `warmSamples`, `warmExpectedWait`, `warm`, `paths`, `path(for:)`, `isFirstScan(_:)` and
+  `atSweepStart(addresses:complete:)`; `DiscoveryResult.reach` carries the plan as the
+  sweep resolved it. `run.reach` adds `warm_wait_millis`, `warm_samples` and `paths`
+  (`cold`, `warm`, `first_scan`, `cold_percentile`, `warm_percentile`, `learned_tail`),
+  and `first_scan` now says whether any address waited the first-scan wait.
 - **Breaking: `neighbor_table` now means inherited, and the report schema is 4.** Through
   0.7.0 `neighbor_table` covered every host the table alone supplied, including entries
   the scan's own probes had just caused to resolve; those are `neighbor_resolved` now, and

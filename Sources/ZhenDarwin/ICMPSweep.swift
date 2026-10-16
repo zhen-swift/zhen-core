@@ -186,6 +186,9 @@ public struct ICMPSweepEngine: HostDiscovery {
         var watchReport: NeighborWatchReport = neighborWatch
             ? NeighborWatchReport(enabled: true, mechanism: "poll", polls: 0, resolved: 0)
             : .disabled
+        // The plan resolved against the baseline, once the sweep has one. Until then —
+        // a refused target, no socket — it never started, and nothing was decided.
+        var resolvedReach: ReachPlan?
 
         func finished(
             _ hosts: [HostFacts], _ outcome: Outcome
@@ -213,7 +216,8 @@ public struct ICMPSweepEngine: HostDiscovery {
                 usedCapabilities: used,
                 outcome: outcome,
                 timing: Timing(stages: [stage], counters: snapshot),
-                neighborWatch: watchReport
+                neighborWatch: watchReport,
+                reach: resolvedReach
             )
         }
 
@@ -277,6 +281,7 @@ public struct ICMPSweepEngine: HostDiscovery {
             budgets: budgets,
             reach: target.reach
         )
+        resolvedReach = state.resolvedReach
         let replies = await socket.replies()
         let planned = await state.extendsWaits
 
@@ -595,6 +600,9 @@ actor SweepState {
     /// The plan, when it extends any wait. Nil is study 1's schedule exactly, which is
     /// what `.learned` and an absent plan both get.
     private let reach: ReachPlan?
+    /// The plan as given, resolved against the baseline — whatever it extends — so the
+    /// artifact can say which addresses were warm and which path each took.
+    nonisolated let resolvedReach: ReachPlan?
     /// Each extended address's deadline — its first transmission plus its wait — until it
     /// shows evidence. Change 8's queue, so the end-of-sweep check pops what is due
     /// rather than walking every address.
@@ -697,24 +705,40 @@ actor SweepState {
         self.neighbors = neighbors
         self.attempts = attempts
         self.counters = counters
-        let plan = reach.flatMap { $0.extendsAnyWait ? $0 : nil }
-        self.reach = plan
+        // F1: the plan judges each address by its own entry, and `neighbors` is the
+        // snapshot taken before the first transmission — the same one that decides what
+        // is inherited and what is cold — so the plan and the sweep agree.
+        let resolved = reach?.atSweepStart(addresses: pending, complete: Set(neighbors.keys))
+        self.resolvedReach = resolved
+        let candidate = resolved.flatMap { $0.extendsAnyWait ? $0 : nil }
+        var waiting = false
         for address in pending {
             var host = Host(attempts: attempts)
-            if let plan {
-                let wait = plan.wait(for: address)
+            if let candidate {
+                let wait = candidate.wait(for: address)
                 if wait > .zero {
                     host.planWait = wait
-                    host.attempts = plan.attempts(for: address)
+                    host.attempts = candidate.attempts(for: address)
+                    waiting = true
                 }
+            }
+            hosts[address] = host
+        }
+        // Kept only if some address actually waits. A fully warm network with too little
+        // warm history gives every address the learned tail, and that is study 1's
+        // schedule — which is what no plan runs.
+        let plan = waiting ? candidate : nil
+        self.reach = plan
+        for address in pending {
+            let wait = hosts[address]?.planWait ?? .zero
+            if let plan {
                 if plan.expected.contains(address) {
                     expectedOutstanding.insert(address)
                 } else if wait > .zero {
                     unexpectedWaiting += 1
                 }
             }
-            if host.planWait == .zero { learnedUnsent += 1 }
-            hosts[address] = host
+            if wait == .zero { learnedUnsent += 1 }
         }
     }
 

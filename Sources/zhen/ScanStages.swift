@@ -54,6 +54,9 @@ nonisolated struct ScanContext: Sendable {
     var exercised: EngineCapabilities = []
     /// What the discovery sweep's neighbour watch did, for `run.neighbor_watch`.
     var neighborWatch: NeighborWatchReport?
+    /// The reach plan as the sweep resolved it at its start, for `run.reach`. Nil when
+    /// no engine read it; the report then falls back to the target's.
+    var reach: ReachPlan?
 
     /// The hosts, in the order every stage iterates them.
     var sortedAddresses: [IPv4Address] { facts.keys.sorted() }
@@ -224,6 +227,7 @@ nonisolated struct DiscoveryStage: ScanStage {
         context.peakConcurrency = discovery.timing.peakConcurrency
         context.exercised = discovery.usedCapabilities
         context.neighborWatch = discovery.neighborWatch
+        context.reach = discovery.reach
         return context
     }
 }

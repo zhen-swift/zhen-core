@@ -175,7 +175,7 @@ nonisolated struct ScanPipeline {
                 mode: discoveryOnly ? .discoveryOnly : .full,
                 timing: timing,
                 neighborWatch: context.neighborWatch,
-                reach: target.reach.map {
+                reach: (context.reach ?? target.reach).map {
                     ReachReport(
                         plan: $0, found: Set(devices.flatMap(\.ipv4Addresses)),
                         historyRead: historyRead && history != nil
@@ -264,7 +264,7 @@ nonisolated struct ScanPipeline {
                 ),
                 neighborWatch: context.neighborWatch,
                 reach: ReachReport(
-                    plan: plan, found: Set(devices.flatMap(\.ipv4Addresses)), historyRead: true
+                    plan: context.reach ?? plan, found: Set(devices.flatMap(\.ipv4Addresses)), historyRead: true
                 ),
                 extendsRun: latest.id,
                 tool: tool

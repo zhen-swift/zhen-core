@@ -308,6 +308,10 @@ public struct DiscoveryResult: Sendable, Hashable {
     /// never watches — the layer-2 sweep, a fixture — which is different from a watch
     /// that was switched off.
     public var neighborWatch: NeighborWatchReport?
+    /// The target's reach plan as the sweep resolved it at its start — which addresses
+    /// were warm, and which path each took — for `run.reach`. Nil for an engine that
+    /// does not read the plan, and when the sweep never started.
+    public var reach: ReachPlan?
 
     /// Creates a value from its fields. Each one is documented on the property it sets.
     public init(
@@ -316,7 +320,8 @@ public struct DiscoveryResult: Sendable, Hashable {
         usedCapabilities: EngineCapabilities = [],
         outcome: Outcome = .complete,
         timing: Timing = Timing(),
-        neighborWatch: NeighborWatchReport? = nil
+        neighborWatch: NeighborWatchReport? = nil,
+        reach: ReachPlan? = nil
     ) {
         self.hosts = hosts
         self.degradations = degradations
@@ -324,6 +329,7 @@ public struct DiscoveryResult: Sendable, Hashable {
         self.outcome = outcome
         self.timing = timing
         self.neighborWatch = neighborWatch
+        self.reach = reach
     }
 }
 

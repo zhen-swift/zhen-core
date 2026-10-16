@@ -138,10 +138,13 @@ interval and an imposed one are never confusable after the fact.
 
 **How long to wait is a property of the address (0.8.0).** `--reach history`, the
 default, waits longer for the addresses this network's history says usually answer —
-up to the 97th percentile (`--reach-percentile`) of their *cold* first-contact times,
-capped at 5 s, with more attempts — and gives every other address the short wait learned
-from the scan's own replies. A network with fewer than 20 cold samples waits 1.5 s
-everywhere, once. The scan ends at the latest per-address deadline, or as soon as every
+up to the 97th percentile (`--reach-percentile`) of their first-contact times, capped at
+5 s, with more attempts — and gives every other address the short wait learned from the
+scan's own replies. Which times count is decided per address, by its own neighbour entry
+when the sweep starts: the *cold* times for an address with no complete entry, the *warm*
+ones for an address with one. A network with fewer than 20 cold samples waits 1.5 s for
+every cold address; a warm address never waits it, because it has no ARP delay to cover.
+`run.reach.paths` counts the addresses that took each rule. The scan ends at the latest per-address deadline, or as soon as every
 expected address has answered; while only expected addresses remain it says so
 (`settling`). `--reach learned` is the single learned wait for everyone, as before 0.8.0;
 `--reach 3s` waits exactly that. `--look-longer` re-asks the latest scan's

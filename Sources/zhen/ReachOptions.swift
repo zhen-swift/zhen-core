@@ -52,13 +52,13 @@ struct ReachOptions: ParsableArguments {
     // that could only move by rebuilding would end the study. Each value used, flagged or
     // defaulted, is echoed in `run.reach`.
 
-    @Option(name: .long, help: "Wait for every address on a network with too little history, e.g. 1500ms. Default 1.5s.")
+    @Option(name: .long, help: "Wait for an address with no neighbour entry on a network with too little cold history, e.g. 1500ms. Default 1.5s.")
     var firstScanWait: String?
 
     @Option(name: .long, help: "The longest any expected address waits, e.g. 5s. Default 5s.")
     var reachCap: String?
 
-    @Option(name: .long, help: "Cold first-contact samples a network needs before history decides its waits. Default 20.")
+    @Option(name: .long, help: "First-contact samples of a kind, cold or warm, a network needs before they decide the waits of the addresses they describe. Default 20.")
     var reachMinSamples: Int?
 
     @Option(name: .long, help: "Each whole step of wait beyond the first earns one more transmission, e.g. 500ms. Default 500ms.")

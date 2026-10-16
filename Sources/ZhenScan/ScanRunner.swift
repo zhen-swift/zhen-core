@@ -260,7 +260,7 @@ public struct ScanRunner: Sendable {
                     )
                 ),
                 neighborWatch: discovery.neighborWatch,
-                reach: target.reach.map {
+                reach: (discovery.reach ?? target.reach).map {
                     ReachReport(plan: $0, found: Set(devices.flatMap(\.ipv4Addresses)), historyRead: true)
                 }
             ),
