@@ -58,52 +58,51 @@ struct ReachPlanCacheStateTests {
     @Test("Warm-only baseline: no first-scan wait anywhere, with no cold history at all")
     func warmOnly() throws {
         let everything = Set(Self.addresses)
-        // Q8's machine: it has only ever scanned warm. Too few warm samples: the
-        // learned tail alone, everywhere — no address waits 1.5 s.
-        let fresh = Self.plan(cold: 0, warm: 4, complete: everything)
-        #expect(fresh.firstScan, "the cold sample set is still empty")
-        for address in [Self.ip(1), Self.ip(12), Self.ip(254)] {
-            #expect(!fresh.isFirstScan(address))
-            #expect(fresh.path(for: address) == .learnedTail)
-            #expect(fresh.wait(for: address) == .zero)
-            #expect(fresh.attempts(for: address) == 3)
+        // Q8's machine: it has only ever scanned warm. No address waits 1.5 s: the
+        // expected ones are inherited (F2), the rest get the learned tail alone.
+        for warm in [4, 20] {
+            let plan = Self.plan(cold: 0, warm: warm, complete: everything)
+            #expect(plan.firstScan, "the cold sample set is still empty")
+            for address in [Self.ip(1), Self.ip(12), Self.ip(254)] {
+                #expect(!plan.isFirstScan(address))
+                #expect(plan.wait(for: address) == .zero)
+                #expect(plan.attempts(for: address) == 3)
+            }
+            #expect(plan.path(for: Self.ip(1)) == .learnedTail)
+            #expect(plan.path(for: Self.ip(12)) == .inherited)
+            #expect(plan.isInherited(Self.ip(12)) && !plan.isInherited(Self.ip(1)))
+            #expect(plan.paths == ReachPathCounts(warm: 254, inherited: 2, learnedTail: 252))
         }
-        #expect(fresh.paths == ReachPathCounts(warm: 254, learnedTail: 254))
 
-        // Enough warm samples: expected addresses wait their percentile, floored by the
-        // learned tail, so in practice the tail.
-        let primed = Self.plan(cold: 0, warm: 20, complete: everything)
-        #expect(primed.warmSamples == 20)
-        #expect(primed.warmExpectedWait == .milliseconds(40))
-        #expect(primed.path(for: Self.ip(12)) == .warmPercentile)
-        #expect(primed.wait(for: Self.ip(12)) == .milliseconds(40))
-        #expect(primed.wait(for: Self.ip(12), learnedTail: .milliseconds(250)) == .milliseconds(250))
-        #expect(primed.attempts(for: Self.ip(12)) == 3)
-        #expect(primed.path(for: Self.ip(50)) == .learnedTail)
-        #expect(primed.paths == ReachPathCounts(warm: 254, warmPercentile: 2, learnedTail: 252))
+        // The warm samples' percentile is still computed, and reported: what F1 would have
+        // waited. With 20 warm samples it is 40 ms; with 4, nothing.
+        #expect(Self.plan(cold: 0, warm: 20, complete: everything).warmExpectedWait == .milliseconds(40))
+        #expect(Self.plan(cold: 0, warm: 20, complete: everything).warmSamples == 20)
+        #expect(Self.plan(cold: 0, warm: 4, complete: everything).warmExpectedWait == nil)
     }
 
     @Test("Mixed baseline: each address judged by its own entry")
     func mixed() throws {
         // .12 warm, .13 cold, everything else cold; cold history too thin, warm enough.
         let thinCold = Self.plan(cold: 10, warm: 20, complete: [Self.ip(12), Self.ip(1)])
-        #expect(thinCold.path(for: Self.ip(12)) == .warmPercentile)
+        #expect(thinCold.path(for: Self.ip(12)) == .inherited)
         #expect(thinCold.path(for: Self.ip(1)) == .learnedTail)
         #expect(thinCold.path(for: Self.ip(13)) == .firstScan)
         #expect(thinCold.path(for: Self.ip(200)) == .firstScan)
         #expect(thinCold.paths == ReachPathCounts(
-            cold: 252, warm: 2, firstScan: 252, warmPercentile: 1, learnedTail: 1
+            cold: 252, warm: 2, firstScan: 252, inherited: 1, learnedTail: 1
         ))
 
-        // Cold history enough, warm too thin: the warm expected address falls back to
-        // the learned tail, never to the first-scan wait; the cold one waits the cold P97.
+        // Cold history enough, warm too thin: the warm expected address is inherited and
+        // waits nothing extra, never the first-scan wait; the cold one waits the cold P97.
         let thinWarm = Self.plan(cold: 20, warm: 3, complete: [Self.ip(12)])
-        #expect(thinWarm.path(for: Self.ip(12)) == .learnedTail)
+        #expect(thinWarm.path(for: Self.ip(12)) == .inherited)
+        #expect(thinWarm.wait(for: Self.ip(12)) == .zero)
         #expect(thinWarm.path(for: Self.ip(13)) == .coldPercentile)
         #expect(thinWarm.wait(for: Self.ip(13)) == .milliseconds(1_000))
         #expect(thinWarm.attempts(for: Self.ip(13)) == 4)
         #expect(thinWarm.paths == ReachPathCounts(
-            cold: 253, warm: 1, coldPercentile: 1, learnedTail: 253
+            cold: 253, warm: 1, coldPercentile: 1, inherited: 1, learnedTail: 252
         ))
     }
 
@@ -169,7 +168,7 @@ struct ReachPlanCacheStateTests {
         let wire = try JSONDecoder().decode(Wire.self, from: JSONEncoder().encode(report))
         #expect(wire.paths == [
             "cold": 253, "warm": 1, "first_scan": 0, "cold_percentile": 1,
-            "warm_percentile": 1, "learned_tail": 252,
+            "inherited": 1, "learned_tail": 252,
         ])
         #expect(wire.warm_wait_millis == 40)
         #expect(wire.warm_samples == 20)

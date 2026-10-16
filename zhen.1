@@ -205,12 +205,13 @@ or a duration such as
 .Ar 3s .
 Under
 .Li history
-an address this network's history says usually answers is waited for up to a high
-percentile of how long it took to answer, capped at 5 s, and asked more often;
-every other address gets the short wait learned from the scan's own replies.
-Which past times count depends on the address's own neighbour entry when the scan
-starts: with none, the times taken when nothing was cached; with a complete one,
-the times taken when it was.
+an address this network's history says usually answers, and that has no neighbour
+entry when the scan starts, is waited for up to a high percentile of how long such
+addresses took to answer when nothing was cached, capped at 5 s, and asked more
+often.
+One that already has a complete entry is reported present from it, and the scan
+does not wait for it.
+Every other address gets the short wait learned from the scan's own replies.
 A network with fewer than 20 uncached times waits 1.5 s for every address with no
 entry, and that scan is what makes the next one fast; an address with a complete
 entry never waits it.

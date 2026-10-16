@@ -103,8 +103,16 @@ follow the app's `CFBundleShortVersionString`.
   `warmSamples`, `warmExpectedWait`, `warm`, `paths`, `path(for:)`, `isFirstScan(_:)` and
   `atSweepStart(addresses:complete:)`; `DiscoveryResult.reach` carries the plan as the
   sweep resolved it. `run.reach` adds `warm_wait_millis`, `warm_samples` and `paths`
-  (`cold`, `warm`, `first_scan`, `cold_percentile`, `warm_percentile`, `learned_tail`),
-  and `first_scan` now says whether any address waited the first-scan wait.
+  (`cold`, `warm`, `first_scan`, `cold_percentile`, `inherited`, `learned_tail`), and
+  `first_scan` now says whether any address waited the first-scan wait.
+- **An expected address whose entry is already complete does not hold the sweep (fixes
+  brief, F2).** Its entry is the evidence the report accepts — it is reported present, as
+  `neighbor_table`, and stays so — so the sweep asks it on the learned schedule and does
+  not wait for more: it is never in the settling list and never has a deadline. Before, an
+  expected host that answers ARP and not echo held every warm scan to its full wait
+  (questions, Q9). `ReachPath.inherited` and `ReachPlan.isInherited(_:)`; `.history` only —
+  a `.fixed` wait still waits for every address. F1 gives the warm samples' percentile
+  only to these addresses, so it is reported (`warm_wait_millis`) and waited by none (Q16).
 - **Breaking: `neighbor_table` now means inherited, and the report schema is 4.** Through
   0.7.0 `neighbor_table` covered every host the table alone supplied, including entries
   the scan's own probes had just caused to resolve; those are `neighbor_resolved` now, and

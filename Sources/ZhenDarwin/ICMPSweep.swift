@@ -612,7 +612,8 @@ actor SweepState {
     /// The same addresses, for a constant-time membership test.
     private var reachRetired: Set<IPv4Address> = []
     /// Expected addresses with no evidence yet. Kept as a set, shrunk on evidence, so
-    /// the settling check does not walk every address on every tick.
+    /// the settling check does not walk every address on every tick. An expected address
+    /// whose entry was complete at the start is never in it: that entry is evidence.
     private var expectedOutstanding: Set<IPv4Address> = []
     /// What change 6's settling check needs to know without a walk: learned-path
     /// addresses never yet sent to, live learned-path transmissions, and extended
@@ -732,7 +733,12 @@ actor SweepState {
         for address in pending {
             let wait = hosts[address]?.planWait ?? .zero
             if let plan {
-                if plan.expected.contains(address) {
+                // F2 (Q9): an expected address whose entry is already complete has the
+                // evidence the final report will accept — it is reported present, as
+                // `neighbor_table` — so the sweep is not waiting for it. It is still
+                // asked, on the learned schedule (its plan wait is zero), and an echo
+                // still upgrades it to `probe_reply`; it just never holds the sweep open.
+                if plan.expected.contains(address), !plan.isInherited(address) {
                     expectedOutstanding.insert(address)
                 } else if wait > .zero {
                     unexpectedWaiting += 1

@@ -180,9 +180,10 @@ public struct ReachPlan: Sendable, Hashable {
     public let expectedWait: Duration?
     /// How many warm first-contact samples the network's history holds.
     public let warmSamples: Int
-    /// The percentile of the warm samples, capped — what an expected address with a
-    /// complete neighbour entry waits before the learned tail floors it. Nil when there
-    /// is none: not `.history`, or too few warm samples.
+    /// The percentile of the warm samples, capped: what F1 says an expected address with
+    /// a complete neighbour entry would wait. Nil when there is none: not `.history`, or
+    /// too few warm samples. Reported, and waited by no address, because every address
+    /// it describes is `inherited` (F2; questions, Q16).
     public let warmExpectedWait: Duration?
     /// The probed addresses whose neighbour entry was complete when the sweep took its
     /// baseline. Nil until `atSweepStart` records it; until then every address is judged
@@ -238,7 +239,7 @@ public struct ReachPlan: Sendable, Hashable {
             switch plan.path(for: address) {
             case .firstScan?: counts.firstScan += 1
             case .coldPercentile?: counts.coldPercentile += 1
-            case .warmPercentile?: counts.warmPercentile += 1
+            case .inherited?: counts.inherited += 1
             case .learnedTail?, nil: counts.learnedTail += 1
             }
         }
@@ -255,14 +256,14 @@ public struct ReachPlan: Sendable, Hashable {
     ///
     /// Cold — no complete entry — is the rule the plan always had: too few cold samples
     /// and every cold address waits the first-scan wait; otherwise an expected address
-    /// waits the cold percentile and the rest the learned tail. Warm is the same rule on
-    /// the warm samples, except that too few of them means the learned tail, never the
-    /// first-scan wait: that wait covers an ARP delay a complete entry does not have.
+    /// waits the cold percentile and the rest the learned tail. Warm never waits the
+    /// first-scan wait: that wait covers an ARP delay a complete entry does not have. An
+    /// unexpected warm address gets the learned tail, and an expected one is `inherited`
+    /// (F2): the entry is evidence the report already accepts, so nothing waits for more.
     public func path(for address: IPv4Address) -> ReachPath? {
         guard case .history = policy else { return nil }
         if isWarm(address) {
-            guard expected.contains(address), warmExpectedWait != nil else { return .learnedTail }
-            return .warmPercentile
+            return expected.contains(address) ? .inherited : .learnedTail
         }
         if firstScan { return .firstScan }
         guard expected.contains(address), expectedWait != nil else { return .learnedTail }
@@ -272,6 +273,12 @@ public struct ReachPlan: Sendable, Hashable {
     /// Whether the address takes the first-scan wait. Per address: a warm one never does.
     public func isFirstScan(_ address: IPv4Address) -> Bool {
         path(for: address) == .firstScan
+    }
+
+    /// Whether the address is expected and its entry was complete at the start of the
+    /// sweep, so the sweep counts it as having evidence already (F2). `.history` only.
+    public func isInherited(_ address: IPv4Address) -> Bool {
+        path(for: address) == .inherited
     }
 
     /// The plan's own wait for an address. Zero means the learned tail alone.
@@ -285,8 +292,7 @@ public struct ReachPlan: Sendable, Hashable {
             switch path(for: address) {
             case .firstScan?: return settings.firstScanWait
             case .coldPercentile?: return expectedWait ?? .zero
-            case .warmPercentile?: return warmExpectedWait ?? .zero
-            case .learnedTail?, nil: return .zero
+            case .inherited?, .learnedTail?, nil: return .zero
             }
         }
     }

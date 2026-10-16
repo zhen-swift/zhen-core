@@ -17,21 +17,22 @@ public struct ReachPathCounts: Sendable, Hashable, Codable {
     public var firstScan: Int
     /// Addresses that waited the cold samples' percentile.
     public var coldPercentile: Int
-    /// Addresses that waited the warm samples' percentile.
-    public var warmPercentile: Int
+    /// Expected addresses whose entry was already complete, which the sweep asked but
+    /// did not wait for.
+    public var inherited: Int
     /// Addresses left to the learned tail.
     public var learnedTail: Int
 
     /// Creates a value from its fields. Each one is documented on the property it sets.
     public init(
         cold: Int = 0, warm: Int = 0, firstScan: Int = 0, coldPercentile: Int = 0,
-        warmPercentile: Int = 0, learnedTail: Int = 0
+        inherited: Int = 0, learnedTail: Int = 0
     ) {
         self.cold = cold
         self.warm = warm
         self.firstScan = firstScan
         self.coldPercentile = coldPercentile
-        self.warmPercentile = warmPercentile
+        self.inherited = inherited
         self.learnedTail = learnedTail
     }
 
@@ -42,7 +43,7 @@ public struct ReachPathCounts: Sendable, Hashable, Codable {
         case warm
         case firstScan = "first_scan"
         case coldPercentile = "cold_percentile"
-        case warmPercentile = "warm_percentile"
+        case inherited
         case learnedTail = "learned_tail"
     }
 }
