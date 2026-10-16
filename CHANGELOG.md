@@ -120,6 +120,16 @@ follow the app's `CFBundleShortVersionString`.
   <duration>` sets it and `run.reach.expected_window_millis` echoes it. Every device's
   first-contact samples still count. **Source-breaking:** `ReachPlan.make` loses its
   `retention:` parameter. Durations on the command line accept days (`30d`).
+- **Each address says how it was found (fixes brief, F4).** A device's `discovered_via`
+  is the union over its addresses, so a dual-stack device could read `neighbor_resolved`
+  and `neighbor_table` at once with no way to tell which address each was for (questions,
+  Q11). `Device.addressSources`, on the wire `address_sources`: one
+  `{address, discovered_via}` per address, in address order. `discovered_via` is
+  unchanged. Additive inside schema 4 (unreleased), and beside `addresses` rather than in
+  it, because the history file is shared with builds that read `addresses` as strings.
+  Absent means not recorded. The JSON fixture and the two `PipelineArtifactGate`
+  baselines gain the key, deliberately; nothing else in them moves. `zhen.1` now lists
+  `neighbor_resolved` too.
 - **Breaking: `neighbor_table` now means inherited, and the report schema is 4.** Through
   0.7.0 `neighbor_table` covered every host the table alone supplied, including entries
   the scan's own probes had just caused to resolve; those are `neighbor_resolved` now, and

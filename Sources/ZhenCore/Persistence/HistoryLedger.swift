@@ -471,6 +471,7 @@ public struct HistoryLedger: Sendable {
                 observed.ttl = device.ttl ?? observed.ttl
                 observed.rtt = device.rtt ?? observed.rtt
                 observed.discoveredVia = device.discoveredVia
+                observed.addressSources = device.addressSources
                 observed.lastSeen = device.lastSeen
                 observed.firstContactMillis = device.firstContactMillis
                 observed.firstContactCold = device.firstContactCold

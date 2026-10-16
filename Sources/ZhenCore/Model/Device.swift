@@ -255,6 +255,15 @@ public struct Device: Sendable, Hashable, Codable {
     /// Empty means the engine did not say, which is what an artifact written before
     /// this field existed decodes to.
     public var discoveredVia: [DiscoverySource]
+    /// How each address was found, address by address (the fixes brief, F4).
+    ///
+    /// `discoveredVia` is the union of these. Kept beside it, not instead of it, and not
+    /// by turning `addresses` into objects: the history file is shared with builds that
+    /// decode `addresses` as a list of strings, and a device line they cannot read is a
+    /// device they lose. Encoded as `address_sources`, one `{address, discovered_via}`
+    /// per address in address order. Empty means not recorded — every document written
+    /// before schema 4 settled, and a device built by hand.
+    public var addressSources: [IPAddress: [DiscoverySource]]
     /// When this device was first ever seen. Wall clock, for display.
     public var firstSeen: Timestamp
     /// When it was last seen. Wall clock, for display.
@@ -296,7 +305,8 @@ public struct Device: Sendable, Hashable, Codable {
         lastSeen: Timestamp,
         firstContactMillis: Double? = nil,
         firstContactCold: Bool? = nil,
-        foundAfterMillis: Double? = nil
+        foundAfterMillis: Double? = nil,
+        addressSources: [IPAddress: [DiscoverySource]] = [:]
     ) {
         precondition(!addresses.isEmpty, "a Device has at least one address")
         self.addresses = addresses
@@ -325,6 +335,13 @@ public struct Device: Sendable, Hashable, Codable {
         self.firstContactMillis = firstContactMillis
         self.firstContactCold = firstContactMillis == nil ? nil : firstContactCold
         self.foundAfterMillis = foundAfterMillis
+        // Only this device's addresses, each in canonical order, none empty: the same
+        // invariant whichever entry point built it.
+        self.addressSources = addressSources.reduce(into: [:]) { result, entry in
+            guard addresses.contains(entry.key) else { return }
+            let via = Set(entry.value).canonical
+            if !via.isEmpty { result[entry.key] = via }
+        }
     }
 
     /// Wire keys, spelled out. Renaming a Swift property is then a refactor; renaming a
@@ -350,6 +367,7 @@ public struct Device: Sendable, Hashable, Codable {
         case firstContactMillis = "first_contact_millis"
         case firstContactCold = "first_contact_cold"
         case foundAfterMillis = "found_after_millis"
+        case addressSources = "address_sources"
     }
 
     /// Keys that only schema 1 and 2 wrote. Read, never written.
@@ -416,11 +434,13 @@ extension Device {
             lastSeen: try container.decode(Timestamp.self, forKey: .lastSeen),
             firstContactMillis: try container.decodeIfPresent(Double.self, forKey: .firstContactMillis),
             firstContactCold: try container.decodeIfPresent(Bool.self, forKey: .firstContactCold),
-            foundAfterMillis: try container.decodeIfPresent(Double.self, forKey: .foundAfterMillis)
+            foundAfterMillis: try container.decodeIfPresent(Double.self, forKey: .foundAfterMillis),
+            addressSources: (try container.decodeIfPresent([AddressSources].self, forKey: .addressSources) ?? [])
+                .reduce(into: [:]) { $0[$1.address, default: []] += $1.discoveredVia }
         )
     }
 
-    /// Encodes schema 3.
+    /// Encodes schema 4.
     ///
     /// Hand-written for one reason: `addresses` is a `Set`, and the synthesized encoder
     /// would emit it in hash order — which differs between processes — so two runs of
@@ -449,6 +469,14 @@ extension Device {
         try container.encodeIfPresent(firstContactMillis, forKey: .firstContactMillis)
         try container.encodeIfPresent(firstContactCold, forKey: .firstContactCold)
         try container.encodeIfPresent(foundAfterMillis, forKey: .foundAfterMillis)
+        if !addressSources.isEmpty {
+            try container.encode(
+                addressSources.keys.sorted().compactMap { address in
+                    addressSources[address].map { AddressSources(address: address, discoveredVia: $0) }
+                },
+                forKey: .addressSources
+            )
+        }
     }
 
     /// The one address to show when there is room for one.
@@ -538,7 +566,9 @@ extension Device {
             firstContactCold: facts.firstContactCold,
             foundAfterMillis: scanStart.flatMap { start in
                 facts.foundAt.map { max($0.duration(since: start), .zero).milliseconds }
-            }
+            },
+            // One observation is one address, so its sources are that address's.
+            addressSources: [address: facts.discoveredVia.canonical]
         )
     }
 
@@ -651,7 +681,11 @@ extension Device {
         var ports: [PortObservation] = []
         var seenPorts: Set<FusedPort> = []
         var via: Set<DiscoverySource> = []
+        var perAddress: [IPAddress: Set<DiscoverySource>] = [:]
         for part in ordered {
+            for (address, sources) in part.addressSources {
+                perAddress[address, default: []].formUnion(sources)
+            }
             for candidate in part.names where seenNames.insert(candidate).inserted {
                 names.append(candidate)
             }
@@ -691,7 +725,9 @@ extension Device {
             firstContactMillis: ordered.lazy.compactMap(\.firstContactMillis).first,
             firstContactCold: ordered.lazy.first { $0.firstContactMillis != nil }?.firstContactCold,
             // Found when its first part was.
-            foundAfterMillis: ordered.compactMap(\.foundAfterMillis).min()
+            foundAfterMillis: ordered.compactMap(\.foundAfterMillis).min(),
+            // Each address keeps its own sources; the union above is the device's.
+            addressSources: perAddress.mapValues(\.canonical)
         )
     }
 }
@@ -731,7 +767,8 @@ extension Device {
             identityStability: Stability(strongestOf: [HostIdentifier.fromMAC(entry.mac)]),
             discoveredVia: [answeredEcho ? .probeReply : .neighborTable],
             firstSeen: seen,
-            lastSeen: seen
+            lastSeen: seen,
+            addressSources: [.v6(entry.address): [answeredEcho ? .probeReply : .neighborTable]]
         )
     }
 }

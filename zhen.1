@@ -206,16 +206,16 @@ or a duration such as
 .Ar 3s .
 Under
 .Li history
-an address this network's history says usually answers, and that has no neighbour
-entry when the scan starts, is waited for up to a high percentile of how long such
-addresses took to answer when nothing was cached, capped at 5 s, and asked more
-often.
-One that already has a complete entry is reported present from it, and the scan
-does not wait for it.
+an address this network's history says usually answers, and that has no
+neighbour entry when the scan starts, is waited for up to a high percentile of
+how long such addresses took to answer when nothing was cached, capped at 5 s,
+and asked more often.
+One that already has a complete entry is reported present from it, and the
+scan does not wait for it.
 Every other address gets the short wait learned from the scan's own replies.
-A network with fewer than 20 uncached times waits 1.5 s for every address with no
-entry, and that scan is what makes the next one fast; an address with a complete
-entry never waits it.
+A network with fewer than 20 uncached times waits 1.5 s for every address with
+no entry, and that scan is what makes the next one fast; an address with a
+complete entry never waits it.
 .Li learned
 is the short wait for every address, which is how scans worked before 0.8.0.
 A duration waits exactly that long for every address.
@@ -255,8 +255,8 @@ The longest any expected address waits, however slow its history.
 Defaults to
 .Ar 5s .
 .It Fl -reach-min-samples Ar n
-How many first-contact times of a kind, uncached or cached, a network needs before
-they decide the waits of the addresses they describe.
+How many first-contact times of a kind, uncached or cached, a network needs
+before they decide the waits of the addresses they describe.
 Defaults to 20.
 .It Fl -expected-attempts-step Ar duration
 Each whole step of wait beyond the first earns an address one more transmission.
@@ -266,8 +266,8 @@ Defaults to
 The most transmissions any address gets.
 Defaults to 8.
 .It Fl -expected-window Ar duration
-How recently a device must have been seen at an address for the scan to expect it
-there.
+How recently a device must have been seen at an address for the scan to expect
+it there.
 History is kept for ever; this is how far back it counts.
 Defaults to
 .Ar 30d .
@@ -504,7 +504,7 @@ never merely because the engine offers it.
 Each device in the artifact also carries
 .Li discovered_via ,
 which says how that host was found rather than only that it was:
-.Bl -tag -width "neighbor_table" -compact
+.Bl -tag -width "neighbor_resolved" -compact
 .It Li probe_reply
 It answered an echo request this scan sent: the ICMP sweep, or for an IPv6
 address the
@@ -512,9 +512,13 @@ address the
 solicitation.
 .It Li arp_reply
 It answered an ARP request this tool put on the wire.
+.It Li neighbor_resolved
+Its neighbour entry resolved while the scan was running: the kernel's ARP, asked
+because of this scan's probe, was answered.
+It did not answer the echo in time, or at all.
 .It Li neighbor_table
-The kernel's neighbour table listed it, ARP or IPv6, and it did not answer in
-time.
+The kernel's neighbour table listed it, ARP or IPv6, before the scan started,
+and it did not answer in time.
 A host whose reply arrives after the sweep has given up is found this way, so
 a run with several of these is also saying its per-host budgets are tight.
 A host that ignores ICMP is found this way and is genuinely present, but
@@ -533,7 +537,18 @@ means comparing the wire only against the hosts marked
 .Li probe_reply
 or
 .Li arp_reply .
-The other two are expected to be missing from it.
+The others are expected to be missing from it.
+.Pp
+On a device with several addresses
+.Li discovered_via
+is the union over all of them, so a dual-stack host can be
+.Li neighbor_resolved
+on its IPv4 address and
+.Li neighbor_table
+on its link-local one at once.
+.Li address_sources
+lists each address with its own
+.Li discovered_via .
 .Sh ENVIRONMENT
 .Bl -tag -width "ZHEN_HISTORY"
 .It Ev ZHEN_HISTORY
