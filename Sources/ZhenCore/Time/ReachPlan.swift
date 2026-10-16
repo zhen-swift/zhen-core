@@ -103,6 +103,13 @@ public struct ReachSettings: Sendable, Hashable {
     public var attemptsCap: Int
     /// Transmissions for an address with no extended wait — the sweep's own `attempts`.
     public var baseAttempts: Int
+    /// How recently history must have seen a device at an address for it to be expected.
+    ///
+    /// 30 days, and independent of how long history is kept (the fixes brief, F3). The
+    /// command line keeps history for ever, and when "expected" meant "inside retention"
+    /// a phone that left the household a year ago was still waited for on every scan
+    /// (questions, Q1). A month covers a holiday; it does not cover a device that left.
+    public var expectedWindow: Duration
 
     /// The brief's constants.
     public init(
@@ -111,7 +118,8 @@ public struct ReachSettings: Sendable, Hashable {
         minimumSamples: Int = 20,
         attemptsStep: Duration = .milliseconds(500),
         attemptsCap: Int = 8,
-        baseAttempts: Int = 3
+        baseAttempts: Int = 3,
+        expectedWindow: Duration = .seconds(30 * 86_400)
     ) {
         self.firstScanWait = firstScanWait
         self.cap = cap
@@ -119,6 +127,7 @@ public struct ReachSettings: Sendable, Hashable {
         self.attemptsStep = attemptsStep
         self.attemptsCap = attemptsCap
         self.baseAttempts = baseAttempts
+        self.expectedWindow = expectedWindow
     }
 
     /// How many transmissions a wait of this length earns.
@@ -163,7 +172,8 @@ public struct ReachPlan: Sendable, Hashable {
     public let policy: SweepReach
     /// The constants it was built with.
     public let settings: ReachSettings
-    /// The addresses history expects: a device last seen at each, inside retention.
+    /// The addresses history expects: a device last seen at each inside
+    /// `settings.expectedWindow`.
     public var expected: Set<IPv4Address>
     /// Whether the network has too few COLD samples, so every address with no complete
     /// neighbour entry waits `settings.firstScanWait`. Only ever true under `.history`.
@@ -344,20 +354,23 @@ public struct ReachPlan: Sendable, Hashable {
     ///   - devices: what history holds.
     ///   - policy: how to wait.
     ///   - settings: the constants.
-    ///   - now: the instant retention is measured back from.
-    ///   - retention: how far back a sighting still makes an address expected. The store's
-    ///     own policy; the command line's is `.forever`.
+    ///   - now: the instant `settings.expectedWindow` is measured back from.
     public static func make(
         addresses: [IPv4Address],
         network: IPv4Network,
         devices: [StoredDevice],
         policy: SweepReach,
         settings: ReachSettings = ReachSettings(),
-        now: Timestamp,
-        retention: RetentionPolicy = .forever
+        now: Timestamp
     ) -> ReachPlan {
         let probed = Set(addresses)
-        let cutoff = retention.cutoff(before: now)
+        // F3: the window, not the store's retention. Every sample still counts — an old
+        // device's first-contact times still describe the network — but only a recent
+        // sighting makes an address expected.
+        let cutoff = Timestamp(
+            millisecondsSinceEpoch: now.millisecondsSinceEpoch
+                - Int64(settings.expectedWindow.milliseconds.rounded())
+        )
         var expected: Set<IPv4Address> = []
         var cold: [Double] = []
         var warm: [Double] = []
@@ -367,7 +380,7 @@ public struct ReachPlan: Sendable, Hashable {
             for sample in stored.firstContactSamples {
                 if sample.cold { cold.append(sample.millis) } else { warm.append(sample.millis) }
             }
-            if cutoff.map({ stored.device.lastSeen >= $0 }) ?? true {
+            if stored.device.lastSeen >= cutoff {
                 expected.formUnion(here.filter(probed.contains))
             }
         }

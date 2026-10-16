@@ -155,7 +155,9 @@ expected address has answered; while only expected addresses remain it says so
 instead of starting one. `--no-neighbor-watch` is an ablation: with `--reach learned` it
 is 0.7.0's mechanism, which study 2 compares against. Every constant behind the default
 is a flag (`--first-scan-wait`, `--reach-cap`, `--reach-min-samples`,
-`--expected-attempts-step`, `--expected-attempts-cap`), and `--no-history` scans as though
+`--expected-attempts-step`, `--expected-attempts-cap`, `--expected-window`). An address is
+expected when history saw a device there inside `--expected-window` (30 days), however long
+history itself is kept. `--no-history` scans as though
 the network were new without touching the store, because study 2 freezes one build and
 moves these from outside it. The artifact echoes every value used in `run.reach`, names the
 build in `run.tool` (`zhen --version` prints the same commit), and gives each host a

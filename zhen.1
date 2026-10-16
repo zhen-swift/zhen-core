@@ -37,6 +37,7 @@
 .Op Fl -reach-min-samples Ar n
 .Op Fl -expected-attempts-step Ar duration
 .Op Fl -expected-attempts-cap Ar n
+.Op Fl -expected-window Ar duration
 .Op Fl -no-history
 .Op Fl -json | Fl -ndjson
 .Op Fl -quiet
@@ -264,13 +265,19 @@ Defaults to
 .It Fl -expected-attempts-cap Ar n
 The most transmissions any address gets.
 Defaults to 8.
+.It Fl -expected-window Ar duration
+How recently a device must have been seen at an address for the scan to expect it
+there.
+History is kept for ever; this is how far back it counts.
+Defaults to
+.Ar 30d .
 .It Fl -no-history
 Neither read nor write history for this scan: it runs as a first scan and leaves
 no trace.
 .Ev ZHEN_HISTORY
 points a scan at a different history file instead.
 .Pp
-These six exist so the waits can be measured from outside a frozen build.
+These seven exist so the waits can be measured from outside a frozen build.
 Every value a scan used, set by a flag or not, is in
 .Li run.reach .
 .It Fl -json

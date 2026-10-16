@@ -31,6 +31,8 @@ public struct ReachReport: Sendable, Hashable, Codable {
     /// How many probed addresses were cold and warm, and how many took each path. Nil
     /// under `learned` and `fixed`, and when the sweep never started.
     public var paths: ReachPathCounts?
+    /// How recently a device had to be seen at an address for it to be expected, in ms.
+    public var expectedWindowMillis: Double?
     /// How many addresses history expected.
     public var expectedCount: Int
     /// The expected addresses the run found no device at, in address order.
@@ -67,7 +69,8 @@ public struct ReachReport: Sendable, Hashable, Codable {
         firstScanWaitMillis: Double? = nil, capMillis: Double? = nil, minSamples: Int? = nil,
         attemptsStepMillis: Double? = nil, attemptsCap: Int? = nil, baseAttempts: Int? = nil,
         historySamples: Int? = nil, historyRead: Bool? = nil,
-        warmWaitMillis: Double? = nil, warmSamples: Int? = nil, paths: ReachPathCounts? = nil
+        warmWaitMillis: Double? = nil, warmSamples: Int? = nil, paths: ReachPathCounts? = nil,
+        expectedWindowMillis: Double? = nil
     ) {
         self.policy = policy
         self.percentile = percentile
@@ -87,6 +90,7 @@ public struct ReachReport: Sendable, Hashable, Codable {
         self.warmWaitMillis = warmWaitMillis
         self.warmSamples = warmSamples
         self.paths = paths
+        self.expectedWindowMillis = expectedWindowMillis
     }
 
     /// The report for a plan, given the addresses the run found a device at.
@@ -121,7 +125,8 @@ public struct ReachReport: Sendable, Hashable, Codable {
             historyRead: historyRead,
             warmWaitMillis: plan.warmExpectedWait?.milliseconds,
             warmSamples: plan.warmSamples,
-            paths: plan.paths
+            paths: plan.paths,
+            expectedWindowMillis: plan.settings.expectedWindow.milliseconds
         )
     }
 
@@ -146,5 +151,6 @@ public struct ReachReport: Sendable, Hashable, Codable {
         case warmWaitMillis = "warm_wait_millis"
         case warmSamples = "warm_samples"
         case paths
+        case expectedWindowMillis = "expected_window_millis"
     }
 }

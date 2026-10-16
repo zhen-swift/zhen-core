@@ -123,9 +123,10 @@ public struct ScanRunner: Sendable {
         let scanStart = MonotonicInstant.now
         let runID = UUID()
         var target = ScanTarget(network: network ?? interface.network, interface: interface)
-        // The plan, from this network's history, before the sweep. Retention governs the
-        // event log, not devices, so every device the store holds counts — as on the
-        // command line (questions, Q1).
+        // The plan, from this network's history, before the sweep. Every device the
+        // store holds contributes its samples; only one seen inside
+        // `settings.expectedWindow` makes its address expected — retention governs the
+        // event log, not this (F3; questions, Q1).
         target.reach = ReachPlan.make(
             addresses: target.resolvedAddresses, network: target.network,
             devices: await store.devices(), policy: reach, settings: settings, now: .now

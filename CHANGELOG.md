@@ -113,6 +113,13 @@ follow the app's `CFBundleShortVersionString`.
   (questions, Q9). `ReachPath.inherited` and `ReachPlan.isInherited(_:)`; `.history` only —
   a `.fixed` wait still waits for every address. F1 gives the warm samples' percentile
   only to these addresses, so it is reported (`warm_wait_millis`) and waited by none (Q16).
+- **"Expected" means seen in the last 30 days, not "inside retention" (fixes brief, F3).**
+  The command line keeps history for ever, so every address that had ever answered was
+  expected and a device that left a year ago was waited for on every scan (questions, Q1).
+  `ReachSettings.expectedWindow` (default 30 days) decides it; `--expected-window
+  <duration>` sets it and `run.reach.expected_window_millis` echoes it. Every device's
+  first-contact samples still count. **Source-breaking:** `ReachPlan.make` loses its
+  `retention:` parameter. Durations on the command line accept days (`30d`).
 - **Breaking: `neighbor_table` now means inherited, and the report schema is 4.** Through
   0.7.0 `neighbor_table` covered every host the table alone supplied, including entries
   the scan's own probes had just caused to resolve; those are `neighbor_resolved` now, and

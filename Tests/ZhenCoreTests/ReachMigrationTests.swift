@@ -249,12 +249,13 @@ struct ReachMigrationTests {
         let cold = expected.samplesByKey.values.flatMap { $0 }.filter(\.cold).map(\.millis)
         #expect(cold.count == 24, "the fixture is not the one this test was written against")
 
-        // Forever: every device ever seen here is expected, at its CURRENT address only —
-        // the phone's earlier .40 and .41 are not.
+        // The default 30-day window covers the fixture's eleven days: every device seen
+        // here is expected, at its CURRENT address only — the phone's earlier .40 and .41
+        // are not.
         let now = Timestamp(millisecondsSinceEpoch: Self.day(11).millisecondsSinceEpoch + 3_600_000)
         let plan = ReachPlan.make(
             addresses: addresses, network: Self.network, devices: devices,
-            policy: .default, now: now, retention: .forever
+            policy: .default, now: now
         )
         let five: Set<IPv4Address> = Set(["10.10.20.1", "10.10.20.10", "10.10.20.42", "10.10.20.50", "10.10.20.60"]
             .map { IPv4Address($0)! })
@@ -269,11 +270,11 @@ struct ReachMigrationTests {
         #expect(plan.wait(for: IPv4Address("10.10.20.41")!) == .zero)
         #expect(plan.attempts(for: IPv4Address("10.10.20.41")!) == 3)
 
-        // A day's retention: the TV, last seen on day 10, is no longer expected — but its
+        // A one-day window: the TV, last seen on day 10, is no longer expected — but its
         // samples still teach the network's wait.
         let recent = ReachPlan.make(
             addresses: addresses, network: Self.network, devices: devices,
-            policy: .default, now: now, retention: .days(1)
+            policy: .default, settings: ReachSettings(expectedWindow: .seconds(86_400)), now: now
         )
         #expect(recent.expected == five.subtracting([IPv4Address("10.10.20.50")!]))
         #expect(recent.historySamples == 24)

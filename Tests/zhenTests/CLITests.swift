@@ -52,6 +52,7 @@ struct OptionTests {
         #expect(Duration(humanReadable: "5s") == .seconds(5))
         #expect(Duration(humanReadable: "2m") == .seconds(120))
         #expect(Duration(humanReadable: "1h") == .seconds(3600))
+        #expect(Duration(humanReadable: "30d") == .seconds(30 * 86_400))
         #expect(Duration(humanReadable: "1.5s") == .milliseconds(1500))
         #expect(Duration(humanReadable: "30") == .seconds(30))
         #expect(Duration(humanReadable: " 250MS ") == .milliseconds(250))

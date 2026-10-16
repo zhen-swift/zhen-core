@@ -208,6 +208,9 @@ g9() {
   scan --reach-percentile 0.9 --first-scan-wait 1200ms --reach-cap 4s --reach-min-samples 10 \
     --expected-attempts-step 400ms --expected-attempts-cap 7 > $OUT/g9-1.json
   echo "row 1: $(jq -c '.run.reach' $OUT/g9-1.json)"
+  # F3's row: the window that makes an address expected. 1s forgets the scan just above.
+  scan --expected-window 1s > $OUT/g9-1w.json
+  echo "row 1w: $(jq -c '.run.reach | {expected_window_millis, expected_count}' $OUT/g9-1w.json) (default: $(jq -c '.run.reach.expected_window_millis' $OUT/g9-1.json))"
   scan --reach learned --no-neighbor-watch > $OUT/g9-2.json
   echo "row 2: $(jq -c '{policy: .run.reach.policy, neighbor_watch: .run.neighbor_watch}' $OUT/g9-2.json)"
   local before=$(shasum -a 256 $ZHEN_HISTORY | cut -d' ' -f1)

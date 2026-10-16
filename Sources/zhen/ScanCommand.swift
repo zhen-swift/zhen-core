@@ -155,9 +155,10 @@ struct Scan: AsyncParsableCommand {
         // ── The reach plan ─────────────────────────────────────────────────────
         //
         // Built before the sweep, from this network's history. The command line keeps
-        // history for ever, so every device ever seen here is expected (questions,
-        // Q1). With nowhere to keep history there is none to read, and the scan is a
-        // first scan every time — which is what that machine's history says.
+        // history for ever, but only a device seen inside `--expected-window` (30 days)
+        // makes its address expected (F3; questions, Q1). With nowhere to keep history
+        // there is none to read, and the scan is a first scan every time — which is
+        // what that machine's history says.
         target.reach = ReachPlan.make(
             addresses: target.resolvedAddresses, network: target.network,
             devices: await history?.devices() ?? [],

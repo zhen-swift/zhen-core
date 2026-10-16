@@ -146,7 +146,7 @@ struct ReachPlanTests {
         #expect(plan.wait(for: Self.ip(50), learnedTail: .milliseconds(310)) == .milliseconds(310))
     }
 
-    @Test("The expected set: in the target, in this network, seen inside retention")
+    @Test("The expected set: in the target, in this network, seen inside the expected window")
     func expectedSet() {
         let devices = [
             Self.stored(12),
@@ -159,23 +159,26 @@ struct ReachPlanTests {
                 firstContactSamples: (0..<30).map { _ in FirstContactSample(millis: 4_000, cold: true) }
             ),
         ]
-        let forever = ReachPlan.make(
+        // The default window is 30 days: .13, last seen 40 days ago, is not expected.
+        let month = ReachPlan.make(
             addresses: Self.addresses, network: Self.network, devices: devices,
             policy: .default, now: Self.now
         )
-        #expect(forever.expected == [Self.ip(12), Self.ip(13)])
-        #expect(forever.historySamples == 0)
-
-        let month = ReachPlan.make(
-            addresses: Self.addresses, network: Self.network, devices: devices,
-            policy: .default, now: Self.now, retention: .days(30)
-        )
         #expect(month.expected == [Self.ip(12)])
+        #expect(month.historySamples == 0)
+
+        let longer = ReachPlan.make(
+            addresses: Self.addresses, network: Self.network, devices: devices,
+            policy: .default, settings: ReachSettings(expectedWindow: .seconds(60 * 86_400)),
+            now: Self.now
+        )
+        #expect(longer.expected == [Self.ip(12), Self.ip(13)])
 
         // A sweep of named addresses only expects among them.
         let named = ReachPlan.make(
             addresses: [Self.ip(13)], network: Self.network, devices: devices,
-            policy: .default, now: Self.now
+            policy: .default, settings: ReachSettings(expectedWindow: .seconds(60 * 86_400)),
+            now: Self.now
         )
         #expect(named.expected == [Self.ip(13)])
     }

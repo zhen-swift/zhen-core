@@ -115,7 +115,9 @@ nonisolated extension Duration {
         self = .nanoseconds(Int64(nanoseconds))
     }
 
-    /// Parses `500ms`, `5s`, `2m`, `1h`, or a bare number of seconds.
+    /// Parses `500ms`, `5s`, `2m`, `1h`, `30d`, or a bare number of seconds.
+    ///
+    /// Days exist for `--expected-window`, whose default is a month.
     ///
     /// Written here rather than taken from a dependency because it is fifteen lines and
     /// `swift-argument-parser` is meant to stay the only external package in the repo.
@@ -124,6 +126,7 @@ nonisolated extension Duration {
         guard !trimmed.isEmpty else { return nil }
         let units: [(suffix: String, nanos: Double)] = [
             ("ms", 1_000_000), ("s", 1_000_000_000), ("m", 60_000_000_000), ("h", 3_600_000_000_000),
+            ("d", 86_400_000_000_000),
         ]
         for unit in units where trimmed.hasSuffix(unit.suffix) {
             let number = String(trimmed.dropLast(unit.suffix.count))

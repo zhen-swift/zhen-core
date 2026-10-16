@@ -67,6 +67,9 @@ struct ReachOptions: ParsableArguments {
     @Option(name: .long, help: "The most transmissions any address gets. Default 8.")
     var expectedAttemptsCap: Int?
 
+    @Option(name: .long, help: "How recently a device must have been seen at an address for the scan to expect it, e.g. 30d. Default 30d.")
+    var expectedWindow: String?
+
     @Flag(
         name: .long,
         help: ArgumentHelp(
@@ -87,6 +90,9 @@ struct ReachOptions: ParsableArguments {
         if let reachCap { settings.cap = try Self.positive(reachCap, "--reach-cap") }
         if let expectedAttemptsStep {
             settings.attemptsStep = try Self.positive(expectedAttemptsStep, "--expected-attempts-step")
+        }
+        if let expectedWindow {
+            settings.expectedWindow = try Self.positive(expectedWindow, "--expected-window")
         }
         if let reachMinSamples {
             guard reachMinSamples >= 1 else { throw .badArgument("--reach-min-samples must be at least 1.") }
