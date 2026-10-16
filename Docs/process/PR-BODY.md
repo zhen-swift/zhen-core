@@ -1,73 +1,99 @@
-# zhen-core 0.7.0 — ports in history
+# zhen-core 0.8.0 — reach
 
-**Base:** `main` · **Tag:** `0.7.0` → `9a2310a` (annotated, local) · **Supersedes:** #5, the
-contrast helper, which this branch contains unchanged (`17ce2cf`)
+**Base:** `main` (`cb786da`, the 0.7.0 tag) · **Branch:** `core-0.8.0-reach` · **Not tagged, not
+pushed.** `ZhenVersion.current` is still `0.7.0`: the release commit and tag are JC's (questions Q10).
 
-A port scan can be kept in history without being a run. A port opening or closing is an
-event. A device's hardware addresses are kept, one row each. Those are the three things
-zhen-app was working around. The helper is a product, its check at scanner build is bounded,
-and the Local Network advice reads right inside an app.
-
-> **Please merge with a merge commit and push the tag as it is.** zhen-app's companion PR
-> pins 0.7.0 at `9a2310a`. A squash merge re-tagged on `main` works too, but then the app
-> must be re-resolved before its PR merges.
+Study 1 found that a cold scan misses the slowest hosts one run in five, always `.12`/`.13`,
+because the network-wide tail is learned from replies that already came back. It can't wait
+for a host it has never heard from. This branch makes the wait a property of the address.
+History says which addresses usually answer and how long they took when nothing was cached.
+Those addresses wait longer and are asked more often. The rest keep the short learned wait.
+A network never scanned waits long everywhere, once. Everything the study needs to measure
+this from a frozen binary is a flag, and the artifact records it.
 
 ## The changes
 
 | # | Change | Commit |
 |---|---|---|
-| 8 | `Contrast` and `SRGBColor` (PR #5), unchanged | `17ce2cf` |
-| 1 | `HistoryStore.recordPorts(_:targeted:at:)`, a new **requirement**: folds a `PortScanResult` into the records history holds. No presence change, no run line; an unknown host or an absent record's old address is skipped | `ef1d976` |
-| 2 | `DerivedEvent.Kind.portOpened` / `.portClosed`, for transitions involving `open` only, and never from a port that was not asked about. Ports are merged by port, protocol and address rather than replaced | `ef1d976` |
-| 3 | `zhen ports --record`, off by default; `MANUAL.md` and `zhen.1` name it | `6a102ac` |
-| 9 | `Record.macHistory` / `StoredDevice.macHistory`: every MAC, its span, and how it joined (`original`, `rotation(by:)`, `merge(by:)`). On the record, not on `Device` | `9bfb877` |
-| — | Migration gate on a store written by 0.6.0's own code; plus two defects it found | `b223e6d` |
-| 4 | A `zhen-helper` executable product | `77e559e` |
-| 5 | `PortStage` (`off`, `everyHost`, `newHosts`) on `ScanRunner.run`, and `ScanRunner.probePorts` | `429f141` |
-| 6 | `HelperClient.probeTimeout`, 750 ms, for the scanner-build check (acquisitions keep 3 s) | `3198d6b` |
-| 7 | `ProbePermissionAdvice.appleLocalNetworkInApp`, chosen from the running bundle | `e38e19b` |
-| — | Release 0.7.0 | `9a2310a` |
-
-## Fixed along the way
-
-- **A merge was logged twice**, same id: `fold` re-logged what `reconcile` had already
-  logged. The 0.6.0 fixture shows the pair.
-- **A line half-understood was dropped.** An event or key kind this build does not know
-  decoded, was skipped, and compaction then erased it. It is now kept verbatim. This is the
-  mechanism by which a 0.6.0 build erases 0.7.0's port events (below).
+| 8 | `ExpiryQueue`: each tick costs what is due, not what was sent. Written on Linux and never compiled until this run; it needed no fix. G8: 15.04 comparisons per operation, against a bound of 40 | `126f856` |
+| G0 | Spike: an unprivileged `PF_ROUTE` socket gets **no** message when an ARP entry resolves. Eleven resolutions, socket proven live, zero messages. So the watch polls | `e02e3c2` |
+| 1 | **Neighbour watch.** The sweep polls the table (25 ms, proportional above 1,024 targets). An entry that resolves mid-sweep is `discovered_via: neighbor_resolved`, found at that moment. `neighbor_table` now means *inherited*. `run.neighbor_watch`. **Schema 4** | `9f952e7` |
+| 2 | `SweepReach` (`learned`, `history(percentile:)`, `fixed`) and `ReachPlan`, a pure plan built before the sweep. Every constant is in `ReachSettings` | `adca7fd` |
+| 3 | **First contact** per host (`first_contact_millis`, `first_contact_cold`). History keeps the newest 32 per device on a `"first_contact"` line of its own, which 0.7.0 carries through a compaction | `501a588` |
+| G1, G2 | Fixtures written by 0.7.0's own store, by this branch on top of it, and by 0.7.0 compacting that. Migration and plan-from-store tests, on macOS and Linux | `c7c2c16` |
+| 4 | **The sweep honours the plan.** Extended addresses get the plan's attempts, spread across their own wait, and a deadline in an `ExpiryQueue`. The sweep ends at the latest deadline, or as soon as every expected address has answered. `.learned` runs the 0.7.0 schedule unchanged | `bfe3597` |
+| 5 | **Look longer.** `ScanRunner.lookLonger(_:wait:)`, and the new `HistoryStore.recordExtension(_:of:)`: a found device joins the *latest* run with an `appeared`, and nothing else changes | `d0ccc68` |
+| 6 | **Settling.** `ProbeEvent.settling(expectedMissing:)` fires when only expected addresses remain ("still listening for 2 you usually have"). `run.reach` records the plan and `expected_missing` | `43a1cfc` |
+| 7 | **CLI.** `--reach history\|learned\|<duration>`, `--reach-percentile`, `--no-neighbor-watch`, `zhen scan --look-longer` (`run.extends_run`). Both pipelines build the plan from history | `97a79d1` |
+| 9 | **The study contract.** `--first-scan-wait`, `--reach-cap`, `--reach-min-samples`, `--expected-attempts-step`, `--expected-attempts-cap` and `--no-history`, each echoed in `run.reach`. Also per-device `found_after_millis`, per-stage `attempts` and `concurrency`, `run.tool`, and `zhen --version` with the commit, stamped by a build-tool plugin | `ae9c4a8` |
+| — | `Scripts/verify-reach-testbed.sh`: JC's gates in one script; questions Q8, Q9 | `588c6f4` |
 
 ## Breaking
 
-- `HistoryStore` has a new requirement.
-- `DerivedEvent.Kind` has two new cases.
-- `ScanRunner.run(…deepScan:…)` is now `run(…ports:…)`.
-- `ScanReport.schemaVersion` stays **3**, because no `Model/` type changed. The argument is in
-  `Docs/process/0.7.0-progress.md` (DM.5).
-- **Do not point a 0.6.0 build at a store 0.7.0 has written.** It drops port events and MAC
-  history the next time it rewrites the file. The CHANGELOG says so; questions Q1 has the one
-  mitigation, which the brief's frozen shape ruled out.
+- **Schema 4.** `discovered_via` has a new value, and `neighbor_table` changed meaning. A
+  schema-3 reader cannot decode a 4 document. `minimumReadableSchema` stays 1.
+- **Source-breaking:** `DiscoverySource.neighborResolved`, `ProbeEvent.settling`, and the new
+  `HistoryStore.recordExtension(_:of:)` requirement. The app must handle all three when it
+  adopts 0.8.0. `NeighborCache.snapshot()` is a new requirement, but it has a default.
+- **The default scan changes.** It reads history before the sweep, and a network with fewer
+  than 20 cold samples waits 1.5 s everywhere. `--reach learned --no-neighbor-watch` is
+  0.7.0's mechanism.
+- The two byte-for-byte artifact baselines in `PipelineArtifactGate` now include `run.tool`,
+  deliberately. The `--version` test now checks the version part against the plist.
 
 ## Verification
 
-- `swift test`: **632 → 673**, all green on macOS 26. Every new behaviour was shown failing
-  first, either against a stub or by breaking the line a guard protects. Each is recorded in
-  the ledger.
-- **Old logs load:** `Tests/ZhenCoreTests/Fixtures/history-0.6.0.ndjson`, written by
-  `Scripts/make-history-fixture` (pinned to `exact: "0.6.0"`), loads, folds and compacts with
-  nothing lost. The gate was shown failing on a reader that drops undecodable lines, and on
-  one that requires the new field.
-- `Scripts/check-docs.sh` and `check-manpage.sh` pass. The man-page check was red on
-  `ports --record` until the page named it.
-- **Linux** (`swift:6.2` in a lima VM): `ZhenCore` builds. The suite aborts at the known
-  AUDIT M2 `try!`, exactly as the baseline does. With the M2 suites skipped: 473 tests (439
-  at baseline), with the same two container-only `CLITests` failures as the baseline.
-- No `unsafe`, `@unchecked` or `nonisolated(unsafe)` in `ZhenCore`.
-- Not run: `swiftlint` (not installed), GitHub CI (nothing pushed).
+- `swift build`: 0 errors. The only warnings are the eight that `main` already has.
+  `swift test`: **679 → 744**, all passing on macOS 26.6.2 / Swift 6.3.3.
+- **Linux** (`swift:6.2` in the `swiftci` lima VM, Swift 6.2.4): the whole package builds,
+  including the `zhen` target and its plugin. `swift test --filter ZhenCoreTests`: 370 pass.
+  That covers G1 and G2.
+- **G0, G1, G2, G7 (fixture half), G8 and G9 (agent half) passed.** The evidence for each
+  is pasted in `Docs/process/0.8.0-progress.md`.
+- **G9 live, this Mac, unprivileged, on 10.10.40.0/24** (not the study LAN, and not a
+  measurement). Every row's flag was accepted and its value is in the artifact.
+  `--first-scan-wait 1200ms` ended discovery at 1,214 ms. `--reach learned
+  --no-neighbor-watch` took 378 ms. `--no-history` left the store byte-identical.
+  `zhen --version` printed `0.7.0 (ae9c4a8…)`. A cold run, once the cache had expired
+  on its own, saw 11 resolutions. `.15`, which doesn't answer echo, was
+  `neighbor_resolved` at 55 ms (warm, it was reported at 1,517 ms), and every IPv4 host but
+  the gateway had `first_contact_cold: true`. JC's real history store has the same sha256
+  before and after.
+- `Scripts/check-manpage.sh` passes (`scan: 26 options checked`), and so does
+  `Scripts/check-docs.sh`.
+- No `unsafe`, `@unchecked` or `nonisolated(unsafe)` was added to `ZhenCore`.
+- **Not run:** G3–G6, G7 live, G8's testbed half and G9's root row. Those are JC's, through
+  `Scripts/verify-reach-testbed.sh`. `swiftlint` and GitHub CI weren't run either; nothing
+  was pushed.
 
-## Known defect
+## For JC
 
-**K1:** this package still shows a `zhen-helper` scheme when opened on its own in Xcode, as
-it did before. Hiding it could not be verified from the command line (questions Q3). The
-app's scheme list, which is what the objection was about, is unaffected.
+```bash
+cd ~/Dev/InfinityCastle/zhen-core && swift build -c release
+limactl start netbed1 netbed2 netbed3 netbed4 netbed5
+Scripts/verify-reach-testbed.sh all          # G3 G4 G5 G6 G8 G9 — asks for sudo
+Scripts/verify-reach-testbed.sh g7 netbed3   # takes one VM down and brings it back
+```
+
+## Known defects and open questions
+
+None of the agent's gates failed. `Docs/process/0.8.0-questions.md` holds eleven questions. The
+ones that change behaviour are these:
+
+- **Q8:** a machine that scans more often than every 20 minutes keeps its ARP cache warm. Its
+  history then never gains cold samples, so it pays the 1.5 s first-scan wait every time.
+  Seen live.
+- **Q9:** an expected host that answers ARP but not ping, with its entry already cached
+  (inherited), holds a warm scan to its full wait. Inherited is not evidence, by the brief's
+  definition.
+- **Q11:** on a dual-stack device, `discovered_via` can hold both `neighbor_resolved` (the v4
+  address resolved this scan) and `neighbor_table` (its inherited IPv6 link-local). Seen
+  live. The analysis should test membership.
+- **Q1:** on the command line, history is kept for ever. So is the expected set.
+- **Q5:** XNU may send at most one ARP request per second per entry. That would make the
+  extra attempts about half as many ARP attempts as they look. A capture during G4 would
+  settle it.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+https://claude.ai/code/session_01WBYqzzAHubrqLjum2CZLP1
