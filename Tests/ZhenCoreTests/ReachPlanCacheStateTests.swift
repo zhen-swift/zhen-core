@@ -175,7 +175,7 @@ struct ReachPlanCacheStateTests {
         let wire = try JSONDecoder().decode(Wire.self, from: JSONEncoder().encode(report))
         #expect(wire.paths == [
             "cold": 253, "warm": 1, "first_scan": 0, "device": 0, "cold_percentile": 1,
-            "inherited": 1, "learned_tail": 252,
+            "inherited": 1, "learned_tail": 252, "backed_off": 0,
         ])
         #expect(wire.warm_wait_millis == 40)
         #expect(wire.warm_samples == 20)

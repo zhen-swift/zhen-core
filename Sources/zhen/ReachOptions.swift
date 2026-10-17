@@ -65,6 +65,12 @@ struct ReachOptions: ParsableArguments {
     @Option(name: .long, help: "A device's own cold first-contact samples it needs before an expected address waits their percentile rather than their maximum. Default 5.")
     var reachDeviceMinSamples: Int?
 
+    @Option(name: .long, help: "What a device's own wait is multiplied by, and at least 50 ms added, for headroom over its past first contacts; 1 turns it off. Default 1.25.")
+    var reachMargin: Double?
+
+    @Option(name: .long, help: "What each scan in a row that missed an expected device multiplies its next wait by, up to --reach-cap; 1 turns it off. Default 2.")
+    var reachMissBackoff: Double?
+
     @Option(name: .long, help: "Each whole step of wait beyond the first earns one more transmission, e.g. 500ms. Default 500ms.")
     var expectedAttemptsStep: String?
 
@@ -127,6 +133,14 @@ struct ReachOptions: ParsableArguments {
         if let reachDeviceMinSamples {
             guard reachDeviceMinSamples >= 1 else { throw .badArgument("--reach-device-min-samples must be at least 1.") }
             settings.deviceMinimumSamples = reachDeviceMinSamples
+        }
+        if let reachMargin {
+            guard reachMargin >= 1, reachMargin.isFinite else { throw .badArgument("--reach-margin must be at least 1 (1 turns it off).") }
+            settings.deviceMargin = reachMargin
+        }
+        if let reachMissBackoff {
+            guard reachMissBackoff >= 1, reachMissBackoff.isFinite else { throw .badArgument("--reach-miss-backoff must be at least 1 (1 turns it off).") }
+            settings.missBackoff = reachMissBackoff
         }
         if let expectedAttemptsCap {
             guard expectedAttemptsCap >= settings.baseAttempts else {

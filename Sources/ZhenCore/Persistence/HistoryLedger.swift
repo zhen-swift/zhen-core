@@ -112,6 +112,10 @@ public struct HistoryLedger: Sendable {
         /// record is where a series of runs is remembered. `ReachPlan` reads the cold
         /// ones to learn how long this network takes to answer when nothing is cached.
         public var firstContactSamples: [FirstContactSample] = []
+        /// How many runs in a row expected this device and ended without evidence of it
+        /// (F13). Any sighting resets it. Kept with the samples, on the line 0.7.0 carries
+        /// through a compaction verbatim.
+        public var missStreak: Int = 0
 
         /// Creates a record. Each field is documented on the property it sets.
         ///
@@ -243,7 +247,8 @@ public struct HistoryLedger: Sendable {
                 StoredDevice(
                     device: $0.device, isPresent: $0.lastRunID == currentRun,
                     macHistory: $0.macHistory,
-                    firstContactSamples: $0.firstContactSamples
+                    firstContactSamples: $0.firstContactSamples,
+                    missStreak: $0.missStreak
                 )
             }
             .sorted { $0.device.primaryAddress < $1.device.primaryAddress }
@@ -371,6 +376,7 @@ public struct HistoryLedger: Sendable {
                 record.device = observed
                 record.observe(device.mac, at: device.lastSeen, matchedBy: match.by.kind)
                 record.observeFirstContact(of: device)
+                record.missStreak = 0
                 record.lastRunID = report.run.id
                 record.identifiers.formUnion(candidates)
                 records[existing] = record
@@ -418,6 +424,13 @@ public struct HistoryLedger: Sendable {
         if !joined.isEmpty {
             seenNow = Set(seenNow.compactMap(surviving))
             previouslyPresent = Set(previouslyPresent.compactMap(surviving))
+        }
+
+        // F13: an address the run expected and found nothing at is a miss for the device
+        // history holds there. Counted after the sightings, so a v6-only sighting of the
+        // device still leaves its v4 address missed.
+        for address in report.run.reach?.expectedMissing ?? [] {
+            if let key = holder(of: address) { records[key]?.missStreak += 1 }
         }
 
         for key in previouslyPresent.subtracting(seenNow) {
@@ -498,6 +511,7 @@ public struct HistoryLedger: Sendable {
                 record.device = observed
                 record.observe(device.mac, at: device.lastSeen, matchedBy: match.by.kind)
                 record.observeFirstContact(of: device)
+                record.missStreak = 0
                 record.lastRunID = runID
                 record.identifiers.formUnion(candidates)
                 records[match.record] = record
@@ -600,6 +614,18 @@ public struct HistoryLedger: Sendable {
 
         log.append(contentsOf: events)
         return Fold(events: events, prunedEvents: pruneEvents(asOf: at), updatedRecords: updated)
+    }
+
+    /// The record whose device holds this address, seen most recently: the one a plan
+    /// expects there (`ReachPlan.make` takes the device seen last at an address).
+    private func holder(of address: IPv4Address) -> HostIdentifier? {
+        records
+            .filter { $0.value.device.ipv4Addresses.contains(address) }
+            .min {
+                ($1.value.device.lastSeen, $0.value.ordinal, $0.key)
+                    < ($0.value.device.lastSeen, $1.value.ordinal, $1.key)
+            }?
+            .key
     }
 
     /// The record the latest run saw at this address, or nil.
@@ -779,6 +805,8 @@ public struct HistoryLedger: Sendable {
                 if loser.device.lastSeen > survivor.device.lastSeen {
                     survivor.device = loser.device
                     survivor.lastRunID = loser.lastRunID
+                    // F13: the misses of whichever was seen last.
+                    survivor.missStreak = loser.missStreak
                 }
                 absorbed += 1
             }

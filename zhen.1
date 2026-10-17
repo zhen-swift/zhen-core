@@ -37,6 +37,8 @@
 .Op Fl -reach-cap Ar duration
 .Op Fl -reach-min-samples Ar n
 .Op Fl -reach-device-min-samples Ar n
+.Op Fl -reach-margin Ar factor
+.Op Fl -reach-miss-backoff Ar factor
 .Op Fl -expected-attempts-step Ar duration
 .Op Fl -expected-attempts-cap Ar n
 .Op Fl -expected-window Ar duration
@@ -297,6 +299,20 @@ it has fewer than
 .Ar n .
 A device with none waits the network's percentile instead.
 Defaults to 5.
+.It Fl -reach-margin Ar factor
+What a device's own wait is multiplied by, for headroom over the first-contact
+times it was learned from, and never less than 50 ms added.
+.Li 1
+turns it off.
+Defaults to 1.25.
+.It Fl -reach-miss-backoff Ar factor
+What each scan in a row that expected a device and found no evidence of it
+multiplies that device's next wait by, up to
+.Fl -reach-cap .
+Any evidence of the device resets it.
+.Li 1
+turns it off.
+Defaults to 2.
 .It Fl -expected-attempts-step Ar duration
 Each whole step of wait beyond the first earns an address one more transmission.
 Defaults to
@@ -334,7 +350,7 @@ no trace.
 .Ev ZHEN_HISTORY
 points a scan at a different history file instead.
 .Pp
-These nine exist so the waits can be measured from outside a frozen build.
+These eleven exist so the waits can be measured from outside a frozen build.
 Every value a scan used, set by a flag or not, is in
 .Li run.reach .
 .It Fl -json

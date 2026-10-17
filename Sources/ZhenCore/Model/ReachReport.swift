@@ -58,6 +58,10 @@ public struct ReachReport: Sendable, Hashable, Codable {
     /// Fewer of its device's own cold samples than this, and an expected address waits
     /// their maximum rather than their percentile (F11). Nil before F11.
     public var deviceMinSamples: Int?
+    /// What a device's own wait was multiplied by for headroom (F12). Nil before F12.
+    public var deviceMargin: Double?
+    /// What each miss in a row multiplied an expected address's wait by (F13). Nil before.
+    public var missBackoff: Double?
     /// Each whole step of wait beyond the first earns one more transmission, in ms.
     public var attemptsStepMillis: Double?
     /// The most transmissions any address gets.
@@ -80,7 +84,7 @@ public struct ReachReport: Sendable, Hashable, Codable {
         historySamples: Int? = nil, historyRead: Bool? = nil,
         warmWaitMillis: Double? = nil, warmSamples: Int? = nil, paths: ReachPathCounts? = nil,
         expectedWindowMillis: Double? = nil, knownNetwork: Bool? = nil, unexpectedCold: String? = nil,
-        deviceMinSamples: Int? = nil
+        deviceMinSamples: Int? = nil, deviceMargin: Double? = nil, missBackoff: Double? = nil
     ) {
         self.policy = policy
         self.percentile = percentile
@@ -104,6 +108,8 @@ public struct ReachReport: Sendable, Hashable, Codable {
         self.knownNetwork = knownNetwork
         self.unexpectedCold = unexpectedCold
         self.deviceMinSamples = deviceMinSamples
+        self.deviceMargin = deviceMargin
+        self.missBackoff = missBackoff
     }
 
     /// The report for a plan, given the addresses the run found a device at.
@@ -142,7 +148,9 @@ public struct ReachReport: Sendable, Hashable, Codable {
             expectedWindowMillis: plan.settings.expectedWindow.milliseconds,
             knownNetwork: plan.knownNetwork,
             unexpectedCold: plan.settings.unexpectedCold.rawValue,
-            deviceMinSamples: plan.settings.deviceMinimumSamples
+            deviceMinSamples: plan.settings.deviceMinimumSamples,
+            deviceMargin: plan.settings.deviceMargin,
+            missBackoff: plan.settings.missBackoff
         )
     }
 
@@ -171,5 +179,7 @@ public struct ReachReport: Sendable, Hashable, Codable {
         case knownNetwork = "known_network"
         case unexpectedCold = "unexpected_cold"
         case deviceMinSamples = "device_min_samples"
+        case deviceMargin = "device_margin"
+        case missBackoff = "miss_backoff"
     }
 }

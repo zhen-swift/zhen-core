@@ -8,6 +8,8 @@
 /// How many probed addresses took each `ReachPath`, and how many were cold and warm.
 ///
 /// `cold + warm` and the five path counts each add up to the addresses probed.
+/// `backedOff` is not a path: it counts the addresses, on any of the waiting paths, whose
+/// wait a run of misses lengthened (F13).
 public struct ReachPathCounts: Sendable, Hashable, Codable {
     /// Addresses with no complete neighbour entry when the sweep started.
     public var cold: Int
@@ -25,11 +27,14 @@ public struct ReachPathCounts: Sendable, Hashable, Codable {
     public var inherited: Int
     /// Addresses left to the learned tail.
     public var learnedTail: Int
+    /// Expected addresses whose wait was multiplied because their device was missed by the
+    /// scans before (F13). Counted within the paths above, not beside them.
+    public var backedOff: Int
 
     /// Creates a value from its fields. Each one is documented on the property it sets.
     public init(
         cold: Int = 0, warm: Int = 0, firstScan: Int = 0, coldPercentile: Int = 0,
-        inherited: Int = 0, learnedTail: Int = 0, device: Int = 0
+        inherited: Int = 0, learnedTail: Int = 0, device: Int = 0, backedOff: Int = 0
     ) {
         self.cold = cold
         self.warm = warm
@@ -38,6 +43,7 @@ public struct ReachPathCounts: Sendable, Hashable, Codable {
         self.coldPercentile = coldPercentile
         self.inherited = inherited
         self.learnedTail = learnedTail
+        self.backedOff = backedOff
     }
 
     /// Wire keys, spelled out. Renaming a Swift property is then a refactor; renaming a
@@ -50,9 +56,11 @@ public struct ReachPathCounts: Sendable, Hashable, Codable {
         case coldPercentile = "cold_percentile"
         case inherited
         case learnedTail = "learned_tail"
+        case backedOff = "backed_off"
     }
 
-    /// Decodes an artifact written before F11, which has no `device`, as zero.
+    /// Decodes an artifact written before F11, which has no `device`, or before F13, which
+    /// has no `backed_off`, as zero.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.init(
@@ -62,7 +70,8 @@ public struct ReachPathCounts: Sendable, Hashable, Codable {
             coldPercentile: try container.decode(Int.self, forKey: .coldPercentile),
             inherited: try container.decode(Int.self, forKey: .inherited),
             learnedTail: try container.decode(Int.self, forKey: .learnedTail),
-            device: try container.decodeIfPresent(Int.self, forKey: .device) ?? 0
+            device: try container.decodeIfPresent(Int.self, forKey: .device) ?? 0,
+            backedOff: try container.decodeIfPresent(Int.self, forKey: .backedOff) ?? 0
         )
     }
 }

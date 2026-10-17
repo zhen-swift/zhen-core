@@ -265,7 +265,8 @@ struct ReachMigrationTests {
         // Nearest rank: ceil(0.97 × 24) = 24, the slowest cold sample — the printer's 1,034 ms.
         #expect(plan.expectedWait == .milliseconds(1_034))
         #expect(plan.expectedWait == .milliseconds(try #require(cold.max())))
-        #expect(plan.wait(for: IPv4Address("10.10.20.60")!) == .milliseconds(1_034))
+        // The printer waits for itself (F11): its own 1,034 ms, × 1.25 (F12).
+        #expect(plan.wait(for: IPv4Address("10.10.20.60")!) == .milliseconds(1_292.5))
         #expect(plan.attempts(for: IPv4Address("10.10.20.60")!) == 4)
         #expect(plan.wait(for: IPv4Address("10.10.20.41")!) == .zero)
         #expect(plan.attempts(for: IPv4Address("10.10.20.41")!) == 3)

@@ -3,11 +3,12 @@
 # verify-reach-testbed.sh — the 0.8.0 gates that need the study testbed, and some need root.
 #
 # It needs root for four things: `arp -a -d` before each cold run, `ndp -c` in G7, G9's
-# root scan, and R10's capture (`tcpdump`, writing to /tmp/zhen-gates-0.8.0). Every one goes
+# root scan, and R10's capture (`tcpdump`, writing to $OUT). Every one goes
 # through `sudo -n` with an absolute path, so it runs unattended under exact NOPASSWD rules
 # and fails at once, rather than prompting, without them. G9's root scan and R10's capture
-# name /tmp/zhen-gates-0.8.0 in their arguments, so their rules only match that $OUT:
-# gate T used OUT=/tmp/zhen-gates-0.8.0. Every scan writes history to a scratch file under
+# name $OUT in their arguments, so their rules only match one fixed $OUT: the first gate T
+# used /tmp/zhen-gates-0.8.0, which reboots emptied twice; the second used
+# ~/Dev/_archive/gate-t-2026-10-17b. Every scan writes history to a scratch file under
 # $OUT, never to the store in ~/Library — ZHEN_HISTORY is exported before anything runs, and
 # passed through sudo explicitly where sudo is used.
 #
@@ -278,7 +279,7 @@ g9() {
   rm -f $ZHEN_HISTORY
   echo "row 8, --version: $($Z --version)"
   scan --reach-percentile 0.9 --first-scan-wait 1200ms --reach-cap 4s --reach-min-samples 10 \
-    --reach-device-min-samples 3 --expected-attempts-step 400ms --expected-attempts-cap 7 > $OUT/g9-1.json
+    --reach-device-min-samples 3 --reach-margin 1.5 --reach-miss-backoff 3 --expected-attempts-step 400ms --expected-attempts-cap 7 > $OUT/g9-1.json
   echo "row 1: $(jq -c '.run.reach' $OUT/g9-1.json)"
   # F3's row: the window that makes an address expected. 1ms forgets the scan just above; 1s
   # would not, since the next scan starts ~50 ms after the last one finishes (R5, 2026-10-16).
@@ -299,7 +300,7 @@ g9() {
   cold; scan > $OUT/g9-4.json
   echo "rows 4–6: $(jq -c '{stage: (.run.timing.stages[0] | {attempts, concurrency, retransmit_budget_millis, tail_budget_millis}), hosts: [.devices[] | {a: .addresses[0], via: .discovered_via, found_after_millis, first_contact_millis, first_contact_cold}]}' $OUT/g9-4.json)"
   sudo -n /usr/bin/env ZHEN_HISTORY=$OUT/root-history.ndjson $Z scan --cidr $CIDR --iface $IFACE --discovery-only --json --quiet > $OUT/g9-7.json \
-    || echo "row 7: sudo -n failed — no rule for this exact command (is OUT=/tmp/zhen-gates-0.8.0?)"
+    || echo "row 7: sudo -n failed — no rule for this exact command (is OUT the directory the rule names?)"
   echo "row 7 (root): $(jq -c '{engine: .run.engine, tool: .run.tool, via: ([.devices[].discovered_via[]] | group_by(.) | map({(.[0]): length}) | add)}' $OUT/g9-7.json)"
   echo "row 8: $(jq -c '.run.tool' $OUT/g9-1.json)"
 }
@@ -313,7 +314,7 @@ r10() {
   echo "\n== R10 — two cold scans back to back, captured. Pass: every reply from $slow1 or $slow2 that answers a probe of scan 1 and arrives inside scan 2 is counted in scan 2's stray_replies, and neither has a first contact under 400 ms in scan 2."
   rm -f $ZHEN_HISTORY $OUT/r10.pcap
   # Rotates once after 8 s and exits; the ping after the scans is the packet that makes it rotate.
-  sudo -n /usr/sbin/tcpdump -i bridge100 -n -U -w /tmp/zhen-gates-0.8.0/r10.pcap -G 8 -W 1 icmp 2>/dev/null &
+  sudo -n /usr/sbin/tcpdump -i bridge100 -n -U -w $OUT/r10.pcap -G 8 -W 1 icmp 2>/dev/null &
   local capture=$!
   sleep 1
   local began=$(date +%s)

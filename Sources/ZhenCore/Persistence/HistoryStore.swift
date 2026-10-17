@@ -146,16 +146,20 @@ public struct StoredDevice: Sendable, Hashable {
     /// `FirstContactSample.retained` of them. History, for the reason `macHistory` is:
     /// it is what `ReachPlan` learns a network's waits from.
     public var firstContactSamples: [FirstContactSample]
+    /// How many scans in a row expected this device at an address and found no evidence
+    /// of it there (addendum 4, F13). `ReachPlan` lengthens its next wait by it.
+    public var missStreak: Int
 
     /// Creates a value from its fields.
     public init(
         device: Device, isPresent: Bool, macHistory: [MACSighting] = [],
-        firstContactSamples: [FirstContactSample] = []
+        firstContactSamples: [FirstContactSample] = [], missStreak: Int = 0
     ) {
         self.device = device
         self.isPresent = isPresent
         self.macHistory = macHistory
         self.firstContactSamples = firstContactSamples
+        self.missStreak = missStreak
     }
 }
 

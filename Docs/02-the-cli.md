@@ -101,7 +101,8 @@ zhen scan      [--cidr <net>] [--iface <name>] [--discovery-only]
                     [--reach history|learned|<duration>] [--reach-percentile <p>]
                     [--no-neighbor-watch] [--look-longer] [--no-history]
                     [--first-scan-wait <d>] [--reach-cap <d>] [--reach-min-samples <n>]
-                    [--reach-device-min-samples <n>]
+                    [--reach-device-min-samples <n>] [--reach-margin <f>]
+                    [--reach-miss-backoff <f>]
                     [--expected-attempts-step <d>] [--expected-attempts-cap <n>]
                     [--expected-window <d>] [--unexpected-cold learned|first-scan]
 zhen hosts     [--since <duration>] [--json] [--store <path>]
@@ -158,7 +159,12 @@ is caught only at the learned tail, and expected from its next scan on. An expec
 address waits for its own device: the percentile of that device's cold times, or their
 maximum while it has fewer than 5 (`--reach-device-min-samples`). One percentile over the
 whole network can't protect one slow phone among fifty fast hosts; the network's value is
-only the fallback for a device with no cold times of its own. `run.reach.paths` counts
+only the fallback for a device with no cold times of its own. A device's wait has headroom
+over the times it was learned from, × 1.25 and at least + 50 ms (`--reach-margin`), because
+the next first contact is often a little later than any before it. And a miss counts: each
+scan in a row that expected a device and heard nothing from it doubles its next wait, up to
+5 s (`--reach-miss-backoff`), until it is heard again. `run.reach.paths.backed_off` counts
+the addresses whose wait a run of misses lengthened. `run.reach.paths` counts
 the addresses that took each rule, and `run.reach` reports the warm samples' percentile
 beside the cold one. The scan ends at the latest per-address deadline, or as soon as every
 expected address has answered; while only expected addresses remain it says so
@@ -169,7 +175,8 @@ out of (`run.interface`; an `--iface` that disagrees exits 64), and adds what an
 that scan instead of starting one. `--no-neighbor-watch` is an ablation: with `--reach learned` it
 is 0.7.0's mechanism, which study 2 compares against. Every constant behind the default
 is a flag (`--first-scan-wait`, `--reach-cap`, `--reach-min-samples`,
-`--reach-device-min-samples`, `--expected-attempts-step`, `--expected-attempts-cap`, `--expected-window`,
+`--reach-device-min-samples`, `--reach-margin`, `--reach-miss-backoff`,
+`--expected-attempts-step`, `--expected-attempts-cap`, `--expected-window`,
 `--unexpected-cold`). An address is
 expected when history saw a device there inside `--expected-window` (30 days), however long
 history itself is kept. `--no-history` scans as though

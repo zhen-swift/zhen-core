@@ -33,7 +33,8 @@ struct ExpectedWindowTests {
         #expect(plan.expected == [G1.ip(13)])
         #expect(plan.historySamples == 40)
         #expect(plan.wait(for: G1.ip(12)) == .zero)
-        #expect(plan.wait(for: G1.ip(13)) == .milliseconds(1_000))
+        // Its own device's P97, 1,000 ms (F11), with F12's margin: × 1.25.
+        #expect(plan.wait(for: G1.ip(13)) == .milliseconds(1_250))
     }
 
     @Test("The boundary: seen exactly 30 days ago is expected, a millisecond more is not")

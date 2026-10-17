@@ -4,6 +4,9 @@
 // samples, or their maximum while it has fewer than `deviceMinimumSamples`, floored by the
 // learned tail and capped. The network's percentile is the fallback for a device with
 // none. Portable, like G1: it runs on Linux.
+//
+// F11's rule alone: every plan here has F12's margin off, and nothing has missed (F13).
+// `ReachPlanMarginTests` has both.
 
 import Foundation
 import Testing
@@ -21,7 +24,7 @@ struct ReachPlanDeviceWaitTests {
     }
 
     static func plan(
-        _ devices: [StoredDevice], policy: SweepReach = .default, settings: ReachSettings = ReachSettings(),
+        _ devices: [StoredDevice], policy: SweepReach = .default, settings: ReachSettings = ReachSettings(deviceMargin: 1),
         complete: Set<IPv4Address> = []
     ) -> ReachPlan {
         ReachPlan.make(
@@ -80,7 +83,7 @@ struct ReachPlanDeviceWaitTests {
         // The threshold is a setting, and a flag (`--reach-device-min-samples`).
         let six = Self.plan(
             Self.fifty + [G1.stored(12, samples: [400, 900, 650, 500, 700].map { FirstContactSample(millis: $0, cold: true) })],
-            policy: median, settings: ReachSettings(deviceMinimumSamples: 6)
+            policy: median, settings: ReachSettings(deviceMinimumSamples: 6, deviceMargin: 1)
         )
         #expect(six.wait(for: Self.ip(12)) == .milliseconds(900))
     }

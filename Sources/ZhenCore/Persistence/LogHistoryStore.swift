@@ -421,7 +421,7 @@ public actor LogHistoryStore: HistoryStore {
         var latest: ScanRun?
         var lines = 0
         // By stored key, last line wins, like the device lines.
-        var contacts: [HostIdentifier: [FirstContactSample]] = [:]
+        var contacts: [HostIdentifier: StoredFirstContactLine] = [:]
 
         for line in data.split(separator: UInt8(ascii: "\n")) where !line.isEmpty {
             lines += 1
@@ -467,7 +467,7 @@ public actor LogHistoryStore: HistoryStore {
                     unreadable.append(Data(line))
                     continue
                 }
-                contacts[key] = stored.samples
+                contacts[key] = stored
             }
         }
 
@@ -477,15 +477,17 @@ public actor LogHistoryStore: HistoryStore {
         // of those builds merged is keyed differently from its samples now, so a key with
         // no record goes to the oldest record that carries it as an identifier — the rule
         // `HistoryLedger.match` states.
-        for (key, samples) in contacts.sorted(by: { $0.key < $1.key }) {
+        for (key, stored) in contacts.sorted(by: { $0.key < $1.key }) {
             let holder = records[key] != nil ? key : records
                 .filter { $0.value.identifiers.contains(key) }
                 .min { ($0.value.ordinal, $0.key) < ($1.value.ordinal, $1.key) }?
                 .key
             guard let holder, var record = records[holder] else { continue }
             record.firstContactSamples = FirstContactSample.newest(
-                (holder == key ? [] : record.firstContactSamples) + samples
+                (holder == key ? [] : record.firstContactSamples) + stored.samples
             )
+            let misses = stored.missStreak ?? 0
+            record.missStreak = holder == key ? misses : max(record.missStreak, misses)
             records[holder] = record
         }
 
@@ -534,9 +536,10 @@ public actor LogHistoryStore: HistoryStore {
                 ordinal: record.ordinal,
                 macHistory: record.macHistory.map(StoredMACSighting.init)
             ))))
-            if !record.firstContactSamples.isEmpty {
+            if !record.firstContactSamples.isEmpty || record.missStreak > 0 {
                 lines.append(Line(payload: .firstContact(StoredFirstContactLine(
-                    key: StoredKey(key), samples: record.firstContactSamples
+                    key: StoredKey(key), samples: record.firstContactSamples,
+                    missStreak: record.missStreak > 0 ? record.missStreak : nil
                 ))))
             }
         }
@@ -578,9 +581,10 @@ public actor LogHistoryStore: HistoryStore {
                 ordinal: record.ordinal,
                 macHistory: record.macHistory.map(StoredMACSighting.init)
             ))))
-            if !record.firstContactSamples.isEmpty {
+            if !record.firstContactSamples.isEmpty || record.missStreak > 0 {
                 lines.append(Line(payload: .firstContact(StoredFirstContactLine(
-                    key: StoredKey(key), samples: record.firstContactSamples
+                    key: StoredKey(key), samples: record.firstContactSamples,
+                    missStreak: record.missStreak > 0 ? record.missStreak : nil
                 ))))
             }
         }
@@ -795,10 +799,14 @@ extension LogHistoryStore {
     struct StoredFirstContactLine: Codable, Sendable {
         var key: StoredKey
         var samples: [FirstContactSample]
+        /// The device's misses in a row (F13). Absent when none, and on a line written
+        /// before F13.
+        var missStreak: Int?
 
         enum CodingKeys: String, CodingKey {
             case key
             case samples = "first_contact_samples"
+            case missStreak = "miss_streak"
         }
     }
 

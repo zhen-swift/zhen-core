@@ -66,6 +66,17 @@
 // `deviceMinimumSamples`, floored by the learned tail and capped. The network percentile
 // is the fallback for a device with no cold samples of its own. This is what "a wait per
 // address, learned from history" meant from the first brief; the pool was a shortcut.
+//
+// ── Headroom, and a miss that counts (addendum 4, F12 and F13) ────────────────────
+//
+// A device's own maximum is one of its past first contacts, and the next one is often a
+// little later: a 500 ms host's scatter over the neighbour watch's 25 ms poll, so the wait
+// was beaten by the very scatter it was learned from (questions, Q19; gate T's `g5-3`). So
+// a device's wait gets a margin: × `deviceMargin`, and never less than + 50 ms. And a miss
+// adds no sample, so nothing used to move the wait of a device that was missed: a host lost
+// once could stay lost. History now counts an expected address's misses in a row, and each
+// one multiplies its next wait by `missBackoff`, capped; any evidence resets the count. A
+// lost device's wait grows until it is heard again.
 
 /// How a sweep decides how long to wait for an address.
 public enum SweepReach: Sendable, Hashable {
@@ -145,6 +156,20 @@ public struct ReachSettings: Sendable, Hashable {
     /// 5: below it the 97th percentile of a device's samples is their maximum anyway, and
     /// saying so keeps the rule readable. With none, the network percentile decides.
     public var deviceMinimumSamples: Int
+    /// What a device's own wait is multiplied by, for headroom over the samples it was
+    /// learned from (F12). 1 turns the margin off, the + 50 ms included.
+    ///
+    /// 1.25: a 500 ms host waits 625 ms, over the ~25 ms its first contacts scatter by.
+    public var deviceMargin: Double
+    /// What each miss in a row multiplies an expected address's next wait by, capped at
+    /// `cap` (F13). 1 turns it off.
+    ///
+    /// 2: two misses, four times the wait. Any evidence of the device resets its count.
+    public var missBackoff: Double
+
+    /// The least a margin adds to a device's wait, whatever the factor: 50 ms (F12). A fast
+    /// device's few milliseconds times 1.25 is still a few milliseconds.
+    public static let deviceMarginMinimum: Duration = .milliseconds(50)
 
     /// 30 days: see `expectedWindow`. History's identity rules use it too (F10).
     public static let defaultExpectedWindow: Duration = .seconds(30 * 86_400)
@@ -159,7 +184,9 @@ public struct ReachSettings: Sendable, Hashable {
         baseAttempts: Int = 3,
         expectedWindow: Duration = ReachSettings.defaultExpectedWindow,
         unexpectedCold: UnexpectedColdWait = .learned,
-        deviceMinimumSamples: Int = 5
+        deviceMinimumSamples: Int = 5,
+        deviceMargin: Double = 1.25,
+        missBackoff: Double = 2
     ) {
         self.firstScanWait = firstScanWait
         self.cap = cap
@@ -170,6 +197,14 @@ public struct ReachSettings: Sendable, Hashable {
         self.expectedWindow = expectedWindow
         self.unexpectedCold = unexpectedCold
         self.deviceMinimumSamples = deviceMinimumSamples
+        self.deviceMargin = deviceMargin
+        self.missBackoff = missBackoff
+    }
+
+    /// A device's wait with its margin: × `deviceMargin`, and at least + 50 ms (F12).
+    public func withMargin(_ wait: Duration) -> Duration {
+        guard deviceMargin > 1 else { return wait }
+        return max(wait * deviceMargin, wait + Self.deviceMarginMinimum)
     }
 
     /// How many transmissions a wait of this length earns.
@@ -266,6 +301,9 @@ public struct ReachPlan: Sendable, Hashable {
     /// with fewer than `settings.deviceMinimumSamples` (F11). Only addresses whose device
     /// has cold samples; `.history` only.
     public let deviceWaits: [IPv4Address: Duration]
+    /// How many scans in a row each expected address's device was missed, where that is
+    /// more than none (F13). Each multiplies its wait by `settings.missBackoff`, capped.
+    public let missStreaks: [IPv4Address: Int]
     /// How many warm first-contact samples the network's history holds.
     public let warmSamples: Int
     /// The percentile of the warm samples, capped: what F1 says an expected address with
@@ -290,7 +328,7 @@ public struct ReachPlan: Sendable, Hashable {
         historySamples: Int = 0, expectedWait: Duration? = nil,
         warmSamples: Int = 0, warmExpectedWait: Duration? = nil,
         warm: Set<IPv4Address>? = nil, paths: ReachPathCounts? = nil,
-        deviceWaits: [IPv4Address: Duration] = [:]
+        deviceWaits: [IPv4Address: Duration] = [:], missStreaks: [IPv4Address: Int] = [:]
     ) {
         self.policy = policy
         self.settings = settings
@@ -304,6 +342,7 @@ public struct ReachPlan: Sendable, Hashable {
         self.warm = warm
         self.paths = paths
         self.deviceWaits = deviceWaits
+        self.missStreaks = missStreaks
     }
 
     /// The plan resolved against the sweep's baseline: which of `addresses` had a
@@ -319,7 +358,8 @@ public struct ReachPlan: Sendable, Hashable {
                 policy: policy, settings: settings, expected: expected, firstScan: firstScan,
                 knownNetwork: knownNetwork, historySamples: historySamples, expectedWait: expectedWait,
                 warmSamples: warmSamples, warmExpectedWait: warmExpectedWait,
-                warm: complete.intersection(addresses), paths: paths, deviceWaits: deviceWaits
+                warm: complete.intersection(addresses), paths: paths, deviceWaits: deviceWaits,
+                missStreaks: missStreaks
             )
         }
         let plan = resolved(paths: nil)
@@ -334,6 +374,7 @@ public struct ReachPlan: Sendable, Hashable {
             case .inherited?: counts.inherited += 1
             case .learnedTail?, nil: counts.learnedTail += 1
             }
+            if plan.isBackedOff(address) { counts.backedOff += 1 }
         }
         return resolved(paths: counts)
     }
@@ -390,12 +431,28 @@ public struct ReachPlan: Sendable, Hashable {
         case .fixed(let wait):
             return wait
         case .history:
-            switch path(for: address) {
-            case .firstScan?: return settings.firstScanWait
-            case .device?: return deviceWaits[address] ?? .zero
-            case .coldPercentile?: return expectedWait ?? .zero
-            case .inherited?, .learnedTail?, nil: return .zero
+            let base: Duration = switch path(for: address) {
+            case .firstScan?: settings.firstScanWait
+            case .device?: deviceWaits[address] ?? .zero
+            case .coldPercentile?: expectedWait ?? .zero
+            case .inherited?, .learnedTail?, nil: .zero
             }
+            // F13: each miss in a row multiplies it, capped — never below what it was.
+            guard isBackedOff(address), let streak = missStreaks[address] else { return base }
+            var grown = base
+            for _ in 0..<streak where grown < settings.cap { grown = grown * settings.missBackoff }
+            return max(base, min(grown, settings.cap))
+        }
+    }
+
+    /// Whether a run of misses lengthened the address's wait (F13): an expected address
+    /// with a wait of its own, whose device was missed by the scans before this one.
+    public func isBackedOff(_ address: IPv4Address) -> Bool {
+        guard case .history = policy, settings.missBackoff > 1,
+              (missStreaks[address] ?? 0) > 0, expected.contains(address) else { return false }
+        switch path(for: address) {
+        case .firstScan?, .device?, .coldPercentile?: return true
+        case .inherited?, .learnedTail?, nil: return false
         }
     }
 
@@ -468,7 +525,7 @@ public struct ReachPlan: Sendable, Hashable {
         var warm: [Double] = []
         // F11: each expected address's own device's cold samples. Where two recent devices
         // hold one address, the one seen last is the one there.
-        var ownSamples: [IPv4Address: (seen: Timestamp, millis: [Double])] = [:]
+        var ownSamples: [IPv4Address: (seen: Timestamp, millis: [Double], misses: Int)] = [:]
         for stored in devices {
             let here = stored.device.ipv4Addresses.filter(network.contains)
             guard !here.isEmpty else { continue }
@@ -480,7 +537,7 @@ public struct ReachPlan: Sendable, Hashable {
                 for address in here where probed.contains(address) {
                     expected.insert(address)
                     if let held = ownSamples[address], held.seen > stored.device.lastSeen { continue }
-                    ownSamples[address] = (stored.device.lastSeen, mine)
+                    ownSamples[address] = (stored.device.lastSeen, mine, stored.missStreak)
                 }
             }
         }
@@ -503,18 +560,22 @@ public struct ReachPlan: Sendable, Hashable {
         }
         let coldWait = wait(cold)
         // F11: the device's percentile, or its maximum while it has few; none, no entry.
+        // F12: with its margin, then capped.
         var deviceWaits: [IPv4Address: Duration] = [:]
         for (address, own) in ownSamples where !own.millis.isEmpty {
             let value = own.millis.count >= max(1, settings.deviceMinimumSamples)
                 ? Self.percentile(percentile, of: own.millis) : own.millis.max()
-            if let value { deviceWaits[address] = min(.milliseconds(value), settings.cap) }
+            if let value {
+                deviceWaits[address] = min(settings.withMargin(.milliseconds(value)), settings.cap)
+            }
         }
+        let missStreaks = ownSamples.compactMapValues { $0.misses > 0 ? $0.misses : nil }
         return ReachPlan(
             policy: policy, settings: settings, expected: expected,
             firstScan: coldWait == nil, knownNetwork: known,
             historySamples: cold.count, expectedWait: coldWait,
             warmSamples: warm.count, warmExpectedWait: wait(warm),
-            deviceWaits: deviceWaits
+            deviceWaits: deviceWaits, missStreaks: missStreaks
         )
     }
 

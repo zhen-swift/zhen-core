@@ -174,6 +174,17 @@ follow the app's `CFBundleShortVersionString`.
   `run.reach.device_min_samples`; `run.reach.paths.device` counts the addresses that waited
   for their device, and `cold_percentile` now counts only the fallback. `ReachPath.device`,
   `ReachPlan.deviceWaits`, `ReachSettings.deviceMinimumSamples`.
+- **A device's wait has headroom, and a miss counts (fixes brief, F12 and F13).** F11's
+  wait was the longest of a device's past first contacts, and a 500 ms host's contacts
+  scatter by ~25 ms, so the next one often landed just past it; a missed host adds no
+  sample, so nothing moved its wait again (questions, Q19). A device's own wait is now ×
+  1.25, and at least + 50 ms (`--reach-margin`, 1 turns it off; `run.reach.device_margin`).
+  An expected address that ends a scan without evidence adds one to its device's miss
+  streak in history; each multiplies the next wait by 2, capped at 5 s, and any evidence
+  resets it (`--reach-miss-backoff`; `run.reach.miss_backoff`; `run.reach.paths.backed_off`).
+  The streak is `miss_streak` on the device's `first_contact` line, which 0.7.0 keeps
+  verbatim. `ReachSettings.deviceMargin`, `missBackoff`, `withMargin(_:)`;
+  `ReachPlan.missStreaks`, `isBackedOff(_:)`; `StoredDevice.missStreak`.
 - **Breaking: `neighbor_table` now means inherited, and the report schema is 4.** Through
   0.7.0 `neighbor_table` covered every host the table alone supplied, including entries
   the scan's own probes had just caused to resolve; those are `neighbor_resolved` now, and

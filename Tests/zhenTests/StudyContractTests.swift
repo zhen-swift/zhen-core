@@ -22,7 +22,7 @@ struct StudyContractTests {
             "--first-scan-wait", "2s", "--reach-cap", "3500ms", "--reach-min-samples", "12",
             "--expected-attempts-step", "1s", "--expected-attempts-cap", "6",
             "--expected-window", "7d", "--unexpected-cold", "first-scan",
-            "--reach-device-min-samples", "3",
+            "--reach-device-min-samples", "3", "--reach-margin", "1.5", "--reach-miss-backoff", "3",
         ]).reachOptions.settings()
         #expect(flagged.firstScanWait == .seconds(2))
         #expect(flagged.cap == .milliseconds(3_500))
@@ -39,6 +39,11 @@ struct StudyContractTests {
         // F11's row: a device's own samples before its percentile replaces its maximum.
         #expect(flagged.deviceMinimumSamples == 3)
         #expect(defaults.deviceMinimumSamples == 5)
+        // F12's and F13's rows: 1 turns either off.
+        #expect(flagged.deviceMargin == 1.5 && flagged.missBackoff == 3)
+        #expect(defaults.deviceMargin == 1.25 && defaults.missBackoff == 2)
+        let off = try Scan.parse(["--reach-margin", "1", "--reach-miss-backoff", "1"]).reachOptions.settings()
+        #expect(off.deviceMargin == 1 && off.missBackoff == 1)
     }
 
     @Test("A value that cannot be a setting is refused")
@@ -49,6 +54,7 @@ struct StudyContractTests {
             ["--expected-attempts-cap", "2"], ["--expected-window", "0d"],
             ["--expected-window", "a month"], ["--unexpected-cold", "sometimes"],
             ["--unexpected-cold", "first_scan"], ["--reach-device-min-samples", "0"],
+            ["--reach-margin", "0.9"], ["--reach-margin", "nan"], ["--reach-miss-backoff", "0.5"],
         ] {
             var refused = false
             do { _ = try Scan.parse(arguments).reachOptions.settings() } catch { refused = true }
@@ -83,6 +89,9 @@ struct StudyContractTests {
         #expect(object["known_network"] as? Bool == false)
         // F11: the device rule's constant.
         #expect(object["device_min_samples"] as? Int == 5)
+        // F12, F13.
+        #expect(object["device_margin"] as? Double == 1.25)
+        #expect(object["miss_backoff"] as? Double == 2)
     }
 
     // ── Rows 3–6, through the pipeline ──────────────────────────────────────────
