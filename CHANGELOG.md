@@ -163,6 +163,17 @@ follow the app's `CFBundleShortVersionString`.
   a new `IPv6MulticastEcho` requirement,
   `solicitAllNodes(on:floor:cap:closing:)`, defaulted to the fixed window, so existing
   conformers still compile. `ScanPipeline` gains `ipv6Window`.
+- **Each expected address waits for its own device (fixes brief, F11).** One percentile
+  over the whole network couldn't protect one slow device: on the testbed the two 500 ms
+  hosts are a fifth of the cold samples, and on a home network one slow phone among fifty
+  hosts is under 3%, so P97 waited past it. An expected address with no complete entry now
+  waits the percentile of *its device's* cold samples, or their maximum while it has fewer
+  than 5, floored by the learned tail and capped at 5 s. The network's percentile, or the
+  first-scan wait while the network has too few, is the fallback for a device with no cold
+  samples of its own. `--reach-device-min-samples` (default 5), echoed as
+  `run.reach.device_min_samples`; `run.reach.paths.device` counts the addresses that waited
+  for their device, and `cold_percentile` now counts only the fallback. `ReachPath.device`,
+  `ReachPlan.deviceWaits`, `ReachSettings.deviceMinimumSamples`.
 - **Breaking: `neighbor_table` now means inherited, and the report schema is 4.** Through
   0.7.0 `neighbor_table` covered every host the table alone supplied, including entries
   the scan's own probes had just caused to resolve; those are `neighbor_resolved` now, and

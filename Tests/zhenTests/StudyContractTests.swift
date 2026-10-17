@@ -22,6 +22,7 @@ struct StudyContractTests {
             "--first-scan-wait", "2s", "--reach-cap", "3500ms", "--reach-min-samples", "12",
             "--expected-attempts-step", "1s", "--expected-attempts-cap", "6",
             "--expected-window", "7d", "--unexpected-cold", "first-scan",
+            "--reach-device-min-samples", "3",
         ]).reachOptions.settings()
         #expect(flagged.firstScanWait == .seconds(2))
         #expect(flagged.cap == .milliseconds(3_500))
@@ -35,6 +36,9 @@ struct StudyContractTests {
         #expect(flagged.unexpectedCold == .firstScan)
         #expect(defaults.unexpectedCold == .learned)
         #expect(try Scan.parse(["--unexpected-cold", "Learned"]).reachOptions.settings().unexpectedCold == .learned)
+        // F11's row: a device's own samples before its percentile replaces its maximum.
+        #expect(flagged.deviceMinimumSamples == 3)
+        #expect(defaults.deviceMinimumSamples == 5)
     }
 
     @Test("A value that cannot be a setting is refused")
@@ -44,7 +48,7 @@ struct StudyContractTests {
             ["--reach-min-samples", "0"], ["--expected-attempts-step", "0s"],
             ["--expected-attempts-cap", "2"], ["--expected-window", "0d"],
             ["--expected-window", "a month"], ["--unexpected-cold", "sometimes"],
-            ["--unexpected-cold", "first_scan"],
+            ["--unexpected-cold", "first_scan"], ["--reach-device-min-samples", "0"],
         ] {
             var refused = false
             do { _ = try Scan.parse(arguments).reachOptions.settings() } catch { refused = true }
@@ -77,6 +81,8 @@ struct StudyContractTests {
         // F7: the rule for a known network's unexpected cold addresses, and whether it was known.
         #expect(object["unexpected_cold"] as? String == "learned")
         #expect(object["known_network"] as? Bool == false)
+        // F11: the device rule's constant.
+        #expect(object["device_min_samples"] as? Int == 5)
     }
 
     // ── Rows 3–6, through the pipeline ──────────────────────────────────────────

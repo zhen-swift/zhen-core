@@ -278,7 +278,7 @@ g9() {
   rm -f $ZHEN_HISTORY
   echo "row 8, --version: $($Z --version)"
   scan --reach-percentile 0.9 --first-scan-wait 1200ms --reach-cap 4s --reach-min-samples 10 \
-    --expected-attempts-step 400ms --expected-attempts-cap 7 > $OUT/g9-1.json
+    --reach-device-min-samples 3 --expected-attempts-step 400ms --expected-attempts-cap 7 > $OUT/g9-1.json
   echo "row 1: $(jq -c '.run.reach' $OUT/g9-1.json)"
   # F3's row: the window that makes an address expected. 1ms forgets the scan just above; 1s
   # would not, since the next scan starts ~50 ms after the last one finishes (R5, 2026-10-16).

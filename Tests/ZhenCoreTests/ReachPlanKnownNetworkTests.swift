@@ -136,6 +136,7 @@ struct ReachPlanKnownNetworkTests {
                         #expect(f1.path(for: address) == reference)
                         let referenceWait: Duration = switch reference {
                         case .firstScan: .milliseconds(1_500)
+                        case .device: f1.deviceWaits[address] ?? .zero
                         case .coldPercentile: f1.expectedWait ?? .zero
                         case .inherited, .learnedTail: .zero
                         }

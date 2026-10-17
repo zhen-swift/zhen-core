@@ -25,6 +25,14 @@ struct ReachPlanTests {
         return StoredDevice(device: device, isPresent: true, firstContactSamples: samples)
     }
 
+    /// A device at `.200` last seen 40 days ago, holding these samples. They still count
+    /// for the network (F3), and nobody waits for it, so the devices expected beside it
+    /// have no cold samples of their own and take the network's rules — the fallback F11
+    /// keeps for exactly that case. `ReachPlanDeviceWaitTests` has the device's own rule.
+    static func pool(_ samples: [FirstContactSample]) -> StoredDevice {
+        stored(200, ageDays: 40, samples: samples)
+    }
+
     static func cold(_ millis: Double...) -> [FirstContactSample] {
         millis.map { FirstContactSample(millis: $0, cold: true) }
     }
@@ -33,10 +41,11 @@ struct ReachPlanTests {
         millis.map { FirstContactSample(millis: $0, cold: false) }
     }
 
-    /// Twenty cold samples, 50 ms to 1,000 ms in 50 ms steps, spread over two devices.
+    /// `.12` and `.13` expected, and twenty cold samples, 50 ms to 1,000 ms in 50 ms
+    /// steps, in the network's pool.
     static var twentyColdDevices: [StoredDevice] {
         let all = (1...20).map { FirstContactSample(millis: Double($0) * 50, cold: true) }
-        return [stored(12, samples: Array(all.prefix(10))), stored(13, samples: Array(all.suffix(10)))]
+        return [stored(12), stored(13), pool(all)]
     }
 
     @Test("Nearest-rank percentile: P97 of twenty is the maximum, P50 the tenth")
@@ -101,7 +110,7 @@ struct ReachPlanTests {
 
     @Test("Under twenty cold samples, every address waits 1.5 s with five attempts")
     func firstScanFallback() {
-        for devices in [[], [Self.stored(12, samples: Self.cold(400, 500))]] {
+        for devices in [[], [Self.stored(12), Self.pool(Self.cold(400, 500))]] {
             let plan = ReachPlan.make(
                 addresses: Self.addresses, network: Self.network, devices: devices,
                 policy: .default, now: Self.now

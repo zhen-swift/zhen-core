@@ -20,15 +20,13 @@ struct ReachPlanCacheStateTests {
     static let addresses = G1.addresses
     static func ip(_ last: UInt8) -> IPv4Address { G1.ip(last) }
 
-    /// `.12` and `.13` expected, with `cold` cold samples and `warm` warm ones between
-    /// them: the cold ones 50 ms apart up to 1,000 ms, the warm ones 2 ms apart from 2.
+    /// `.12` and `.13` expected, and `cold` cold samples and `warm` warm ones in the
+    /// network's pool (`G1.pool`): the cold ones 50 ms apart up to 1,000 ms, the warm ones
+    /// 2 ms apart from 2.
     static func history(cold: Int, warm: Int) -> [StoredDevice] {
         let coldSamples = (0..<cold).map { FirstContactSample(millis: Double($0 % 20 + 1) * 50, cold: true) }
         let warmSamples = (0..<warm).map { FirstContactSample(millis: Double($0 % 20 + 1) * 2, cold: false) }
-        return [
-            G1.stored(12, samples: Array(coldSamples.prefix(cold / 2)) + Array(warmSamples.prefix(warm / 2))),
-            G1.stored(13, samples: Array(coldSamples.dropFirst(cold / 2)) + Array(warmSamples.dropFirst(warm / 2))),
-        ]
+        return [G1.stored(12), G1.stored(13), G1.pool(coldSamples + warmSamples)]
     }
 
     /// F1's settings: the brief's constants, with F7 turned off.
@@ -176,7 +174,7 @@ struct ReachPlanCacheStateTests {
         }
         let wire = try JSONDecoder().decode(Wire.self, from: JSONEncoder().encode(report))
         #expect(wire.paths == [
-            "cold": 253, "warm": 1, "first_scan": 0, "cold_percentile": 1,
+            "cold": 253, "warm": 1, "first_scan": 0, "device": 0, "cold_percentile": 1,
             "inherited": 1, "learned_tail": 252,
         ])
         #expect(wire.warm_wait_millis == 40)

@@ -62,6 +62,9 @@ struct ReachOptions: ParsableArguments {
     @Option(name: .long, help: "First-contact samples of a kind, cold or warm, a network needs before they decide the waits of the addresses they describe. Default 20.")
     var reachMinSamples: Int?
 
+    @Option(name: .long, help: "A device's own cold first-contact samples it needs before an expected address waits their percentile rather than their maximum. Default 5.")
+    var reachDeviceMinSamples: Int?
+
     @Option(name: .long, help: "Each whole step of wait beyond the first earns one more transmission, e.g. 500ms. Default 500ms.")
     var expectedAttemptsStep: String?
 
@@ -120,6 +123,10 @@ struct ReachOptions: ParsableArguments {
         if let reachMinSamples {
             guard reachMinSamples >= 1 else { throw .badArgument("--reach-min-samples must be at least 1.") }
             settings.minimumSamples = reachMinSamples
+        }
+        if let reachDeviceMinSamples {
+            guard reachDeviceMinSamples >= 1 else { throw .badArgument("--reach-device-min-samples must be at least 1.") }
+            settings.deviceMinimumSamples = reachDeviceMinSamples
         }
         if let expectedAttemptsCap {
             guard expectedAttemptsCap >= settings.baseAttempts else {

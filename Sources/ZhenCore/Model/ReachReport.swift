@@ -55,6 +55,9 @@ public struct ReachReport: Sendable, Hashable, Codable {
     public var capMillis: Double?
     /// Fewer cold samples than this and the network is treated as never scanned.
     public var minSamples: Int?
+    /// Fewer of its device's own cold samples than this, and an expected address waits
+    /// their maximum rather than their percentile (F11). Nil before F11.
+    public var deviceMinSamples: Int?
     /// Each whole step of wait beyond the first earns one more transmission, in ms.
     public var attemptsStepMillis: Double?
     /// The most transmissions any address gets.
@@ -76,7 +79,8 @@ public struct ReachReport: Sendable, Hashable, Codable {
         attemptsStepMillis: Double? = nil, attemptsCap: Int? = nil, baseAttempts: Int? = nil,
         historySamples: Int? = nil, historyRead: Bool? = nil,
         warmWaitMillis: Double? = nil, warmSamples: Int? = nil, paths: ReachPathCounts? = nil,
-        expectedWindowMillis: Double? = nil, knownNetwork: Bool? = nil, unexpectedCold: String? = nil
+        expectedWindowMillis: Double? = nil, knownNetwork: Bool? = nil, unexpectedCold: String? = nil,
+        deviceMinSamples: Int? = nil
     ) {
         self.policy = policy
         self.percentile = percentile
@@ -99,6 +103,7 @@ public struct ReachReport: Sendable, Hashable, Codable {
         self.expectedWindowMillis = expectedWindowMillis
         self.knownNetwork = knownNetwork
         self.unexpectedCold = unexpectedCold
+        self.deviceMinSamples = deviceMinSamples
     }
 
     /// The report for a plan, given the addresses the run found a device at.
@@ -136,7 +141,8 @@ public struct ReachReport: Sendable, Hashable, Codable {
             paths: plan.paths,
             expectedWindowMillis: plan.settings.expectedWindow.milliseconds,
             knownNetwork: plan.knownNetwork,
-            unexpectedCold: plan.settings.unexpectedCold.rawValue
+            unexpectedCold: plan.settings.unexpectedCold.rawValue,
+            deviceMinSamples: plan.settings.deviceMinimumSamples
         )
     }
 
@@ -164,5 +170,6 @@ public struct ReachReport: Sendable, Hashable, Codable {
         case expectedWindowMillis = "expected_window_millis"
         case knownNetwork = "known_network"
         case unexpectedCold = "unexpected_cold"
+        case deviceMinSamples = "device_min_samples"
     }
 }

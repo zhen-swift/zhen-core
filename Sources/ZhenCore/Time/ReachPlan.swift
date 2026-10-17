@@ -55,6 +55,17 @@
 // unexpected cold address takes the learned tail, as an unexpected warm one already does.
 // An expected cold address keeps F1's rule, because that's the sleeping phone the long
 // wait exists for. `ReachSettings.unexpectedCold` keeps F1's rule as the study's other arm.
+//
+// ── Each expected address waits for its own device (addendum 3, F11) ──────────────
+//
+// One percentile over the whole network can't protect one slow device. On the testbed two
+// 500 ms hosts among eleven are under a fifth of the cold samples, on a home network one
+// slow phone among fifty hosts is under 3%, and P97 of the pool waits past it. So an
+// expected cold address waits for the device history holds there: the percentile of THAT
+// device's cold samples, or their maximum while it has fewer than
+// `deviceMinimumSamples`, floored by the learned tail and capped. The network percentile
+// is the fallback for a device with no cold samples of its own. This is what "a wait per
+// address, learned from history" meant from the first brief; the pool was a shortcut.
 
 /// How a sweep decides how long to wait for an address.
 public enum SweepReach: Sendable, Hashable {
@@ -128,6 +139,12 @@ public struct ReachSettings: Sendable, Hashable {
     /// cold samples are too few: the learned tail (F7, the default), or the first-scan
     /// wait (F1).
     public var unexpectedCold: UnexpectedColdWait
+    /// Fewer of a device's own cold samples than this, and an expected address waits
+    /// their maximum rather than their percentile (F11).
+    ///
+    /// 5: below it the 97th percentile of a device's samples is their maximum anyway, and
+    /// saying so keeps the rule readable. With none, the network percentile decides.
+    public var deviceMinimumSamples: Int
 
     /// 30 days: see `expectedWindow`. History's identity rules use it too (F10).
     public static let defaultExpectedWindow: Duration = .seconds(30 * 86_400)
@@ -141,7 +158,8 @@ public struct ReachSettings: Sendable, Hashable {
         attemptsCap: Int = 8,
         baseAttempts: Int = 3,
         expectedWindow: Duration = ReachSettings.defaultExpectedWindow,
-        unexpectedCold: UnexpectedColdWait = .learned
+        unexpectedCold: UnexpectedColdWait = .learned,
+        deviceMinimumSamples: Int = 5
     ) {
         self.firstScanWait = firstScanWait
         self.cap = cap
@@ -151,6 +169,7 @@ public struct ReachSettings: Sendable, Hashable {
         self.baseAttempts = baseAttempts
         self.expectedWindow = expectedWindow
         self.unexpectedCold = unexpectedCold
+        self.deviceMinimumSamples = deviceMinimumSamples
     }
 
     /// How many transmissions a wait of this length earns.
@@ -238,10 +257,15 @@ public struct ReachPlan: Sendable, Hashable {
     public let knownNetwork: Bool
     /// How many cold first-contact samples the network's history holds.
     public let historySamples: Int
-    /// The percentile of those samples, capped — what an expected cold address waits
-    /// before the learned tail floors it. Nil when there is none: not `.history`, or too
-    /// few cold samples.
+    /// The percentile of those samples, capped — what an expected cold address whose
+    /// device has no cold samples of its own waits before the learned tail floors it.
+    /// Nil when there is none: not `.history`, or too few cold samples.
     public let expectedWait: Duration?
+    /// What each expected address waits for its own device, capped, before the learned
+    /// tail floors it: the percentile of that device's cold samples, or their maximum
+    /// with fewer than `settings.deviceMinimumSamples` (F11). Only addresses whose device
+    /// has cold samples; `.history` only.
+    public let deviceWaits: [IPv4Address: Duration]
     /// How many warm first-contact samples the network's history holds.
     public let warmSamples: Int
     /// The percentile of the warm samples, capped: what F1 says an expected address with
@@ -265,7 +289,8 @@ public struct ReachPlan: Sendable, Hashable {
         expected: Set<IPv4Address> = [], firstScan: Bool = false, knownNetwork: Bool = false,
         historySamples: Int = 0, expectedWait: Duration? = nil,
         warmSamples: Int = 0, warmExpectedWait: Duration? = nil,
-        warm: Set<IPv4Address>? = nil, paths: ReachPathCounts? = nil
+        warm: Set<IPv4Address>? = nil, paths: ReachPathCounts? = nil,
+        deviceWaits: [IPv4Address: Duration] = [:]
     ) {
         self.policy = policy
         self.settings = settings
@@ -278,6 +303,7 @@ public struct ReachPlan: Sendable, Hashable {
         self.warmExpectedWait = warmExpectedWait
         self.warm = warm
         self.paths = paths
+        self.deviceWaits = deviceWaits
     }
 
     /// The plan resolved against the sweep's baseline: which of `addresses` had a
@@ -293,7 +319,7 @@ public struct ReachPlan: Sendable, Hashable {
                 policy: policy, settings: settings, expected: expected, firstScan: firstScan,
                 knownNetwork: knownNetwork, historySamples: historySamples, expectedWait: expectedWait,
                 warmSamples: warmSamples, warmExpectedWait: warmExpectedWait,
-                warm: complete.intersection(addresses), paths: paths
+                warm: complete.intersection(addresses), paths: paths, deviceWaits: deviceWaits
             )
         }
         let plan = resolved(paths: nil)
@@ -303,6 +329,7 @@ public struct ReachPlan: Sendable, Hashable {
             if plan.isWarm(address) { counts.warm += 1 } else { counts.cold += 1 }
             switch plan.path(for: address) {
             case .firstScan?: counts.firstScan += 1
+            case .device?: counts.device += 1
             case .coldPercentile?: counts.coldPercentile += 1
             case .inherited?: counts.inherited += 1
             case .learnedTail?, nil: counts.learnedTail += 1
@@ -327,11 +354,14 @@ public struct ReachPlan: Sendable, Hashable {
     /// first-scan wait: that wait covers an ARP delay a complete entry does not have. An
     /// unexpected warm address gets the learned tail, and an expected one is `inherited`
     /// (F2): the entry is evidence the report already accepts, so nothing waits for more.
+    /// An expected cold address whose device has cold samples of its own waits for that
+    /// device (F11), however many the network has; the rules above are for the rest.
     public func path(for address: IPv4Address) -> ReachPath? {
         guard case .history = policy else { return nil }
         if isWarm(address) {
             return expected.contains(address) ? .inherited : .learnedTail
         }
+        if expected.contains(address), deviceWaits[address] != nil { return .device }
         if firstScan {
             let unexpectedOnKnown = knownNetwork && !expected.contains(address)
             return unexpectedOnKnown && settings.unexpectedCold == .learned ? .learnedTail : .firstScan
@@ -362,6 +392,7 @@ public struct ReachPlan: Sendable, Hashable {
         case .history:
             switch path(for: address) {
             case .firstScan?: return settings.firstScanWait
+            case .device?: return deviceWaits[address] ?? .zero
             case .coldPercentile?: return expectedWait ?? .zero
             case .inherited?, .learnedTail?, nil: return .zero
             }
@@ -400,7 +431,7 @@ public struct ReachPlan: Sendable, Hashable {
         case .fixed: true
         case .history:
             firstScan || (expectedWait != nil && !expected.isEmpty)
-                || (warmExpectedWait != nil && !expected.isEmpty)
+                || (warmExpectedWait != nil && !expected.isEmpty) || !deviceWaits.isEmpty
         }
     }
 
@@ -435,6 +466,9 @@ public struct ReachPlan: Sendable, Hashable {
         var expected: Set<IPv4Address> = []
         var cold: [Double] = []
         var warm: [Double] = []
+        // F11: each expected address's own device's cold samples. Where two recent devices
+        // hold one address, the one seen last is the one there.
+        var ownSamples: [IPv4Address: (seen: Timestamp, millis: [Double])] = [:]
         for stored in devices {
             let here = stored.device.ipv4Addresses.filter(network.contains)
             guard !here.isEmpty else { continue }
@@ -442,7 +476,12 @@ public struct ReachPlan: Sendable, Hashable {
                 if sample.cold { cold.append(sample.millis) } else { warm.append(sample.millis) }
             }
             if stored.device.lastSeen >= cutoff {
-                expected.formUnion(here.filter(probed.contains))
+                let mine = stored.firstContactSamples.filter(\.cold).map(\.millis)
+                for address in here where probed.contains(address) {
+                    expected.insert(address)
+                    if let held = ownSamples[address], held.seen > stored.device.lastSeen { continue }
+                    ownSamples[address] = (stored.device.lastSeen, mine)
+                }
             }
         }
 
@@ -463,11 +502,19 @@ public struct ReachPlan: Sendable, Hashable {
             return min(.milliseconds(value), settings.cap)
         }
         let coldWait = wait(cold)
+        // F11: the device's percentile, or its maximum while it has few; none, no entry.
+        var deviceWaits: [IPv4Address: Duration] = [:]
+        for (address, own) in ownSamples where !own.millis.isEmpty {
+            let value = own.millis.count >= max(1, settings.deviceMinimumSamples)
+                ? Self.percentile(percentile, of: own.millis) : own.millis.max()
+            if let value { deviceWaits[address] = min(.milliseconds(value), settings.cap) }
+        }
         return ReachPlan(
             policy: policy, settings: settings, expected: expected,
             firstScan: coldWait == nil, knownNetwork: known,
             historySamples: cold.count, expectedWait: coldWait,
-            warmSamples: warm.count, warmExpectedWait: wait(warm)
+            warmSamples: warm.count, warmExpectedWait: wait(warm),
+            deviceWaits: deviceWaits
         )
     }
 

@@ -24,17 +24,23 @@ struct InheritedExpectedSweepTests {
     static let answers = ip(13)
     static let mac = MACAddress(raw: 0xAA_BB_CC_DD_EE_12)
 
-    /// History expects `.12` and `.13`: 20 cold samples up to 1,000 ms, and 20 warm ones
-    /// of 1,200 ms — so F1 alone would have held `.12`, warm, for 1.2 s.
+    /// History expects `.12` and `.13`, and the network holds 20 cold samples up to
+    /// 1,000 ms and 20 warm ones of 1,200 ms — so F1 alone would have held `.12`, warm, for
+    /// 1.2 s. The samples are a device's last seen 40 days ago, so `.12` and `.13` have
+    /// none of their own and take the network's rules (F11's fallback).
     static var plan: ReachPlan {
         let cold = (1...20).map { FirstContactSample(millis: Double($0) * 50, cold: true) }
         let warm = (1...20).map { _ in FirstContactSample(millis: 1_200, cold: false) }
+        let aged = Timestamp(millisecondsSinceEpoch: now.millisecondsSinceEpoch - 40 * 86_400_000)
         let devices = [arpOnly, answers].map { address in
             StoredDevice(
                 device: Device(observing: HostFacts(ip: address), in: network, lastSeen: now),
-                isPresent: true, firstContactSamples: cold + warm
+                isPresent: true
             )
-        }
+        } + [StoredDevice(
+            device: Device(observing: HostFacts(ip: ip(200)), in: network, lastSeen: aged),
+            isPresent: false, firstContactSamples: cold + warm
+        )]
         return ReachPlan.make(
             addresses: addresses, network: network, devices: devices, policy: .default, now: now
         )

@@ -36,6 +36,7 @@
 .Op Fl -first-scan-wait Ar duration
 .Op Fl -reach-cap Ar duration
 .Op Fl -reach-min-samples Ar n
+.Op Fl -reach-device-min-samples Ar n
 .Op Fl -expected-attempts-step Ar duration
 .Op Fl -expected-attempts-cap Ar n
 .Op Fl -expected-window Ar duration
@@ -289,6 +290,13 @@ Defaults to
 How many first-contact times of a kind, uncached or cached, a network needs
 before they decide the waits of the addresses they describe.
 Defaults to 20.
+.It Fl -reach-device-min-samples Ar n
+An expected address with no neighbour entry waits for its own device: the
+percentile of that device's uncached first-contact times, or their maximum while
+it has fewer than
+.Ar n .
+A device with none waits the network's percentile instead.
+Defaults to 5.
 .It Fl -expected-attempts-step Ar duration
 Each whole step of wait beyond the first earns an address one more transmission.
 Defaults to
@@ -326,7 +334,7 @@ no trace.
 .Ev ZHEN_HISTORY
 points a scan at a different history file instead.
 .Pp
-These eight exist so the waits can be measured from outside a frozen build.
+These nine exist so the waits can be measured from outside a frozen build.
 Every value a scan used, set by a flag or not, is in
 .Li run.reach .
 .It Fl -json

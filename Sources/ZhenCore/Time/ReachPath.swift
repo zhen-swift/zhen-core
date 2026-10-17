@@ -8,7 +8,11 @@
 public enum ReachPath: String, Sendable, Hashable, CaseIterable, Codable {
     /// No complete neighbour entry, and too few cold samples: `firstScanWait`.
     case firstScan = "first_scan"
-    /// No complete neighbour entry, expected, and enough cold samples: their percentile.
+    /// No complete neighbour entry, expected, and its device has cold samples of its own:
+    /// their percentile, or their maximum while they are few (the fixes brief, F11).
+    case device = "device"
+    /// No complete neighbour entry, expected, its device with no cold samples, and enough
+    /// on the network: the network's percentile — the fallback F11 left it.
     case coldPercentile = "cold_percentile"
     /// A complete neighbour entry, and expected: already present by the evidence the
     /// report accepts, so the sweep does not wait for more (the fixes brief, F2). It is
