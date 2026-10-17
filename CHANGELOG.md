@@ -151,6 +151,18 @@ follow the app's `CFBundleShortVersionString`.
   (default) or `first-scan` (F1's rule, for study 2's other arm);
   `ReachSettings.unexpectedCold` (`UnexpectedColdWait`), `ReachPlan.knownNetwork`, and in
   `run.reach` `unexpected_cold` and `known_network`.
+- **The IPv6 window ends with the IPv4 sweep (fixes brief, F8).** The one `ff02::1` echo
+  was listened to for a fixed 2 s, and every scan waited for it, so after F7 a known
+  network's 360 ms sweep still made a 2 s scan (questions, Q18). The window now closes
+  when the sweep ends, floored at 500 ms and capped at 2 s. `--ipv6-window sweep`
+  (default), `<duration>` (fixed; `2s` is the old window), or `0` (no echo). Not accepted
+  with `--look-longer`, which sends no echo. `run.ipv6_window`
+  (`IPv6WindowReport`: `policy`, `millis`, `floor_millis`, `cap_millis`) records it, and is
+  absent when there is no IPv6 engine, so the artifact baselines are unchanged.
+  `IPv6Window`, `ListenWindow.wait(floor:cap:closing:)`, `IPv6Solicitation.listened`, and
+  a new `IPv6MulticastEcho` requirement,
+  `solicitAllNodes(on:floor:cap:closing:)`, defaulted to the fixed window, so existing
+  conformers still compile. `ScanPipeline` gains `ipv6Window`.
 - **Breaking: `neighbor_table` now means inherited, and the report schema is 4.** Through
   0.7.0 `neighbor_table` covered every host the table alone supplied, including entries
   the scan's own probes had just caused to resolve; those are `neighbor_resolved` now, and

@@ -16,7 +16,7 @@ subs=$($Z --help | sed -n '/SUBCOMMANDS:/,/See/p' | grep -E '^  [a-z]+( \(defaul
 [ -z "$subs" ] && { echo "no subcommands parsed — the check measures nothing"; exit 2; }
 accepted=()
 for c in ${=subs}; do
-  flags=$($Z help $c 2>&1 | grep -oE '^\s+--[a-z-]+' | tr -d ' ' | grep -vE '^--(help|version)$' | sort -u)
+  flags=$($Z help $c 2>&1 | grep -oE '^\s+--[a-z0-9-]+' | tr -d ' ' | grep -vE '^--(help|version)$' | sort -u)
   n=0
   for f in ${=flags}; do
     n=$((n+1)); accepted+=$f
@@ -25,7 +25,7 @@ for c in ${=subs}; do
   grep -qE "^\.Cm $c( |$)|^\.It Cm $c( |$)" $MAN || { echo "MISSING command: $c"; fail=1; }
   echo "  $c: $n options checked"
 done
-for f in $(grep -oE 'Fl -[a-z-]+' $MAN | sed 's/Fl /-/' | sort -u); do
+for f in $(grep -oE 'Fl -[a-z0-9-]+' $MAN | sed 's/Fl /-/' | sort -u); do
   (( ${accepted[(Ie)$f]} )) || { echo "ON PAGE BUT ACCEPTED BY NO COMMAND: $f"; fail=1; }
 done
 echo "subcommands: $(echo $subs | wc -w | tr -d ' '), result: $([ $fail = 0 ] && echo PASS || echo FAIL)"

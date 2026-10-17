@@ -163,6 +163,16 @@ public protocol IPv6MulticastEcho: Sendable {
     /// within `window`. Each responder once, with its zone.
     func solicitAllNodes(on interface: String, within window: Duration) async -> IPv6Solicitation
 
+    /// Sends one echo request to `ff02::1` on `interface` and collects who answers until
+    /// `closing` yields or finishes, but for no less than `floor` and no more than `cap`
+    /// (the fixes brief's second addendum, F8). `ListenWindow.wait` is that rule.
+    ///
+    /// Defaulted to `solicitAllNodes(on:within: cap)`, the fixed window, so a conformer
+    /// written before F8 still compiles and listens for as long as it always did.
+    func solicitAllNodes(
+        on interface: String, floor: Duration, cap: Duration, closing: AsyncStream<Void>
+    ) async -> IPv6Solicitation
+
     /// One unicast echo. True if it answered. Sent only to a responder the cache has no
     /// hardware address for: the exchange makes the kernel resolve it, and without a MAC
     /// the responder cannot be joined to its v4 device.
@@ -177,12 +187,27 @@ public struct IPv6Solicitation: Sendable, Hashable {
     public var sent: Int
     /// Why nothing could be sent, when nothing was.
     public var failure: String?
+    /// How long it listened after sending. Nil when nothing was sent, or when the
+    /// conformer doesn't measure it.
+    public var listened: Duration?
 
     /// Creates a value from its fields. Each one is documented on the property it sets.
-    public init(responders: [IPv6Address] = [], sent: Int = 0, failure: String? = nil) {
+    public init(
+        responders: [IPv6Address] = [], sent: Int = 0, failure: String? = nil, listened: Duration? = nil
+    ) {
         self.responders = responders
         self.sent = sent
         self.failure = failure
+        self.listened = listened
+    }
+}
+
+extension IPv6MulticastEcho {
+    /// The fixed window, `cap` long: what every conformer did before F8.
+    public func solicitAllNodes(
+        on interface: String, floor: Duration, cap: Duration, closing: AsyncStream<Void>
+    ) async -> IPv6Solicitation {
+        await solicitAllNodes(on: interface, within: cap)
     }
 }
 

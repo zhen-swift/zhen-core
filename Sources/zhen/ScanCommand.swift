@@ -96,6 +96,21 @@ struct Scan: AsyncParsableCommand {
     )
     var sharedBudget = false
 
+    @Option(
+        name: .long,
+        help: ArgumentHelp(
+            "How long to listen after the one IPv6 all-nodes echo: sweep (default), a duration, or 0.",
+            discussion: """
+                The scan sends one echo to ff02::1 before the IPv4 sweep, and listens \
+                while the sweep runs. sweep stops listening when the sweep ends, but \
+                never before 500ms or after 2s. A duration (2s) listens exactly that \
+                long, which is how scans worked before; 0 sends no echo, and IPv6 \
+                hosts come only from the neighbour cache. Recorded as run.ipv6_window.
+                """
+        )
+    )
+    var ipv6Window: String?
+
     func run() async throws {
         do {
             let status = try await execute()
@@ -117,8 +132,14 @@ struct Scan: AsyncParsableCommand {
         let budgets = try parseBudgets()
         let policy = try reachOptions.policy()
         let settings = try reachOptions.settings()
+        let window = try parseIPv6Window()
         if lookLonger {
             try checkLookLonger(policy: policy, network: requestedNetwork)
+            // Look longer sends no all-nodes echo, so a window would go unused while the
+            // artifact said it was asked for.
+            guard ipv6Window == nil else {
+                throw .badArgument("--ipv6-window has nothing to time with --look-longer, which sends no IPv6 echo.")
+            }
         }
         let scanner = try await PlatformScanner.make(
             concurrencyOverride: options.concurrency, budgets: budgets,
@@ -195,7 +216,8 @@ struct Scan: AsyncParsableCommand {
             discoveryOnly: discoveryOnly,
             deep: deep,
             ports: portSpec,
-            history: history
+            history: history,
+            ipv6Window: window
         )
 
         // The scan runs in a child task so the signal handler has something to cancel.
@@ -349,6 +371,17 @@ struct Scan: AsyncParsableCommand {
     /// Internal rather than private so the exclusion and the rejections can be tested
     /// without a network — the rest of this file needs one, and that is the line this
     /// package's test suite draws.
+    /// `--ipv6-window`: `sweep`, a duration, or zero for none (F8).
+    func parseIPv6Window() throws(ScanSetupError) -> IPv6Window {
+        guard let ipv6Window else { return .default }
+        if ipv6Window.lowercased() == "sweep" { return .default }
+        guard let window = Duration(humanReadable: ipv6Window) else {
+            throw .badArgument("--ipv6-window: '\(ipv6Window)' is not sweep, 0 or a duration such as 2s.")
+        }
+        guard window >= .zero else { throw .badArgument("--ipv6-window cannot be negative.") }
+        return window == .zero ? .off : .fixed(window)
+    }
+
     func parseBudgets() throws(ScanSetupError) -> SweepBudgets {
         if sharedBudget, retransmitTimeout != nil {
             throw .badArgument("""

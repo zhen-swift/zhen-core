@@ -47,6 +47,8 @@ nonisolated struct ScanPipeline {
     var history: (any HistoryStore)?
     /// Whether history was read to build the plan, for `run.reach.history_read`.
     var historyRead: Bool = true
+    /// How long to listen after the all-nodes echo (`--ipv6-window`, F8).
+    var ipv6Window: IPv6Window = .default
     /// The build, for `run.tool`. This binary's own unless a test pins it: the commit
     /// changes with every build, and a byte-for-byte gate cannot compare against that.
     var tool: RunTool? = ScanPipeline.buildTool
@@ -92,7 +94,7 @@ nonisolated struct ScanPipeline {
         // artifact, which is what the B1 gate catches.
         let pipeline: [any ScanStage] = [
             EngineNoticesStage(notices: scanner.notices, renderer: renderer),
-            IPv6SolicitationStage(echo: scanner.ipv6Multicast),
+            IPv6SolicitationStage(echo: scanner.ipv6Multicast, window: ipv6Window),
             DiscoveryStage(engine: scanner.discovery, renderer: renderer),
             IPv6NeighborStage(cache: scanner.ipv6Neighbors, echo: scanner.ipv6Multicast),
             NamingStage(engine: scanner.naming, renderer: renderer,
@@ -181,7 +183,8 @@ nonisolated struct ScanPipeline {
                         historyRead: historyRead && history != nil
                     )
                 },
-                tool: tool
+                tool: tool,
+                ipv6Window: context.ipv6WindowReport
             ),
             devices: devices,
             degradations: degradations

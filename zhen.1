@@ -28,6 +28,7 @@
 .Op Fl -yes
 .Op Fl -retransmit-timeout Ar duration
 .Op Fl -shared-budget
+.Op Fl -ipv6-window Ar window
 .Op Fl -reach Ar policy
 .Op Fl -reach-percentile Ar p
 .Op Fl -no-neighbor-watch
@@ -198,6 +199,27 @@ The artifact records that the interval was imposed.
 Use one budget for both retransmitting and declaring hosts absent, as the scan
 did before the two were separated.
 Slower by construction; exists so the split can be measured against its absence.
+.It Fl -ipv6-window Ar window
+How long to listen for answers to the one
+.Li ff02::1
+echo, which is sent before the IPv4 sweep:
+.Li sweep ,
+the default, a duration such as
+.Ar 2s ,
+or
+.Ar 0 .
+.Li sweep
+stops listening when the IPv4 sweep ends, but never before 500 ms or after 2 s.
+A duration listens exactly that long, as scans did before;
+.Ar 2s
+is that window.
+.Ar 0
+sends no echo, and IPv6 hosts come only from the neighbour cache.
+The artifact records the rule and how long it listened as
+.Li run.ipv6_window .
+Not accepted with
+.Fl -look-longer ,
+which sends no echo.
 .It Fl -reach Ar policy
 How long to wait for each address:
 .Li history ,

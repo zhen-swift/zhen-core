@@ -279,6 +279,10 @@ g9() {
   # F7's row: the rule for a known network's unexpected cold addresses.
   scan --unexpected-cold first-scan > $OUT/g9-1u.json
   echo "row 1u: $(jq -c '.run.reach | {unexpected_cold, known_network}' $OUT/g9-1u.json) (default: $(jq -c '.run.reach.unexpected_cold' $OUT/g9-1.json))"
+  # F8's row: how long the scan listened after its all-nodes echo, and by which rule.
+  scan --ipv6-window 2s > $OUT/g9-1i.json
+  scan --ipv6-window 0 > $OUT/g9-1i0.json
+  echo "row 1i: 2s $(jq -c '.run.ipv6_window' $OUT/g9-1i.json), 0 $(jq -c '.run.ipv6_window' $OUT/g9-1i0.json) (default: $(jq -c '.run.ipv6_window' $OUT/g9-1.json))"
   scan --reach learned --no-neighbor-watch > $OUT/g9-2.json
   echo "row 2: $(jq -c '{policy: .run.reach.policy, neighbor_watch: .run.neighbor_watch}' $OUT/g9-2.json)"
   local before=$(shasum -a 256 $ZHEN_HISTORY | cut -d' ' -f1)

@@ -40,6 +40,14 @@ nonisolated struct ScanContext: Sendable {
     var ipv6Neighbors: [IPv6NeighborEntry] = []
     /// The `ff02::1` solicitation, started beside the v4 sweep and collected after it.
     var solicitation: Task<IPv6Solicitation, Never>?
+    /// Closes the solicitation's window. `IPv6NeighborStage` yields it once the v4 sweep
+    /// has ended (F8).
+    var closeSolicitation: AsyncStream<Void>.Continuation?
+    /// The window the solicitation was asked for, for `run.ipv6_window`.
+    var ipv6Window: IPv6Window = .default
+    /// `run.ipv6_window`. Nil when there is no IPv6 engine: nothing was sent and nothing
+    /// failed, so there is no window to report.
+    var ipv6WindowReport: IPv6WindowReport?
     /// Every v6 address that answered an echo this scan sent. Their devices are reported
     /// as `probe_reply` rather than `neighbor_table`: the cache only supplied the MAC.
     var ipv6Responders: Set<IPv6Address> = []
@@ -76,18 +84,30 @@ nonisolated protocol ScanStage: Sendable {
 /// is a degradation, not an error — the scan is complete without it, as it was before.
 /// D2′: one echo to `ff02::1`, started before the v4 sweep so its window runs inside the
 /// sweep's rather than after it. Collected by `IPv6NeighborStage`.
+///
+/// F8: the window used to be a fixed 2 s, and the scan waited for it, so every scan lasted
+/// about 2 s however fast its sweep was (questions, Q18). By default it now closes when
+/// the v4 sweep ends, but no sooner than 500 ms (2.5× the slowest reply P2 saw, a
+/// sleeping phone's radio at 200 ms) and no later than 2 s (`IPv6Window.default`).
 nonisolated struct IPv6SolicitationStage: ScanStage {
     let echo: any IPv6MulticastEcho
-    /// Long enough for a sleeping phone's radio (replies of 200 ms were seen in P2), short
-    /// enough to finish inside a sweep that takes seconds.
-    static let window: Duration = .seconds(2)
+    var window: IPv6Window = .default
 
     func run(_ context: ScanContext) async -> ScanContext {
         var context = context
+        context.ipv6Window = window
+        // `--ipv6-window 0`: no echo. The neighbour cache is still read.
+        guard let bounds = window.bounds else { return context }
         let echo = echo
         let interface = context.target.interface.name
-        let window = min(Self.window, context.deadline.remaining)
-        context.solicitation = Task { await echo.solicitAllNodes(on: interface, within: window) }
+        let remaining = context.deadline.remaining
+        let floor = min(bounds.floor, remaining)
+        let cap = min(bounds.cap, remaining)
+        let (closing, close) = AsyncStream<Void>.makeStream()
+        context.closeSolicitation = close
+        context.solicitation = Task {
+            await echo.solicitAllNodes(on: interface, floor: floor, cap: cap, closing: closing)
+        }
         return context
     }
 }
@@ -99,7 +119,16 @@ nonisolated struct IPv6NeighborStage: ScanStage {
     func run(_ context: ScanContext) async -> ScanContext {
         var context = context
         let interface = context.target.interface.name
+        // This stage runs right after discovery, so the v4 sweep has ended: close the
+        // window. The floor and the cap are the echo's to apply.
+        context.closeSolicitation?.yield()
+        context.closeSolicitation?.finish()
         let solicitation = await context.solicitation?.value ?? IPv6Solicitation()
+        if context.solicitation == nil, context.ipv6Window == .off {
+            context.ipv6WindowReport = IPv6WindowReport(window: .off, listened: nil)
+        } else if solicitation.sent > 0 || solicitation.failure != nil {
+            context.ipv6WindowReport = IPv6WindowReport(window: context.ipv6Window, listened: solicitation.listened)
+        }
         if let failure = solicitation.failure {
             context.degradations.append(Degradation(
                 stage: .discovery,

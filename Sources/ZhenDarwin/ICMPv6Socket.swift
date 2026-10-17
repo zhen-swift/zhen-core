@@ -222,6 +222,16 @@ public struct DarwinMulticastEcho: IPv6MulticastEcho {
     public init() {}
 
     public func solicitAllNodes(on interface: String, within window: Duration) async -> IPv6Solicitation {
+        // A fixed window is a floor and a cap of the same length, so whatever `closing`
+        // does, the window is `window` long.
+        await solicitAllNodes(on: interface, floor: window, cap: window, closing: AsyncStream { _ in })
+    }
+
+    /// F8: listens until the scan closes the window — the v4 sweep has ended — floored and
+    /// capped by `ListenWindow.wait`.
+    public func solicitAllNodes(
+        on interface: String, floor: Duration, cap: Duration, closing: AsyncStream<Void>
+    ) async -> IPv6Solicitation {
         let socket: ICMPv6Socket
         do { socket = try ICMPv6Socket(interface: interface) }
         catch { return IPv6Solicitation(failure: "\(error)") }
@@ -233,7 +243,7 @@ public struct DarwinMulticastEcho: IPv6MulticastEcho {
             return IPv6Solicitation(failure: "sendto(ff02::1%\(interface)) failed")
         }
         let own = socket.local
-        let heard = await withTaskGroup(of: [IPv6Address]?.self) { group in
+        let (heard, listened) = await withTaskGroup(of: [IPv6Address].self) { group in
             group.addTask {
                 var seen: [IPv6Address] = []
                 // Every host answers once; a host answering twice is still one host.
@@ -242,20 +252,15 @@ public struct DarwinMulticastEcho: IPv6MulticastEcho {
                 }
                 return seen
             }
-            group.addTask {
-                try? await Task.sleep(for: window)
-                return nil
-            }
-            // The timer ends the window; stopping the socket then finishes the reader,
-            // which returns what it heard.
-            // Whichever finishes first, the reader's list is the answer: collect it
-            // from the first value or from the rest, never drop it.
-            var result = await group.next() ?? nil
+            // The window, not cancellation, is what ends the reader: stopping the socket
+            // finishes its stream, so every reply already buffered is still read.
+            let listened = await ListenWindow.wait(floor: floor, cap: cap, closing: closing)
             socket.stop()
-            for await value in group { if let value { result = value } }
-            return result ?? []
+            var result: [IPv6Address] = []
+            for await value in group { result = value }
+            return (result, listened)
         }
-        return IPv6Solicitation(responders: heard, sent: 1)
+        return IPv6Solicitation(responders: heard, sent: 1, listened: listened)
     }
 
     public func echo(_ address: IPv6Address, on interface: String, within budget: Duration) async -> Bool {

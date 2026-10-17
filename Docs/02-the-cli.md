@@ -97,6 +97,7 @@ that way; every addition is a supply chain we then own.
 zhen scan      [--cidr <net>] [--iface <name>] [--discovery-only]
                     [--deep] [--ports <spec>]
                     [--retransmit-timeout <duration>] [--shared-budget]
+                    [--ipv6-window sweep|<duration>|0]
                     [--reach history|learned|<duration>] [--reach-percentile <p>]
                     [--no-neighbor-watch] [--look-longer] [--no-history]
                     [--first-scan-wait <d>] [--reach-cap <d>] [--reach-min-samples <n>]
@@ -171,6 +172,17 @@ the network were new without touching the store, because study 2 freezes one bui
 moves these from outside it. The artifact echoes every value used in `run.reach`, names the
 build in `run.tool` (`zhen --version` prints the same commit), and gives each host a
 `found_after_millis` from the scan's start.
+
+**The IPv6 window ends with the IPv4 sweep (0.8.0).** One echo to `ff02::1` goes out
+before the IPv4 sweep, and the scan listens for answers while the sweep runs. It used to
+listen for a fixed 2 s and wait for that, so a sweep that finished in 360 ms still made a
+2 s scan (questions, Q18). `--ipv6-window sweep`, the default, stops listening when the
+sweep ends, but never before 500 ms (2.5× the slowest all-nodes reply seen in P2, a
+sleeping phone at 200 ms) and never after 2 s. `--ipv6-window 2s` is the old window, and
+`--ipv6-window 0` sends no echo, leaving IPv6 hosts to the neighbour cache.
+`run.ipv6_window` records the rule (`policy`, `floor_millis`, `cap_millis`) and how long
+the scan listened (`millis`), so a wall clock can be read as the sweep plus what the
+window added.
 
 **Three output modes, and they are not interchangeable.** `--json` emits one
 `ScanReport` on completion, for a caller that wants the artifact. `--ndjson` emits

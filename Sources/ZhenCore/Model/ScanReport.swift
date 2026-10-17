@@ -104,6 +104,9 @@ public struct ScanRun: Sendable, Hashable, Codable {
     /// from. Absent when the producer does not know its own build — the app's runner, and
     /// every document written before 0.8.0.
     public var tool: RunTool?
+    /// How long the scan listened after its all-nodes echo, and by which rule. Absent for
+    /// a run with no IPv6 engine, and in every document written before F8.
+    public var ipv6Window: IPv6WindowReport?
 
     /// Creates a value from its fields. Each one is documented on the property it sets.
     public init(
@@ -119,7 +122,8 @@ public struct ScanRun: Sendable, Hashable, Codable {
         neighborWatch: NeighborWatchReport? = nil,
         reach: ReachReport? = nil,
         extendsRun: UUID? = nil,
-        tool: RunTool? = nil
+        tool: RunTool? = nil,
+        ipv6Window: IPv6WindowReport? = nil
     ) {
         self.id = id
         self.startedAt = startedAt
@@ -134,6 +138,7 @@ public struct ScanRun: Sendable, Hashable, Codable {
         self.reach = reach
         self.extendsRun = extendsRun
         self.tool = tool
+        self.ipv6Window = ipv6Window
     }
 
     /// Wire keys, spelled out. Renaming a Swift property is then a refactor; renaming a
@@ -152,6 +157,7 @@ public struct ScanRun: Sendable, Hashable, Codable {
         case reach
         case extendsRun = "extends_run"
         case tool
+        case ipv6Window = "ipv6_window"
     }
 
     /// Decodes, tolerating a document written before `mode` existed.
@@ -178,7 +184,8 @@ public struct ScanRun: Sendable, Hashable, Codable {
             ),
             reach: try container.decodeIfPresent(ReachReport.self, forKey: .reach),
             extendsRun: try container.decodeIfPresent(UUID.self, forKey: .extendsRun),
-            tool: try container.decodeIfPresent(RunTool.self, forKey: .tool)
+            tool: try container.decodeIfPresent(RunTool.self, forKey: .tool),
+            ipv6Window: try container.decodeIfPresent(IPv6WindowReport.self, forKey: .ipv6Window)
         )
     }
 }
