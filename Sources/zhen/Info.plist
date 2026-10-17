@@ -20,7 +20,7 @@
     <key>CFBundleName</key>
     <string>zhen</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.7.0</string>
+    <string>0.8.0</string>
     <key>NSLocalNetworkUsageDescription</key>
     <string>zhen scans your local network to list the devices on it.</string>
     <key>NSBonjourServices</key>

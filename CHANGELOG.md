@@ -6,7 +6,7 @@ nothing is released yet.
 The format is loosely [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions
 follow the app's `CFBundleShortVersionString`.
 
-## Unreleased
+## [0.8.0] — 2026-10-17 — reach
 
 ### Added
 - **The sweep watches the neighbour table while it runs (0.8.0 change 1).** An entry that
