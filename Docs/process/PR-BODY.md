@@ -12,7 +12,8 @@ A network never scanned waits long everywhere, once. Everything the study needs 
 this from a frozen binary is a flag, and the artifact records it.
 
 A review of the first run found four questions that would change what study 2 measures. The
-second run (`core-0.8.0-fixes`) answers them, F1–F5, and corrects the record, F6.
+second run (`core-0.8.0-fixes`) answers them, F1–F5, and corrects the record, F6. Its
+review found one more defect in F1's rule (Q15), and the addendum run fixes it, F7.
 
 ## The changes
 
@@ -35,14 +36,15 @@ second run (`core-0.8.0-fixes`) answers them, F1–F5, and corrects the record, 
 | F4 | **Each address says how it was found:** `address_sources`, one `{address, discovered_via}` per address. `discovered_via` stays the union | `d0c390e` |
 | F5 | **Look longer asks on the latest scan's interface**, `run.interface` (on every run since 0.7.0). A disagreeing `--iface` exits 64 | `07925a2` |
 | F6 | **Corrections:** the testbed isolates responders in network namespaces, which a reboot wipes along with the netem qdiscs. It doesn't use `arp_ignore`/`arp_announce`. The script's preflight now checks `.12`'s delay | `cf415ac` |
-| — | Testbed gates as one script (`Scripts/verify-reach-testbed.sh`), its fixes, and gate evidence | `588c6f4`, `562b90a`, `4a0e273`, `db58ed5`, `4a29208` |
+| F7 | **A known network's unexpected cold addresses take the learned tail.** The first-scan wait is for a network zhen doesn't know yet (fewer than 20 samples, cold and warm together) and for expected addresses. A machine that scans often no longer waits 1.5 s for the ~240 addresses where nothing lives. `--unexpected-cold learned` (default) or `first-scan` (F1's rule, for the study); `run.reach.unexpected_cold`, `run.reach.known_network` | `3255bfc` |
+| — | Testbed gates as one script (`Scripts/verify-reach-testbed.sh`), its fixes, and gate evidence | `588c6f4`, `562b90a`, `4a0e273`, `db58ed5`, `4a29208`, `11d4b02` |
 
 ## Breaking
 
 - **Schema 4.** `discovered_via` has a new value and `neighbor_table` changed meaning. A
   schema-3 reader cannot decode a 4 document. `minimumReadableSchema` stays 1. Everything
-  the fixes added (`paths`, `warm_*`, `expected_window_millis`, `address_sources`) is
-  additive inside 4.
+  the fixes added (`paths`, `warm_*`, `expected_window_millis`, `address_sources`,
+  `known_network`, `unexpected_cold`) is additive inside 4.
 - **Source-breaking:**
   - `DiscoverySource.neighborResolved`.
   - `ProbeEvent.settling`.
@@ -52,8 +54,9 @@ second run (`core-0.8.0-fixes`) answers them, F1–F5, and corrects the record, 
 
   The app must handle the first three when it adopts 0.8.0. `NeighborCache.snapshot()` is
   a new requirement with a default.
-- **The default scan changes.** It reads history before the sweep. An address with no
-  neighbour entry, on a network with fewer than 20 cold samples, waits 1.5 s.
+- **The default scan changes.** It reads history before the sweep. On a network with fewer
+  than 20 cold samples, an address with no neighbour entry waits 1.5 s if history expects
+  it, or if the network isn't known yet (fewer than 20 samples of both kinds together).
   `--reach learned --no-neighbor-watch` is 0.7.0's mechanism.
 - The JSON fixture and the two `PipelineArtifactGate` baselines gain `run.tool` (change 9)
   and `address_sources` (F4), deliberately. Nothing else in them moved; each update was
@@ -62,23 +65,34 @@ second run (`core-0.8.0-fixes`) answers them, F1–F5, and corrects the record, 
 ## Verification
 
 - `swift build`: 0 errors. The only warnings are the eight `main` already has. `swift test`:
-  **679 → 744 → 773**, all passing on macOS 26.6.2 / Swift 6.3.3.
+  **679 → 744 → 773 → 782**, all passing on macOS 26.6.2 / Swift 6.3.3.
 - **Linux** (`swift:6.2` in the `swiftci` lima VM, Swift 6.2.4): the whole package builds,
-  including `zhen` and its plugin. `swift test --filter ZhenCoreTests`: **390 pass**. That
-  covers G1, G2, R1 and R3.
+  including `zhen` and its plugin. `swift test --filter ZhenCoreTests`: **396 pass**. That
+  covers G1, G2, R1, R3 and R6.
 - **Passed:**
   - The first run's G0, G1, G2, G7 (fixture half), G8 and G9 (agent half).
   - The fixes run's R1–R5.
+  - The addendum's R6, R7 and R4 again.
   - The evidence for each is pasted in `Docs/process/0.8.0-progress.md`.
 - **R2** is a fixture sweep: an expected, inherited, ARP-only address ends at the learned
   tail, before the 1.2 s F1 alone would have held it. With F2's line reverted, the same test
   fails.
+- **R6** checks F7's rule in the plan: the shapes it changes, unknown networks under both flag
+  values, and 6 × 6 × 4 × 254 cases where `--unexpected-cold first-scan` must equal F1's rule.
+  The sweep half has Q15's shape: no plan kept, and the schedule identical to a plan-less
+  sweep. R1 runs under `first-scan` now. With F7's condition forced false, the new tests fail.
+- **R7, Q15's repro live on this Mac** (unprivileged, scratch history, a minute apart, at
+  `3255bfc`). The first scan on a known network had `paths.first_scan` 0, equal to the expected
+  cold count, and discovery took **364 ms**, against 1,514–1,519 ms on the scans before it.
+  The same history under `--unexpected-cold first-scan` took 1,518 ms. That first known scan
+  is the **third**, not the second: one scan of a 15-host LAN leaves 14 samples (Q17). The
+  committed `g5k` passed both halves on this LAN.
 - **R5, G9 live on this Mac, unprivileged, on 10.10.40.0/24** (not the study LAN and not a
   measurement). Every row's flag was accepted and its value is in the artifact, including
   F3's `--expected-window` (`1ms` forgets the scan before it; the default expects all 15
   hosts). `zhen --version` printed `0.7.0 (cf415ac…)`. JC's real history store had the same
   sha256 before and after.
-- `Scripts/check-manpage.sh` (`scan: 27 options checked`) and `Scripts/check-docs.sh` pass.
+- `Scripts/check-manpage.sh` (`scan: 28 options checked`) and `Scripts/check-docs.sh` pass.
 - No `unsafe`, `@unchecked` or `nonisolated(unsafe)` was added to `ZhenCore`.
 - **On the testbed** (first run, JC's sudo through a temporary sudoers entry, since removed):
   - **G4** 10 of 10, **G8** nothing moved, **G9** every row including root.
@@ -105,11 +119,12 @@ cd ~/Dev/InfinityCastle/zhen-core && swift build -c release
 export OUT=$(mktemp -d /tmp/zhen-reach.XXXXXX)
 Scripts/verify-reach-testbed.sh g3            # absolute window 330–404 ms; cold misses only .12/.13
 Scripts/verify-reach-testbed.sh g4            # with the 500 ms hosts: 10 of 10
-Scripts/verify-reach-testbed.sh g5            # primed: 10 of 10, first_scan false, wall below G4
-Scripts/verify-reach-testbed.sh g5w           # F1: warm cache never takes the first-scan wait
+Scripts/verify-reach-testbed.sh g5            # primed: 10 of 10, first_scan false, wall below G4 (and mean discovery, Q18)
+Scripts/verify-reach-testbed.sh g5w           # F1: warm cache never takes the first-scan wait; then F7 (g5k):
+                                              #   the first known scan waits 1.5 s only for expected cold addresses
 Scripts/verify-reach-testbed.sh g6            # .11 neighbor_resolved cold, neighbor_table warm
 Scripts/verify-reach-testbed.sh g7 netbed3    # look-longer on the run's interface (F5)
-Scripts/verify-reach-testbed.sh g9            # optional: the contract on the testbed, incl. root
+Scripts/verify-reach-testbed.sh g9            # optional: the contract on the testbed, incl. rows 1w, 1u, root
 
 cd ~/Dev/InfinityCastle/zhen-study
 git checkout -- testbed/manifest.json testbed/gate-0.4.json
@@ -120,17 +135,17 @@ Then bump to 0.8.0, tag, and write `zhen-study/v2/frozen-binary-v2.json`.
 
 ## Known defects and open questions
 
-No gate failed for a reason in the code. `Docs/process/0.8.0-questions.md` holds Q1–Q16 and
-corrections to Q5, Q12 and Q14. **Decide these before the freeze.** They are rules, not
-constants, so no flag can move them afterwards:
+No gate failed for a reason in the code. `Docs/process/0.8.0-questions.md` holds Q1–Q18 and
+corrections to Q5, Q12 and Q14. **Decide these before the freeze**, since no flag moves
+them afterwards:
 
-- **Q15:** F1 takes warm hosts off the first-scan wait, but a machine that only ever scans
-  warm still has no cold history. Its ~240 empty addresses are cold, so they still wait
-  1.5 s, and so does the scan. Seen live: 1,514–1,517 ms. One option is to give the
-  first-scan wait only to expected cold addresses, or only while history holds too few
-  samples of either kind.
-- **Q16:** F1's warm percentile is computed and reported, but F2 takes every address it
-  applies to, so no address waits it.
+- **Q18:** F7 shortens the discovery stage, not the scan. The 2 s IPv6 all-nodes window runs
+  beside the sweep and holds every scan's wall clock at about 2 s: 2,013 ms with F7, 2,077 ms
+  without it, and 2,038/2,021 ms for G4/G5 on the testbed earlier. Make the window a flag?
+  Have G5 compare discovery instead of wall clock? Should the product stop waiting for it?
+- **Q17:** "known" counts cold and warm samples together, against `--reach-min-samples`.
+  One scan of a small LAN doesn't reach 20, so a frequent scanner's third scan is its first
+  fast one. Does "known" need its own minimum?
 
 Also open:
 - **Q5:** XNU may send at most one ARP request per second per entry. A capture during G4
@@ -139,7 +154,9 @@ Also open:
 - **Q13:** a powered-off dual-stack host stays present through its NDP entry. Presence is
   unchanged by design; `address_sources` now lets the analysis filter it.
 
-Answered: Q1 (F3), Q8 (F1, with Q15 left), Q9 (F2), Q11 (F4), Q12 (F5), Q14 (corrected).
+Answered: Q1 (F3), Q8 (F1 and F7), Q9 (F2), Q11 (F4), Q12 (F5), Q14 (corrected), Q15 (F7).
+Accepted as resolved: Q16 (a cached, expected address waits for nothing; its warm percentile
+is only reported).
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 
