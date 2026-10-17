@@ -154,10 +154,10 @@ ARP stalling before any wait applies (Q21), and that run stopped as its brief sa
 
 ## For JC — after the second gate T
 
-`/etc/sudoers.d/zhen-gates` is still installed, and the five testbed VMs are running:
+The sudoers file is removed (`/etc/sudoers.d` is empty). The five testbed VMs are still
+running, for an ARP capture:
 
 ```bash
-zsh ~/Dev/_archive/gate-t-2026-10-17b/run-gates.sh cleanup      # removes the sudoers file
 for v in netbed{1..5}; do limactl stop $v; done                 # when the testbed isn't needed
 ```
 
