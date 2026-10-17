@@ -17,7 +17,10 @@ review found one more defect in F1's rule (Q15), and the addendum run fixes it, 
 second addendum, F8, makes that reach the person running the scan: the IPv6 window had held
 every scan at 2 s (Q18). Gate T then ran on the rebuilt testbed. Everything passed except G5:
 on a network zhen knows, with a cold cache, it lost the 500 ms hosts in 5 of 10 scans and
-never got them back. The third addendum fixes the three causes, F9–F11.
+never got them back. The third addendum fixes the three causes, F9–F11. The fourth gives a
+device's wait headroom and makes a miss lengthen the next wait, F12–F13 (Q19). Gate T then
+ran again: everything held except G5 at **9 of 10**. Its one miss, and one of G4's, is `.13`'s
+ARP stalling before any wait applies (Q21), and that run stopped as its brief says.
 
 ## The changes
 
@@ -45,6 +48,7 @@ never got them back. The third addendum fixes the three causes, F9–F11.
 | F9 | **A reply to another scan's probe is a stray.** Probe tokens started at 1 every sweep, in the same address order, so a 500 ms host's late reply to the previous scan matched this scan's probe and became a 46 ms first contact. Each sweep draws a random 32-bit base. `timing.stages[].stray_replies`, `late_replies` | `9e0201b` |
 | F10 | **A sighting with less than its record takes nothing away.** A MAC-less sighting, and the v6-only twin `Device.fusing` reports beside it, each replaced the host's record and removed its MAC, then its v4 address, so it left the expected set. Now such a sighting fills the record in; a MAC-less one joins the current holder of the address; samples carry `at_millis` and merge by time | `bca88f5` |
 | F11 | **Each expected address waits for its own device:** the percentile of its device's cold samples, or their maximum below 5, floored by the learned tail, capped at 5 s. The network's value is the fallback for a device with none. `--reach-device-min-samples`, `run.reach.device_min_samples`, `paths.device` | `a79b034` |
+| F12, F13 | **A margin on a device's wait** (× 1.25, at least + 50 ms; `--reach-margin`, `run.reach.device_margin`) and **a miss that counts**: each scan in a row that missed an expected device doubles its next wait, capped at 5 s, and any sighting resets it (`miss_streak` on the samples line; `--reach-miss-backoff`, `run.reach.miss_backoff`, `paths.backed_off`) | `56fd2f6` |
 | — | Testbed gates as one script (`Scripts/verify-reach-testbed.sh`), its fixes, and gate evidence | `588c6f4`, `562b90a`, `4a0e273`, `db58ed5`, `4a29208`, `11d4b02`, `b510ed8` |
 
 ## Breaking
@@ -53,8 +57,8 @@ never got them back. The third addendum fixes the three causes, F9–F11.
   schema-3 reader cannot decode a 4 document. `minimumReadableSchema` stays 1. Everything
   the fixes added (`paths`, `warm_*`, `expected_window_millis`, `address_sources`,
   `known_network`, `unexpected_cold`, `run.ipv6_window`, `paths.device`,
-  `device_min_samples`, `stray_replies`, `late_replies`, a sample's `at_millis`) is additive
-  inside 4.
+  `device_min_samples`, `stray_replies`, `late_replies`, a sample's `at_millis`,
+  `device_margin`, `miss_backoff`, `paths.backed_off`, `miss_streak`) is additive inside 4.
 - **Source-breaking:**
   - `DiscoverySource.neighborResolved`.
   - `ProbeEvent.settling`.
@@ -80,17 +84,18 @@ never got them back. The third addendum fixes the three causes, F9–F11.
 ## Verification
 
 - `swift build`: 0 errors. The only warnings are the eight `main` already has. `swift test`:
-  **679 → 744 → 773 → 782 → 796 → 812**, all passing on macOS 26.6.2 / Swift 6.3.3. Each of
-  F9, F10 and F11's commits passes on its own (799, 805, 812).
+  **679 → 744 → 773 → 782 → 796 → 812 → 822**, all passing on macOS 26.6.2 / Swift 6.3.3.
+  Each of F9, F10 and F11's commits passes on its own (799, 805, 812).
 - **Linux** (`swift:6.2` in the `swiftci` lima VM, Swift 6.2.4): the whole package builds,
-  including `zhen` and its plugin. `swift test --filter ZhenCoreTests`: **416 pass**. That
-  covers G1, G2, R1, R3, R6, R8's portable half, R11 and R12.
+  including `zhen` and its plugin. `swift test --filter ZhenCoreTests`: **426 pass**. That
+  covers G1, G2, R1, R3, R6, R8's portable half, R11, R12, R13 and R14.
 - **Passed:**
   - The first run's G0, G1, G2, G7 (fixture half), G8 and G9 (agent half).
   - The fixes run's R1–R5.
   - The addendum's R6, R7 and R4 again.
   - The second addendum's R8, R9 and R4 again.
   - The third addendum's R10 (fixture half), R11, R12 and R4 again.
+  - The fourth addendum's R13, R14 and R4 again.
   - The evidence for each is pasted in `Docs/process/0.8.0-progress.md`.
 - **R10:** two sweeps over the testbed's ten responders; the first's reply for `.12` reaches the
   second 46 ms in, or before the second has recorded its sends. Before F9 it became a 46 ms
@@ -128,7 +133,7 @@ never got them back. The third addendum fixes the three causes, F9–F11.
   F3's `--expected-window` (`1ms` forgets the scan before it; the default expects all 15
   hosts). `zhen --version` printed `0.7.0 (cf415ac…)`. JC's real history store had the same
   sha256 before and after.
-- `Scripts/check-manpage.sh` (`scan: 30 options checked`) and `Scripts/check-docs.sh` pass.
+- `Scripts/check-manpage.sh` (`scan: 32 options checked`) and `Scripts/check-docs.sh` pass.
 - No `unsafe`, `@unchecked` or `nonisolated(unsafe)` was added to `ZhenCore`.
 - **On the testbed** (first run, JC's sudo through a temporary sudoers entry, since removed):
   - **G4** 10 of 10, **G8** nothing moved, **G9** every row including root.
@@ -139,46 +144,44 @@ never got them back. The third addendum fixes the three causes, F9–F11.
     judged, and nothing has yet run against a slow host. That is gate T, below.
 - **Gate T** (2026-10-17, rebuilt testbed, 500 ms hosts back, at `b510ed8`): G3, G4 (10 of 10,
   mean wall 1,885 ms), G5w, G5k, G6, G7 and every G9 row, root included, passed. **G5
-  failed**: 5 of 10 scans missed `.12`/`.13`. F9–F11 are the fixes; gate T has not run on them.
+  failed**: 5 of 10 scans missed `.12`/`.13`. F9–F11 are the fixes.
+- **Gate T again** (2026-10-17, at `56fd2f6`, with F9–F13): G3, G5w, G5k, G6 and G7 passed. **G5: 9
+  of 10** (mean wall 592 ms against G4's 1,885). The miss was `.13` in run 3, and F13's backoff
+  found it in run 4. **G4: 9 of 10**, the same host. R10 had no late reply to count. G9 wasn't
+  run: the run stopped at G5. Every miss is `.13`'s ARP not completing. In the capture, no echo
+  to it went on the wire in the scan that missed it (Q21).
 - `swiftlint` and GitHub CI weren't run, and nothing was pushed.
 
-## For JC — gate T, again
+## For JC — after the second gate T
 
-The testbed is down (its VMs stopped at a reboot). The last gate T's kit is back in `/tmp`,
-updated for R10's capture: `/tmp/zhen-gates.sudoers` (its four rules plus one for `tcpdump`,
-`visudo -cf` clean) and `/tmp/zhen-gates-0.8.0/run-gates.sh`. Both texts are in the ledger's
-latest closing entry, in case `/tmp` goes again. **Read Q19 first**: F11's wait has no margin,
-and G5's 10 of 10 is at risk from it.
+`/etc/sudoers.d/zhen-gates` is still installed, and the five testbed VMs are running:
 
 ```bash
-sudo install -m 0440 -o root -g wheel /tmp/zhen-gates.sudoers /etc/sudoers.d/zhen-gates
-
-cd ~/Dev/InfinityCastle/zhen-study
-python3 testbed/netbed.py up && python3 testbed/netbed.py configure && python3 harness/oracles.py
-cp testbed/manifest.json /tmp/manifest-0.8.0-gates.json
-
-cd ~/Dev/InfinityCastle/zhen-core && swift build -c release
-zsh /tmp/zhen-gates-0.8.0/run-gates.sh check g3 g4 g5 g5w g6 r10 g7
-cd ~/Dev/InfinityCastle/zhen-study && python3 testbed/netbed.py configure && python3 harness/oracles.py   # g7 restarts netbed3
-zsh /tmp/zhen-gates-0.8.0/run-gates.sh g9 cleanup
-git checkout -- testbed/manifest.json testbed/gate-0.4.json
-git status --short                            # must show only paper/ and v2/PLAN.md
+zsh ~/Dev/_archive/gate-t-2026-10-17b/run-gates.sh cleanup      # removes the sudoers file
+for v in netbed{1..5}; do limactl stop $v; done                 # when the testbed isn't needed
 ```
 
-G5 is the one that matters: 10 of 10, mean wall below G4's. Each line prints `paths` (with
-`device`) and `strays`. `r10` prints its own PASS or FAIL. Then bump to 0.8.0, tag, and write
-`zhen-study/v2/frozen-binary-v2.json`.
+Then decide Q21: a capture with `arp` in the filter would say whether `.13`'s stall is
+netbed5's or XNU's ARP retry. After that, G5 can run again with the same kit
+(`~/Dev/_archive/gate-t-2026-10-17b/`). The release (bump to 0.8.0, tag,
+`zhen-study/v2/frozen-binary-v2.json`) waits on G5.
 
 ## Known defects and open questions
 
-Gate T's G5 failed for reasons in the code; F9–F11 fix them, and no agent gate fails.
-`Docs/process/0.8.0-questions.md` holds Q1–Q19 and corrections to Q5, Q12 and Q14. **One is
-waiting on a decision before gate T runs again:**
+The first gate T's G5 failed for reasons in the code; F9–F13 fix them, and no agent gate
+fails. The second gate T's G5 is 9 of 10 for a reason below the code (Q21).
+`Docs/process/0.8.0-questions.md` holds Q1–Q22 and corrections to Q5, Q12 and Q14. **Waiting on
+a decision before G5 runs again:**
 
-- **Q19:** F11 waits a device's maximum while it has fewer than 5 samples, with no margin. A
-  500 ms host's cold first contacts scatter over ~25 ms (the neighbour watch's poll), so the
-  next one often lands past the wait. That rule over the whole network is what missed `.13` in
-  gate T's `g5-3`. Options: a margin, a miss that lengthens the next wait, or run gate T as is.
+- **Q21:** in 5 of 24 cold scans, `.13`'s ARP took 0.8 s to over 1.5 s, against its usual 0.5 s.
+  When it missed, no echo to it reached the wire. Unknown: netbed5 dropping it, or XNU's retry
+  rate (Q5). An `arp` capture would settle it.
+
+Also new:
+- **Q20:** F13 grows a departed device's wait to 5 s per scan for the 30-day expected window.
+- **Q22:** a late *ARP* reply from the previous scan still makes an impossible first contact
+  (24–419 ms for 500 ms hosts). F9 only covers echo replies. These samples don't shorten a
+  wait at the default P97.
 
 The rest:
 
@@ -204,7 +207,7 @@ Also open:
   unchanged by design; `address_sources` now lets the analysis filter it.
 
 Answered: Q1 (F3), Q8 (F1 and F7), Q9 (F2), Q11 (F4), Q12 (F5), Q14 (corrected), Q15 (F7),
-Q18 (F8). Accepted as they stand: Q17.
+Q18 (F8), Q19 (F12, F13). Accepted as they stand: Q17.
 Accepted as resolved: Q16 (a cached, expected address waits for nothing; its warm percentile
 is only reported).
 
