@@ -1,7 +1,9 @@
 # zhen-core 0.8.0 — reach
 
-**Base:** `main` (`cb786da`, the 0.7.0 tag) · **Branch:** `core-0.8.0-reach` · **Not tagged, not
-pushed.** `ZhenVersion.current` is still `0.7.0`: the release commit and tag are JC's (questions Q10).
+**Base:** `main` (`cb786da`, the 0.7.0 tag) · **Branch:** `core-0.8.0-reach` · **Released
+locally:** `f629ba2` is "zhen-core 0.8.0", tagged `0.8.0` (annotated), and local `main` is
+fast-forwarded to the branch. Nothing is pushed. Study 2's binary is frozen from the tag
+(`zhen-study/v2/frozen-binary-v2.json`).
 
 Study 1 found that a cold scan misses the slowest hosts one run in five, always `.12`/`.13`,
 because the network-wide tail is learned from replies that already came back. It can't wait
@@ -152,19 +154,16 @@ ARP stalling before any wait applies (Q21), and that run stopped as its brief sa
   to it went on the wire in the scan that missed it (Q21).
 - `swiftlint` and GitHub CI weren't run, and nothing was pushed.
 
-## For JC — after the second gate T
-
-The sudoers file is removed (`/etc/sudoers.d` is empty). The five testbed VMs are still
-running, for an ARP capture:
+## For JC — the push
 
 ```bash
-for v in netbed{1..5}; do limactl stop $v; done                 # when the testbed isn't needed
+git -C ~/Dev/InfinityCastle/zhen-core push origin main 0.8.0
+git -C ~/Dev/InfinityCastle/zhen-study push
 ```
 
-Then decide Q21: a capture with `arp` in the filter would say whether `.13`'s stall is
-netbed5's or XNU's ARP retry. After that, G5 can run again with the same kit
-(`~/Dev/_archive/gate-t-2026-10-17b/`). The release (bump to 0.8.0, tag,
-`zhen-study/v2/frozen-binary-v2.json`) waits on G5.
+Gate T's G5 at 9 of 10 is accepted: `.13` is the testbed's 15% loss host (ledger correction).
+G9 passed against the frozen binary (`~/Dev/zhen-study2-binary`, sha256 `e1f95ea9…a742c`),
+which must not be rebuilt.
 
 ## Known defects and open questions
 
