@@ -102,6 +102,12 @@ preflight() {
   fi
 }
 mean() { jq -s 'map(.run.finished_at - .run.started_at) | add / length | floor' "$@" }
+# The wall clock has a floor of about 2 s wherever the interface has IPv6: the all-nodes echo
+# window (IPv6SolicitationStage.window) runs beside the sweep and the scan waits for it
+# (questions, Q18). So a shorter discovery stage may not show in wall_ms; print both.
+mean_discovery() {
+  jq -s 'map([.run.timing.stages[] | select(.stage == "discovery") | .elapsed_millis][0]) | add / length | floor' "$@"
+}
 discovery_ms() { jq '[.run.timing.stages[] | select(.stage == "discovery") | .elapsed_millis][0] | floor' "$1" }
 median_discovery() {
   jq -s 'map([.run.timing.stages[] | select(.stage == "discovery") | .elapsed_millis][0]) | sort | .[length / 2 | floor]' "$@"
@@ -148,6 +154,7 @@ g5() {
     echo "$(summary $OUT/g5-$i.json) missed: [$(missing $OUT/g5-$i.json)]"
   done
   echo "G5 mean wall_ms: $(mean $OUT/g5-[0-9]*.json)   (G4's: $(ls $OUT/g4-*.json >/dev/null 2>&1 && mean $OUT/g4-*.json || echo 'run g4 first'))"
+  echo "G5 mean discovery_ms: $(mean_discovery $OUT/g5-[0-9]*.json)   (G4's: $(ls $OUT/g4-*.json >/dev/null 2>&1 && mean_discovery $OUT/g4-*.json || echo 'run g4 first'))"
 }
 
 g5w() {
