@@ -137,6 +137,20 @@ follow the app's `CFBundleShortVersionString`.
   when `--iface` is absent, refuses with exit 64 when `--iface` names another, and exits
   69 when that interface is gone. `ScanRunner.lookLonger` refuses the same way, with a
   degradation, when the runner's interface is not the run's.
+- **A known network's unexpected cold addresses take the learned tail (fixes brief, F7).**
+  After F1 a machine that scans often still paid 1.5 s on every scan: its live hosts stay
+  cached, so it gathers warm samples and never cold ones, and every address with no entry
+  (the ~240 where nothing lives) kept the first-scan wait (questions, Q15). The first-scan
+  wait is now for a network zhen doesn't know yet, and for expected addresses. A network is
+  *known* once history holds `minimumSamples` (20) first-contact samples, cold and warm
+  together. On a known network an address history doesn't expect, with no complete entry,
+  takes the learned tail. An expected one still takes the cold percentile, or the
+  first-scan wait while cold samples are short. On an unknown network nothing changes. The
+  cost: a new device that is slow on first contact, on a known network, is caught only at
+  the learned tail, and is expected from its next scan on. `--unexpected-cold learned`
+  (default) or `first-scan` (F1's rule, for study 2's other arm);
+  `ReachSettings.unexpectedCold` (`UnexpectedColdWait`), `ReachPlan.knownNetwork`, and in
+  `run.reach` `unexpected_cold` and `known_network`.
 - **Breaking: `neighbor_table` now means inherited, and the report schema is 4.** Through
   0.7.0 `neighbor_table` covered every host the table alone supplied, including entries
   the scan's own probes had just caused to resolve; those are `neighbor_resolved` now, and

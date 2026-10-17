@@ -43,6 +43,18 @@
 // held every address to the first-scan wait (questions, Q8). The cache state is only
 // known when the sweep takes its baseline, so `make` computes both sample sets and
 // `atSweepStart` records which addresses are warm.
+//
+// ── A known network's dead addresses (the addendum, F7) ───────────────────────────
+//
+// F1 left one case on the first-scan wait that shouldn't be: the cold addresses of a
+// network zhen has scanned many times, but always warm. Its live hosts are cached, so it
+// gathers warm samples and never cold ones. Its cold addresses are the ~240 where nothing
+// lives, and every one of them waited 1.5 s on every scan (questions, Q15). The first-scan
+// wait is for a network zhen doesn't know yet, and for expected addresses. A network is
+// KNOWN once history holds `minimumSamples` samples of either kind. On a known network an
+// unexpected cold address takes the learned tail, as an unexpected warm one already does.
+// An expected cold address keeps F1's rule, because that's the sleeping phone the long
+// wait exists for. `ReachSettings.unexpectedCold` keeps F1's rule as the study's other arm.
 
 /// How a sweep decides how long to wait for an address.
 public enum SweepReach: Sendable, Hashable {
@@ -76,7 +88,8 @@ public enum SweepReach: Sendable, Hashable {
 /// will move them, by flag, without a rebuild.
 public struct ReachSettings: Sendable, Hashable {
     /// How long an address with no complete neighbour entry waits on a network with too
-    /// few cold samples. An address whose entry is complete never waits it.
+    /// few cold samples, if it is expected or the network is unknown (F7). An address
+    /// whose entry is complete never waits it.
     ///
     /// 1.5 s: the testbed's slowest host makes cold first contact in about 1.0 s
     /// (study 1, the shared budget's 987 ms stage), plus margin. A first scan pays it
@@ -89,7 +102,8 @@ public struct ReachSettings: Sendable, Hashable {
     public var cap: Duration
     /// Fewer samples of a kind than this, and they decide nothing: too few cold samples
     /// and a cold address takes `firstScanWait`; too few warm ones and a warm address
-    /// takes the learned tail.
+    /// takes the learned tail. Also how many samples of both kinds together make a
+    /// network known (F7).
     ///
     /// 20: below it the 97th percentile is the maximum of a handful, which is a guess
     /// with a unit.
@@ -110,6 +124,10 @@ public struct ReachSettings: Sendable, Hashable {
     /// a phone that left the household a year ago was still waited for on every scan
     /// (questions, Q1). A month covers a holiday; it does not cover a device that left.
     public var expectedWindow: Duration
+    /// What an unexpected address with no complete entry waits on a known network whose
+    /// cold samples are too few: the learned tail (F7, the default), or the first-scan
+    /// wait (F1).
+    public var unexpectedCold: UnexpectedColdWait
 
     /// The brief's constants.
     public init(
@@ -119,7 +137,8 @@ public struct ReachSettings: Sendable, Hashable {
         attemptsStep: Duration = .milliseconds(500),
         attemptsCap: Int = 8,
         baseAttempts: Int = 3,
-        expectedWindow: Duration = .seconds(30 * 86_400)
+        expectedWindow: Duration = .seconds(30 * 86_400),
+        unexpectedCold: UnexpectedColdWait = .learned
     ) {
         self.firstScanWait = firstScanWait
         self.cap = cap
@@ -128,6 +147,7 @@ public struct ReachSettings: Sendable, Hashable {
         self.attemptsCap = attemptsCap
         self.baseAttempts = baseAttempts
         self.expectedWindow = expectedWindow
+        self.unexpectedCold = unexpectedCold
     }
 
     /// How many transmissions a wait of this length earns.
@@ -175,13 +195,18 @@ public struct ReachPlan: Sendable, Hashable {
     /// The addresses history expects: a device last seen at each inside
     /// `settings.expectedWindow`.
     public var expected: Set<IPv4Address>
-    /// Whether the network has too few COLD samples, so every address with no complete
-    /// neighbour entry waits `settings.firstScanWait`. Only ever true under `.history`.
+    /// Whether the network has too few COLD samples, so an address with no complete
+    /// neighbour entry may wait `settings.firstScanWait`. Only ever true under `.history`.
     ///
     /// A property of the cold sample set, not of the scan: whether a given address
-    /// takes that wait depends on its own entry (`path(for:)`), and an address whose
-    /// entry is complete never does.
+    /// takes that wait depends on its own entry and on whether it is expected
+    /// (`path(for:)`). An address whose entry is complete never does.
     public let firstScan: Bool
+    /// Whether history holds `settings.minimumSamples` first-contact samples of either
+    /// kind, cold and warm together, for this network (F7). On a known network an
+    /// unexpected cold address doesn't take the first-scan wait, unless
+    /// `settings.unexpectedCold` is `.firstScan`.
+    public let knownNetwork: Bool
     /// How many cold first-contact samples the network's history holds.
     public let historySamples: Int
     /// The percentile of those samples, capped — what an expected cold address waits
@@ -208,7 +233,7 @@ public struct ReachPlan: Sendable, Hashable {
     /// test or a caller that has already decided.
     public init(
         policy: SweepReach, settings: ReachSettings = ReachSettings(),
-        expected: Set<IPv4Address> = [], firstScan: Bool = false,
+        expected: Set<IPv4Address> = [], firstScan: Bool = false, knownNetwork: Bool = false,
         historySamples: Int = 0, expectedWait: Duration? = nil,
         warmSamples: Int = 0, warmExpectedWait: Duration? = nil,
         warm: Set<IPv4Address>? = nil, paths: ReachPathCounts? = nil
@@ -217,6 +242,7 @@ public struct ReachPlan: Sendable, Hashable {
         self.settings = settings
         self.expected = expected
         self.firstScan = firstScan
+        self.knownNetwork = knownNetwork
         self.historySamples = historySamples
         self.expectedWait = expectedWait
         self.warmSamples = warmSamples
@@ -236,7 +262,7 @@ public struct ReachPlan: Sendable, Hashable {
         func resolved(paths: ReachPathCounts?) -> ReachPlan {
             ReachPlan(
                 policy: policy, settings: settings, expected: expected, firstScan: firstScan,
-                historySamples: historySamples, expectedWait: expectedWait,
+                knownNetwork: knownNetwork, historySamples: historySamples, expectedWait: expectedWait,
                 warmSamples: warmSamples, warmExpectedWait: warmExpectedWait,
                 warm: complete.intersection(addresses), paths: paths
             )
@@ -264,9 +290,11 @@ public struct ReachPlan: Sendable, Hashable {
 
     /// Which rule of `.history` decides the address's wait. Nil under the other two.
     ///
-    /// Cold — no complete entry — is the rule the plan always had: too few cold samples
-    /// and every cold address waits the first-scan wait; otherwise an expected address
-    /// waits the cold percentile and the rest the learned tail. Warm never waits the
+    /// Cold — no complete entry: with too few cold samples an expected address waits the
+    /// first-scan wait, and so does an unexpected one while the network is unknown. On a
+    /// known network an unexpected one takes the learned tail (F7), or the first-scan
+    /// wait under `unexpectedCold: .firstScan` (F1). With enough cold samples an expected
+    /// address waits the cold percentile and the rest the learned tail. Warm never waits the
     /// first-scan wait: that wait covers an ARP delay a complete entry does not have. An
     /// unexpected warm address gets the learned tail, and an expected one is `inherited`
     /// (F2): the entry is evidence the report already accepts, so nothing waits for more.
@@ -275,12 +303,16 @@ public struct ReachPlan: Sendable, Hashable {
         if isWarm(address) {
             return expected.contains(address) ? .inherited : .learnedTail
         }
-        if firstScan { return .firstScan }
+        if firstScan {
+            let unexpectedOnKnown = knownNetwork && !expected.contains(address)
+            return unexpectedOnKnown && settings.unexpectedCold == .learned ? .learnedTail : .firstScan
+        }
         guard expected.contains(address), expectedWait != nil else { return .learnedTail }
         return .coldPercentile
     }
 
-    /// Whether the address takes the first-scan wait. Per address: a warm one never does.
+    /// Whether the address takes the first-scan wait. Per address: a warm one never does,
+    /// and on a known network an unexpected one doesn't either (F7).
     public func isFirstScan(_ address: IPv4Address) -> Bool {
         path(for: address) == .firstScan
     }
@@ -385,9 +417,12 @@ public struct ReachPlan: Sendable, Hashable {
             }
         }
 
+        // F7: either kind counts. A network with twenty warm samples has been scanned
+        // enough to know which addresses answer, though it has no cold sample at all.
+        let known = cold.count + warm.count >= max(1, settings.minimumSamples)
         guard case .history(let percentile) = policy else {
             return ReachPlan(
-                policy: policy, settings: settings, expected: expected,
+                policy: policy, settings: settings, expected: expected, knownNetwork: known,
                 historySamples: cold.count, warmSamples: warm.count
             )
         }
@@ -401,7 +436,8 @@ public struct ReachPlan: Sendable, Hashable {
         let coldWait = wait(cold)
         return ReachPlan(
             policy: policy, settings: settings, expected: expected,
-            firstScan: coldWait == nil, historySamples: cold.count, expectedWait: coldWait,
+            firstScan: coldWait == nil, knownNetwork: known,
+            historySamples: cold.count, expectedWait: coldWait,
             warmSamples: warm.count, warmExpectedWait: wait(warm)
         )
     }

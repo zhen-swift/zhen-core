@@ -101,6 +101,7 @@ zhen scan      [--cidr <net>] [--iface <name>] [--discovery-only]
                     [--no-neighbor-watch] [--look-longer] [--no-history]
                     [--first-scan-wait <d>] [--reach-cap <d>] [--reach-min-samples <n>]
                     [--expected-attempts-step <d>] [--expected-attempts-cap <n>]
+                    [--expected-window <d>] [--unexpected-cold learned|first-scan]
 zhen hosts     [--since <duration>] [--json] [--store <path>]
 zhen events    [--since <duration>] [--json] [--store <path>]
 zhen history   <host> [--json] [--store <path>]
@@ -144,8 +145,14 @@ scan's own replies. That is decided per address, by its own neighbour entry when
 sweep starts. The wait is the percentile of the *cold* times, for an address with no
 complete entry. An expected address whose entry is already complete is present by the
 evidence the report accepts (`neighbor_table`), so the scan asks it but does not wait for
-it. A network with fewer than 20 cold samples waits 1.5 s for every cold address; a warm
-address never waits it, because it has no ARP delay to cover. `run.reach.paths` counts
+it. A network with fewer than 20 cold samples waits 1.5 s for every expected cold address;
+a warm address never waits it, because it has no ARP delay to cover. An unexpected cold
+address waits it only while the network is unknown: once history holds 20 samples of either
+kind, a machine that scans often enough never to gather a cold sample stops waiting 1.5 s
+for the ~240 addresses where nothing lives (`--unexpected-cold learned`, the default;
+`first-scan` keeps the old rule for study 2, and `run.reach.known_network` says which case a
+scan was in). The cost is a new device that is slow on first contact: on a known network it
+is caught only at the learned tail, and expected from its next scan on. `run.reach.paths` counts
 the addresses that took each rule, and `run.reach` reports the warm samples' percentile
 beside the cold one. The scan ends at the latest per-address deadline, or as soon as every
 expected address has answered; while only expected addresses remain it says so
@@ -156,7 +163,8 @@ out of (`run.interface`; an `--iface` that disagrees exits 64), and adds what an
 that scan instead of starting one. `--no-neighbor-watch` is an ablation: with `--reach learned` it
 is 0.7.0's mechanism, which study 2 compares against. Every constant behind the default
 is a flag (`--first-scan-wait`, `--reach-cap`, `--reach-min-samples`,
-`--expected-attempts-step`, `--expected-attempts-cap`, `--expected-window`). An address is
+`--expected-attempts-step`, `--expected-attempts-cap`, `--expected-window`,
+`--unexpected-cold`). An address is
 expected when history saw a device there inside `--expected-window` (30 days), however long
 history itself is kept. `--no-history` scans as though
 the network were new without touching the store, because study 2 freezes one build and

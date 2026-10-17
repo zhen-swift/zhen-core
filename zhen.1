@@ -38,6 +38,7 @@
 .Op Fl -expected-attempts-step Ar duration
 .Op Fl -expected-attempts-cap Ar n
 .Op Fl -expected-window Ar duration
+.Op Fl -unexpected-cold Ar rule
 .Op Fl -no-history
 .Op Fl -json | Fl -ndjson
 .Op Fl -quiet
@@ -213,9 +214,14 @@ and asked more often.
 One that already has a complete entry is reported present from it, and the
 scan does not wait for it.
 Every other address gets the short wait learned from the scan's own replies.
-A network with fewer than 20 uncached times waits 1.5 s for every address with
-no entry, and that scan is what makes the next one fast; an address with a
-complete entry never waits it.
+A network with fewer than 20 uncached times waits 1.5 s for an expected address
+with no entry.
+Until the network is known, that is, until its history holds 20 times of either
+kind, it waits 1.5 s for every address with no entry, and that scan is what
+makes the next one fast.
+An address with a complete entry never waits it, and on a known network neither
+does an address history does not expect
+.Pq Fl -unexpected-cold .
 .Li learned
 is the short wait for every address, which is how scans worked before 0.8.0.
 A duration waits exactly that long for every address.
@@ -250,7 +256,7 @@ The artifact names the scan it extended in
 .Li run.extends_run .
 .It Fl -first-scan-wait Ar duration
 How long an address with no neighbour entry waits on a network with too little
-history.
+uncached history, if the scan expects it or the network is not known yet.
 Defaults to
 .Ar 1.5s .
 .It Fl -reach-cap Ar duration
@@ -274,13 +280,31 @@ it there.
 History is kept for ever; this is how far back it counts.
 Defaults to
 .Ar 30d .
+.It Fl -unexpected-cold Ar rule
+What an address history does not expect, with no neighbour entry, waits on a
+known network:
+.Li learned ,
+the default, or
+.Li first-scan .
+A network is known once its history holds as many first-contact times, uncached
+or cached, as
+.Fl -reach-min-samples .
+While it has fewer uncached ones than that,
+.Li learned
+gives those addresses the short learned wait, and
+.Li first-scan
+gives them the first-scan wait.
+An expected address, and every address on a network that is not known yet, waits
+the first-scan wait either way.
+.Li run.reach.known_network
+says whether the network was known.
 .It Fl -no-history
 Neither read nor write history for this scan: it runs as a first scan and leaves
 no trace.
 .Ev ZHEN_HISTORY
 points a scan at a different history file instead.
 .Pp
-These seven exist so the waits can be measured from outside a frozen build.
+These eight exist so the waits can be measured from outside a frozen build.
 Every value a scan used, set by a flag or not, is in
 .Li run.reach .
 .It Fl -json

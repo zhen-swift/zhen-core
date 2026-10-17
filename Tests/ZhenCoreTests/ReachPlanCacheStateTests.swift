@@ -5,6 +5,10 @@
 // (or the learned tail) with one. Cold-only, warm-only and mixed baselines, and the
 // property the fix exists for: a warm address never waits the first-scan wait.
 // Portable, like G1: it runs on Linux.
+//
+// This suite is F1's rule, so it runs under `unexpectedCold: .firstScan`, the flag that
+// keeps F1 as the study's other arm (the addendum, F7). Passing unchanged under it is half
+// of R6's "the flag reproduces F1 exactly"; `ReachPlanKnownNetworkTests` has the rest.
 
 import Foundation
 import Testing
@@ -27,10 +31,15 @@ struct ReachPlanCacheStateTests {
         ]
     }
 
-    static func plan(cold: Int, warm: Int, complete: Set<IPv4Address>) -> ReachPlan {
+    /// F1's settings: the brief's constants, with F7 turned off.
+    static let f1 = ReachSettings(unexpectedCold: .firstScan)
+
+    static func plan(
+        cold: Int, warm: Int, complete: Set<IPv4Address>, settings: ReachSettings = f1
+    ) -> ReachPlan {
         ReachPlan.make(
             addresses: addresses, network: G1.network, devices: history(cold: cold, warm: warm),
-            policy: .default, now: G1.now
+            policy: .default, settings: settings, now: G1.now
         ).atSweepStart(addresses: addresses, complete: complete)
     }
 
@@ -124,7 +133,7 @@ struct ReachPlanCacheStateTests {
     func unresolvedIsCold() {
         let plan = ReachPlan.make(
             addresses: Self.addresses, network: G1.network, devices: Self.history(cold: 0, warm: 40),
-            policy: .default, now: G1.now
+            policy: .default, settings: Self.f1, now: G1.now
         )
         #expect(plan.warm == nil && plan.paths == nil)
         #expect(!plan.isWarm(Self.ip(12)))

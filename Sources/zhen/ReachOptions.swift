@@ -19,8 +19,9 @@ struct ReachOptions: ParsableArguments {
                 history waits longer for the addresses this network's history says \
                 usually answer, up to a high percentile of how long they took when \
                 nothing was cached, and asks them more often; everything else gets the \
-                short wait learned from this scan's replies. A network with too little \
-                history waits long everywhere, once. learned is that short wait for \
+                short wait learned from this scan's replies. A network zhen doesn't \
+                know yet waits long everywhere; a known one, only where it expects a \
+                host. learned is that short wait for \
                 every address — how zhen scanned before 0.8.0. A duration (3s, 800ms) \
                 waits exactly that long for every address.
                 """
@@ -52,7 +53,7 @@ struct ReachOptions: ParsableArguments {
     // that could only move by rebuilding would end the study. Each value used, flagged or
     // defaulted, is echoed in `run.reach`.
 
-    @Option(name: .long, help: "Wait for an address with no neighbour entry on a network with too little cold history, e.g. 1500ms. Default 1.5s.")
+    @Option(name: .long, help: "Wait for an address with no neighbour entry on a network with too little cold history, if it is expected or the network is not known yet, e.g. 1500ms. Default 1.5s.")
     var firstScanWait: String?
 
     @Option(name: .long, help: "The longest any expected address waits, e.g. 5s. Default 5s.")
@@ -69,6 +70,22 @@ struct ReachOptions: ParsableArguments {
 
     @Option(name: .long, help: "How recently a device must have been seen at an address for the scan to expect it, e.g. 30d. Default 30d.")
     var expectedWindow: String?
+
+    @Option(
+        name: .long,
+        help: ArgumentHelp(
+            "What an unexpected address with no neighbour entry waits on a known network: learned (default) or first-scan.",
+            discussion: """
+                A network is known once its history holds as many first-contact times, \
+                cached or not, as --reach-min-samples. Until it also has that many \
+                uncached ones, learned gives the addresses history doesn't expect the \
+                short learned wait, and first-scan gives them the first-scan wait, as \
+                0.8.0's first fixes did. An expected address, and every address on a \
+                network that isn't known yet, waits the first-scan wait either way.
+                """
+        )
+    )
+    var unexpectedCold: String?
 
     @Flag(
         name: .long,
@@ -93,6 +110,12 @@ struct ReachOptions: ParsableArguments {
         }
         if let expectedWindow {
             settings.expectedWindow = try Self.positive(expectedWindow, "--expected-window")
+        }
+        if let unexpectedCold {
+            guard let wait = UnexpectedColdWait(rawValue: unexpectedCold.lowercased()) else {
+                throw .badArgument("--unexpected-cold: '\(unexpectedCold)' is not learned or first-scan.")
+            }
+            settings.unexpectedCold = wait
         }
         if let reachMinSamples {
             guard reachMinSamples >= 1 else { throw .badArgument("--reach-min-samples must be at least 1.") }

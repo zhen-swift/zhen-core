@@ -21,7 +21,7 @@ struct StudyContractTests {
         let flagged = try Scan.parse([
             "--first-scan-wait", "2s", "--reach-cap", "3500ms", "--reach-min-samples", "12",
             "--expected-attempts-step", "1s", "--expected-attempts-cap", "6",
-            "--expected-window", "7d",
+            "--expected-window", "7d", "--unexpected-cold", "first-scan",
         ]).reachOptions.settings()
         #expect(flagged.firstScanWait == .seconds(2))
         #expect(flagged.cap == .milliseconds(3_500))
@@ -31,6 +31,10 @@ struct StudyContractTests {
         #expect(flagged.baseAttempts == 3)
         #expect(flagged.expectedWindow == .seconds(7 * 86_400))
         #expect(defaults.expectedWindow == .seconds(30 * 86_400))
+        // F7's row: the default is the learned tail; the flag gives F1's rule back.
+        #expect(flagged.unexpectedCold == .firstScan)
+        #expect(defaults.unexpectedCold == .learned)
+        #expect(try Scan.parse(["--unexpected-cold", "Learned"]).reachOptions.settings().unexpectedCold == .learned)
     }
 
     @Test("A value that cannot be a setting is refused")
@@ -39,7 +43,8 @@ struct StudyContractTests {
             ["--first-scan-wait", "soon"], ["--first-scan-wait", "0ms"], ["--reach-cap", "-1s"],
             ["--reach-min-samples", "0"], ["--expected-attempts-step", "0s"],
             ["--expected-attempts-cap", "2"], ["--expected-window", "0d"],
-            ["--expected-window", "a month"],
+            ["--expected-window", "a month"], ["--unexpected-cold", "sometimes"],
+            ["--unexpected-cold", "first_scan"],
         ] {
             var refused = false
             do { _ = try Scan.parse(arguments).reachOptions.settings() } catch { refused = true }
@@ -69,6 +74,9 @@ struct StudyContractTests {
         #expect(object["history_read"] as? Bool == true)
         // F3: the expected window, a row of its own in G9.
         #expect(object["expected_window_millis"] as? Double == 2_592_000_000)
+        // F7: the rule for a known network's unexpected cold addresses, and whether it was known.
+        #expect(object["unexpected_cold"] as? String == "learned")
+        #expect(object["known_network"] as? Bool == false)
     }
 
     // ── Rows 3–6, through the pipeline ──────────────────────────────────────────

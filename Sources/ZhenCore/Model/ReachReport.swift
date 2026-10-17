@@ -33,6 +33,12 @@ public struct ReachReport: Sendable, Hashable, Codable {
     public var paths: ReachPathCounts?
     /// How recently a device had to be seen at an address for it to be expected, in ms.
     public var expectedWindowMillis: Double?
+    /// Whether history held enough first-contact samples of either kind for this network
+    /// to count as known (F7). Nil in an artifact written before F7.
+    public var knownNetwork: Bool?
+    /// What an unexpected cold address waits on a known network with too few cold
+    /// samples: `learned` (the default) or `first-scan` (F1), the flag's spelling.
+    public var unexpectedCold: String?
     /// How many addresses history expected.
     public var expectedCount: Int
     /// The expected addresses the run found no device at, in address order.
@@ -70,7 +76,7 @@ public struct ReachReport: Sendable, Hashable, Codable {
         attemptsStepMillis: Double? = nil, attemptsCap: Int? = nil, baseAttempts: Int? = nil,
         historySamples: Int? = nil, historyRead: Bool? = nil,
         warmWaitMillis: Double? = nil, warmSamples: Int? = nil, paths: ReachPathCounts? = nil,
-        expectedWindowMillis: Double? = nil
+        expectedWindowMillis: Double? = nil, knownNetwork: Bool? = nil, unexpectedCold: String? = nil
     ) {
         self.policy = policy
         self.percentile = percentile
@@ -91,6 +97,8 @@ public struct ReachReport: Sendable, Hashable, Codable {
         self.warmSamples = warmSamples
         self.paths = paths
         self.expectedWindowMillis = expectedWindowMillis
+        self.knownNetwork = knownNetwork
+        self.unexpectedCold = unexpectedCold
     }
 
     /// The report for a plan, given the addresses the run found a device at.
@@ -126,7 +134,9 @@ public struct ReachReport: Sendable, Hashable, Codable {
             warmWaitMillis: plan.warmExpectedWait?.milliseconds,
             warmSamples: plan.warmSamples,
             paths: plan.paths,
-            expectedWindowMillis: plan.settings.expectedWindow.milliseconds
+            expectedWindowMillis: plan.settings.expectedWindow.milliseconds,
+            knownNetwork: plan.knownNetwork,
+            unexpectedCold: plan.settings.unexpectedCold.rawValue
         )
     }
 
@@ -152,5 +162,7 @@ public struct ReachReport: Sendable, Hashable, Codable {
         case warmSamples = "warm_samples"
         case paths
         case expectedWindowMillis = "expected_window_millis"
+        case knownNetwork = "known_network"
+        case unexpectedCold = "unexpected_cold"
     }
 }

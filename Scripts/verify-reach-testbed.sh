@@ -10,7 +10,7 @@
 # Usage:
 #   swift build -c release
 #   for v in netbed{1..5}; do limactl start $v; done          # the testbed, if stopped
-#   Scripts/verify-reach-testbed.sh g3|g4|g5|g5w|g6|g7 <vm>|g8|g9|all
+#   Scripts/verify-reach-testbed.sh g3|g4|g5|g5w|g5k|g6|g7 <vm>|g8|g9|all
 #
 # Every gate prints its pass condition first, then one JSON line per run, then a verdict
 # line it computed — read the lines, not only the verdict. Artifacts stay in $OUT.
@@ -23,6 +23,11 @@
 #   G5w F1's warm path, after g5 with the same $OUT: G5 again with the cache left warm —
 #       no address takes the first-scan wait, 10 of 10. Then Q8's case, a warm cache and
 #       no history: the cold addresses take it and no warm address does (first_scan = cold).
+#       Then F7 (Q15's repro, g5k on its own): a scratch history scanned warm until the
+#       network is known; on that scan only expected cold addresses take the first-scan
+#       wait (0 when every expected host is cached) and discovery ends before it. The same
+#       history with --unexpected-cold first-scan: every cold address takes it again.
+#   G5k F7's half of G5w alone. Needs no g5 and no sudo, so it runs on any LAN with CIDR/IFACE.
 #   G6  .11 (ARP-only) is neighbor_resolved cold and neighbor_table warm.
 #   G7  a VM taken down and brought back: --look-longer (no --iface; F5 takes the run's)
 #       finds its addresses, adds them to the latest run, and nobody else is marked absent.
@@ -43,8 +48,8 @@ OUT=${OUT:-$(mktemp -d /tmp/zhen-reach.XXXXXX)}
 export ZHEN_HISTORY=$OUT/history.ndjson
 
 case ${1:-} in
-  g3|g4|g5|g5w|g6|g7|g8|g9|all) ;;
-  *) echo "usage: $0 g3|g4|g5|g5w|g6|g7 <vm>|g8|g9|all"; exit 64 ;;
+  g3|g4|g5|g5w|g5k|g6|g7|g8|g9|all) ;;
+  *) echo "usage: $0 g3|g4|g5|g5w|g5k|g6|g7 <vm>|g8|g9|all"; exit 64 ;;
 esac
 [[ -x $Z ]] || { echo "no binary at $Z — run 'swift build -c release' first"; exit 2; }
 ifconfig $IFACE >/dev/null 2>&1 || { echo "no $IFACE — is the testbed up? (limactl start netbedN, one at a time)"; exit 2; }
@@ -67,7 +72,7 @@ summary() {
           hosts: ([.devices[].addresses[] | select(test("^[0-9]+(\\.[0-9]+){3}$"))] | length),
           policy: .run.reach.policy, first_scan: .run.reach.first_scan,
           history_samples: .run.reach.history_samples, warm_samples: .run.reach.warm_samples,
-          paths: .run.reach.paths, watch: .run.neighbor_watch.enabled,
+          paths: .run.reach.paths, known: .run.reach.known_network, watch: .run.neighbor_watch.enabled,
           expected_missing: .run.reach.expected_missing}' "$1"
 }
 # Reference hosts that a run did not find.
@@ -97,6 +102,7 @@ preflight() {
   fi
 }
 mean() { jq -s 'map(.run.finished_at - .run.started_at) | add / length | floor' "$@" }
+discovery_ms() { jq '[.run.timing.stages[] | select(.stage == "discovery") | .elapsed_millis][0] | floor' "$1" }
 median_discovery() {
   jq -s 'map([.run.timing.stages[] | select(.stage == "discovery") | .elapsed_millis][0]) | sort | .[length / 2 | floor]' "$@"
 }
@@ -167,6 +173,46 @@ g5w() {
     jq -e '.run.reach.paths | .first_scan == .cold and .warm > 0' $OUT/g5w-empty-$i.json >/dev/null && ok=$((ok + 1))
   done
   echo "G5w empty history: $ok of 3 where no warm address took the first-scan wait"
+  g5k
+}
+
+# F7 (the addendum to the fixes brief; questions, Q15). A known network's unexpected cold
+# addresses, the ones where nothing lives, take the learned tail. Expected cold addresses
+# are expected_count minus paths.inherited, since under history every expected address
+# with an entry is inherited; only they may wait the first-scan wait.
+g5k() {
+  echo "\n== G5k — F7, Q15's repro. Pass: on the first scan of a known network, paths.first_scan + paths.cold_percentile == expected cold (expected_count − inherited), and with none of those, discovery below first_scan_wait_millis; with --unexpected-cold first-scan on the same history, paths.first_scan == paths.cold and discovery at least first_scan_wait_millis."
+  local hist=$OUT/g5k-history.ndjson
+  rm -f $hist $hist.before
+  local i
+  for i in {1..8}; do
+    [[ -f $hist ]] && cp $hist $hist.before
+    ZHEN_HISTORY=$hist scan > $OUT/g5k-$i.json
+    echo "scan $i: $(summary $OUT/g5k-$i.json) tail_ms: $(jq '.run.timing.stages[0].tail_budget_millis | floor' $OUT/g5k-$i.json)"
+    jq -e '.run.reach.known_network' $OUT/g5k-$i.json >/dev/null && break
+  done
+  local f7=$OUT/g5k-$i.json
+  if ! jq -e '.run.reach.known_network' $f7 >/dev/null; then
+    echo "G5k: FAIL — the network was not known after $i scans"; return 1
+  fi
+  local wait=$(jq '.run.reach.first_scan_wait_millis' $f7)
+  local expected_cold=$(jq '.run.reach.expected_count - .run.reach.paths.inherited' $f7)
+  local ms=$(discovery_ms $f7)
+  local verdict=PASS
+  jq -e --argjson c $expected_cold '.run.reach.paths | .first_scan + .cold_percentile == $c' $f7 >/dev/null || verdict=FAIL
+  (( expected_cold == 0 && ms >= wait )) && verdict=FAIL
+  jq -e '.run.reach.unexpected_cold == "learned"' $f7 >/dev/null || verdict=FAIL
+  echo "G5k learned (scan $i, the first known): $verdict — expected cold $expected_cold, first_scan $(jq '.run.reach.paths.first_scan' $f7), discovery $ms ms vs first-scan wait $wait ms"
+
+  # The study's other arm, on the history as it was before that scan.
+  cp $hist.before $OUT/g5k-f1-history.ndjson
+  ZHEN_HISTORY=$OUT/g5k-f1-history.ndjson scan --unexpected-cold first-scan > $OUT/g5k-f1.json
+  echo "first-scan: $(summary $OUT/g5k-f1.json)"
+  local f1ms=$(discovery_ms $OUT/g5k-f1.json)
+  verdict=PASS
+  jq -e '.run.reach | .known_network and .unexpected_cold == "first-scan" and .paths.first_scan == .paths.cold' $OUT/g5k-f1.json >/dev/null || verdict=FAIL
+  (( f1ms >= wait )) || verdict=FAIL
+  echo "G5k first-scan: $verdict — first_scan $(jq '.run.reach.paths.first_scan' $OUT/g5k-f1.json) of $(jq '.run.reach.paths.cold' $OUT/g5k-f1.json) cold, discovery $f1ms ms"
 }
 
 g6() {
@@ -223,6 +269,9 @@ g9() {
   # would not, since the next scan starts ~50 ms after the last one finishes (R5, 2026-10-16).
   scan --expected-window 1ms > $OUT/g9-1w.json
   echo "row 1w: $(jq -c '.run.reach | {expected_window_millis, expected_count}' $OUT/g9-1w.json) (default: $(jq -c '.run.reach.expected_window_millis' $OUT/g9-1.json))"
+  # F7's row: the rule for a known network's unexpected cold addresses.
+  scan --unexpected-cold first-scan > $OUT/g9-1u.json
+  echo "row 1u: $(jq -c '.run.reach | {unexpected_cold, known_network}' $OUT/g9-1u.json) (default: $(jq -c '.run.reach.unexpected_cold' $OUT/g9-1.json))"
   scan --reach learned --no-neighbor-watch > $OUT/g9-2.json
   echo "row 2: $(jq -c '{policy: .run.reach.policy, neighbor_watch: .run.neighbor_watch}' $OUT/g9-2.json)"
   local before=$(shasum -a 256 $ZHEN_HISTORY | cut -d' ' -f1)
@@ -236,7 +285,7 @@ g9() {
 }
 
 case ${1:-} in
-  g3) g3 ;; g4) g4 ;; g5) g5 ;; g5w) g5w ;; g6) g6 ;; g7) g7 ${2:-} ;; g8) g8 ;; g9) g9 ;;
+  g3) g3 ;; g4) g4 ;; g5) g5 ;; g5w) g5w ;; g5k) g5k ;; g6) g6 ;; g7) g7 ${2:-} ;; g8) g8 ;; g9) g9 ;;
   all) g3; g4; g5; g5w; g6; g8; g9; echo "\n(G7 takes a VM down; run it on its own: $0 g7 netbed3)" ;;
-  *) echo "usage: $0 g3|g4|g5|g5w|g6|g7 <vm>|g8|g9|all"; exit 64 ;;
+  *) echo "usage: $0 g3|g4|g5|g5w|g5k|g6|g7 <vm>|g8|g9|all"; exit 64 ;;
 esac
