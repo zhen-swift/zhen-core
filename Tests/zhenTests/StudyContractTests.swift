@@ -143,6 +143,13 @@ struct StudyContractTests {
         let text = String(decoding: try JSONEncoder().encode(stage), as: UTF8.self)
         #expect(text.contains(#""attempts":3"#) && text.contains(#""concurrency":512"#))
         #expect(try JSONDecoder().decode(StageTiming.self, from: Data(text.utf8)) == stage)
+        // F9: what the sweep couldn't attribute, and what it attributed late, absent
+        // where no echo was sent.
+        #expect(!text.contains("stray_replies") && !text.contains("late_replies"))
+        let swept = StageTiming(stage: .discovery, elapsedMillis: 505, strayReplies: 2, lateReplies: 1)
+        let sweptText = String(decoding: try JSONEncoder().encode(swept), as: UTF8.self)
+        #expect(sweptText.contains(#""stray_replies":2"#) && sweptText.contains(#""late_replies":1"#))
+        #expect(try JSONDecoder().decode(StageTiming.self, from: Data(sweptText.utf8)) == swept)
     }
 
     // ── Row 8: the build ─────────────────────────────────────────────────────────

@@ -97,6 +97,19 @@ public struct StageTiming: Sendable, Hashable, Codable {
     /// The in-flight window the stage ran with: the most probes it would have outstanding
     /// at once. Configured, not measured — `peak_concurrency` is the measurement.
     public var concurrency: Int?
+    /// Replies the sweep decoded as its own kind and could not attribute: a second reply
+    /// to a probe already answered, a reply from an address its token wasn't issued for,
+    /// or a reply to another sweep's probe. None of them is evidence. Absent for a stage
+    /// that sent no echo.
+    ///
+    /// In the artifact since F9: scans run back to back had a slow host's reply to the
+    /// previous scan's probe counted as this scan's first contact, and nothing in the
+    /// output could show it.
+    public var strayReplies: Int?
+    /// Replies that arrived after their probe's window closed and were still attributed
+    /// exactly. These hosts were found; a count here says the per-host budgets ran tight.
+    /// Absent for a stage that sent no echo.
+    public var lateReplies: Int?
 
     /// Creates a value from its fields. Each one is documented on the property it sets.
     public init(
@@ -114,7 +127,9 @@ public struct StageTiming: Sendable, Hashable, Codable {
         nameStageBudgetMillis: Double? = nil,
         nameSourceBudgetMillis: Double? = nil,
         attempts: Int? = nil,
-        concurrency: Int? = nil
+        concurrency: Int? = nil,
+        strayReplies: Int? = nil,
+        lateReplies: Int? = nil
     ) {
         self.stage = stage
         self.elapsedMillis = elapsedMillis
@@ -131,6 +146,8 @@ public struct StageTiming: Sendable, Hashable, Codable {
         self.nameSourceBudgetMillis = nameSourceBudgetMillis
         self.attempts = attempts
         self.concurrency = concurrency
+        self.strayReplies = strayReplies
+        self.lateReplies = lateReplies
     }
 
     /// Explicit keys: renaming the Swift property must never silently rename the
@@ -151,6 +168,8 @@ public struct StageTiming: Sendable, Hashable, Codable {
         case nameSourceBudgetMillis = "name_source_budget_millis"
         case attempts
         case concurrency
+        case strayReplies = "stray_replies"
+        case lateReplies = "late_replies"
     }
 }
 

@@ -2,10 +2,11 @@
 #
 # verify-reach-testbed.sh — the 0.8.0 gates that need the study testbed, and some need root.
 #
-# It needs root for three things: `arp -a -d` before each cold run, `ndp -c` in G7, and G9's
-# root scan. Every one goes through `sudo -n` with an absolute path, so it runs unattended
-# under exact NOPASSWD rules and fails at once, rather than prompting, without them. G9's
-# root scan names $OUT in its arguments, so a rule for it can only match a fixed $OUT:
+# It needs root for four things: `arp -a -d` before each cold run, `ndp -c` in G7, G9's
+# root scan, and R10's capture (`tcpdump`, writing to /tmp/zhen-gates-0.8.0). Every one goes
+# through `sudo -n` with an absolute path, so it runs unattended under exact NOPASSWD rules
+# and fails at once, rather than prompting, without them. G9's root scan and R10's capture
+# name /tmp/zhen-gates-0.8.0 in their arguments, so their rules only match that $OUT:
 # gate T used OUT=/tmp/zhen-gates-0.8.0. Every scan writes history to a scratch file under
 # $OUT, never to the store in ~/Library — ZHEN_HISTORY is exported before anything runs, and
 # passed through sudo explicitly where sudo is used.
@@ -13,7 +14,7 @@
 # Usage:
 #   swift build -c release
 #   for v in netbed{1..5}; do limactl start $v; done          # the testbed, if stopped
-#   Scripts/verify-reach-testbed.sh g3|g4|g5|g5w|g5k|g6|g7 <vm>|g8|g9|all
+#   Scripts/verify-reach-testbed.sh g3|g4|g5|g5w|g5k|g6|g7 <vm>|g8|g9|r10|all
 #
 # Every gate prints its pass condition first, then one JSON line per run, then a verdict
 # line it computed — read the lines, not only the verdict. Artifacts stay in $OUT.
@@ -37,6 +38,8 @@
 #       `g7 netbed3`
 #   G8  change 8's testbed comparison: three --discovery-only runs, nothing moved.
 #   G9  the study contract on the testbed, one scan per row, including `sudo zhen scan`.
+#   R10 F9 on the wire: two cold scans back to back under a capture; the 500 ms hosts' replies
+#       to scan 1 that land in scan 2 are its strays, and none is its first contact.
 #
 # The reference host set is one warm scan with `--reach 3s` (every address waited for
 # three seconds), taken once per $OUT and saved as reference.json. "Every host" in G4/G5
@@ -51,8 +54,8 @@ OUT=${OUT:-$(mktemp -d /tmp/zhen-reach.XXXXXX)}
 export ZHEN_HISTORY=$OUT/history.ndjson
 
 case ${1:-} in
-  g3|g4|g5|g5w|g5k|g6|g7|g8|g9|all) ;;
-  *) echo "usage: $0 g3|g4|g5|g5w|g5k|g6|g7 <vm>|g8|g9|all"; exit 64 ;;
+  g3|g4|g5|g5w|g5k|g6|g7|g8|g9|r10|all) ;;
+  *) echo "usage: $0 g3|g4|g5|g5w|g5k|g6|g7 <vm>|g8|g9|r10|all"; exit 64 ;;
 esac
 [[ -x $Z ]] || { echo "no binary at $Z — run 'swift build -c release' first"; exit 2; }
 ifconfig $IFACE >/dev/null 2>&1 || { echo "no $IFACE — is the testbed up? (limactl start netbedN, one at a time)"; exit 2; }
@@ -76,6 +79,7 @@ summary() {
           policy: .run.reach.policy, first_scan: .run.reach.first_scan,
           history_samples: .run.reach.history_samples, warm_samples: .run.reach.warm_samples,
           paths: .run.reach.paths, known: .run.reach.known_network, watch: .run.neighbor_watch.enabled,
+          strays: ([.run.timing.stages[] | select(.stage == "discovery") | .stray_replies][0]),
           expected_missing: .run.reach.expected_missing}' "$1"
 }
 # Reference hosts that a run did not find.
@@ -300,8 +304,72 @@ g9() {
   echo "row 8: $(jq -c '.run.tool' $OUT/g9-1.json)"
 }
 
+# R10 (addendum 3, F9): the previous scan's late replies, on the wire. Two cold scans back to
+# back with a capture running. A 500 ms host's reply to scan 1's probe that lands inside scan 2
+# must be a stray there, counted in stray_replies, and never scan 2's first contact.
+r10() {
+  # The two 500 ms hosts (r09, r10), wherever DHCP put them.
+  local slow1=${IP12:-192.168.64.12} slow2=${IP13:-192.168.64.13}
+  echo "\n== R10 — two cold scans back to back, captured. Pass: every reply from $slow1 or $slow2 that answers a probe of scan 1 and arrives inside scan 2 is counted in scan 2's stray_replies, and neither has a first contact under 400 ms in scan 2."
+  rm -f $ZHEN_HISTORY $OUT/r10.pcap
+  # Rotates once after 8 s and exits; the ping after the scans is the packet that makes it rotate.
+  sudo -n /usr/sbin/tcpdump -i bridge100 -n -U -w /tmp/zhen-gates-0.8.0/r10.pcap -G 8 -W 1 icmp 2>/dev/null &
+  local capture=$!
+  sleep 1
+  local began=$(date +%s)
+  cold; scan > $OUT/r10-1.json
+  cold; scan > $OUT/r10-2.json
+  while (( $(date +%s) - began < 9 )); do sleep 1; done
+  ping -c 1 -t 1 $slow1 >/dev/null 2>&1
+  wait $capture
+  for i in 1 2; do echo "scan $i: $(summary $OUT/r10-$i.json)"; done
+  python3 -I - $OUT/r10.pcap $OUT/r10-1.json $OUT/r10-2.json $slow1 $slow2 <<'EOF'
+import json, struct, sys
+pcap, first, second, *slow = sys.argv[1:]
+runs = [json.load(open(path)) for path in (first, second)]
+data = open(pcap, "rb").read()
+little = data[:4] == b"\xd4\xc3\xb2\xa1"
+endian = "<" if little else ">"
+linktype = struct.unpack(endian + "I", data[20:24])[0]
+link = {1: 14, 0: 4, 108: 4}.get(linktype, 14)   # Ethernet, BSD loopback/null
+requests, replies = {}, []
+offset = 24
+while offset + 16 <= len(data):
+    seconds, micros, length, _ = struct.unpack(endian + "IIII", data[offset:offset + 16])
+    packet = data[offset + 16: offset + 16 + length][link:]
+    offset += 16 + length
+    if len(packet) < 36 or packet[9] != 1: continue
+    header = (packet[0] & 0x0F) * 4
+    icmp = packet[header:]
+    if len(icmp) < 16 or icmp[8:12] != b"NSTY": continue
+    source = ".".join(map(str, packet[12:16])); target = ".".join(map(str, packet[16:20]))
+    token = struct.unpack(">I", icmp[12:16])[0]
+    at = seconds * 1000 + micros / 1000
+    if icmp[0] == 8 and target in slow: requests[token] = (at, target)
+    if icmp[0] == 0 and source in slow: replies.append((at, source, token))
+def scan_of(at):
+    for index, run in enumerate(runs):
+        if run["run"]["started_at"] <= at <= run["run"]["finished_at"]: return index
+    return None
+late = [(at, source, token) for at, source, token in replies
+        if token in requests and scan_of(requests[token][0]) == 0 and scan_of(at) == 1]
+stage = [s for s in runs[1]["run"]["timing"]["stages"] if s["stage"] == "discovery"][0]
+strays = stage.get("stray_replies")
+start = runs[1]["run"]["started_at"]
+for at, source, token in late:
+    print(f"late reply from {source}: token {token:#010x} sent in scan 1, arrived {at - start:.1f} ms into scan 2")
+contacts = {d["addresses"][0]: d.get("first_contact_millis") for d in runs[1]["devices"] if d["addresses"][0] in slow}
+print(f"scan 2: stray_replies {strays}, slow hosts' first contacts {contacts}")
+impossible = [a for a, fc in contacts.items() if fc is not None and fc < 400]
+ok = strays is not None and strays >= len(late) and not impossible
+print(f"R10 live: {'PASS' if ok else 'FAIL'} — {len(late)} late repl{'y' if len(late) == 1 else 'ies'} from scan 1 inside scan 2, "
+      f"{strays} stray{'s' if strays != 1 else ''} counted, {len(impossible)} impossible first contact{'s' if len(impossible) != 1 else ''}"
+      + ("" if late else " (no late reply landed in scan 2 this time; run it again)"))
+EOF
+}
+
 case ${1:-} in
-  g3) g3 ;; g4) g4 ;; g5) g5 ;; g5w) g5w ;; g5k) g5k ;; g6) g6 ;; g7) g7 ${2:-} ;; g8) g8 ;; g9) g9 ;;
+  g3) g3 ;; g4) g4 ;; g5) g5 ;; g5w) g5w ;; g5k) g5k ;; g6) g6 ;; g7) g7 ${2:-} ;; g8) g8 ;; g9) g9 ;; r10) r10 ;;
   all) g3; g4; g5; g5w; g6; g8; g9; echo "\n(G7 takes a VM down; run it on its own: $0 g7 netbed3)" ;;
-  *) echo "usage: $0 g3|g4|g5|g5w|g5k|g6|g7 <vm>|g8|g9|all"; exit 64 ;;
+  *) echo "usage: $0 g3|g4|g5|g5w|g5k|g6|g7 <vm>|g8|g9|r10|all"; exit 64 ;;
 esac

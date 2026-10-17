@@ -198,6 +198,15 @@ follow the app's `CFBundleShortVersionString`.
   `CITATION.cff` is new beside it, for anyone citing the tool in a paper or a report.
 
 ### Fixed
+- **A reply to the previous scan's probe is no longer this scan's first contact (fixes
+  brief, F9).** Every sweep's probe tokens started at 1 and the addresses went out in the
+  same order, so token *k* meant the same address in every scan. Scans run back to back
+  with a 500 ms host on the network matched the late reply to the previous scan's probe
+  to this scan's, and recorded first contacts of 46–132 ms that fed the cold percentile
+  (gate T, G5). Each sweep now draws a random 32-bit base, as the SYN scan salts its
+  cookies, and a reply carrying another sweep's token is a stray, never evidence. Each
+  discovery stage in `timing.stages` reports `stray_replies` and `late_replies`, absent
+  where no echo was sent.
 - **The Linux CI job is green, and its skips are visible.** It had been red since the split.
   One test's `try!` on the platform scanner crashed the whole test process on Linux, so
   every failure behind it went unreported. Two tests assumed a runner that is not root.

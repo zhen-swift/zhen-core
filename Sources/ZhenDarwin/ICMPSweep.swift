@@ -189,6 +189,10 @@ public struct ICMPSweepEngine: HostDiscovery {
         // The plan resolved against the baseline, once the sweep has one. Until then —
         // a refused target, no socket — it never started, and nothing was decided.
         var resolvedReach: ReachPlan?
+        // What the sweep could not attribute, and what it attributed late. Nil on the
+        // early-return paths, which sent nothing.
+        var strayReplies: Int?
+        var lateReplies: Int?
 
         func finished(
             _ hosts: [HostFacts], _ outcome: Outcome
@@ -207,7 +211,9 @@ public struct ICMPSweepEngine: HostDiscovery {
                 spreadBudgetMillis: retransmitBudget > .zero ? spreadBudget.milliseconds : nil,
                 spacingJitter: retransmitBudget > .zero ? spacing.jitter : nil,
                 attempts: attempts,
-                concurrency: concurrency
+                concurrency: concurrency,
+                strayReplies: strayReplies,
+                lateReplies: lateReplies
             )
             sink(.stageFinished(stage))
             return DiscoveryResult(
@@ -452,7 +458,9 @@ public struct ICMPSweepEngine: HostDiscovery {
             updated.mac = mac
             return updated
         }
+        strayReplies = await state.strayReplies
         let strays = await state.lateReplies
+        lateReplies = strays
         if strays > 0 {
             // Replies arriving after their probe expired mean the per-host budgets were
             // too tight for this network, and the hosts that sent them may be reported
@@ -687,7 +695,15 @@ actor SweepState {
     /// estimators have evidence, whereas at construction they have none.
     private var frozenSpread: Duration?
     private var frozenAllowance: Duration?
-    private var nextToken: UInt32 = 1
+    /// The next probe's token, counting up from a base drawn for this sweep.
+    ///
+    /// It started at 1 on every sweep, and the addresses go out in the same order, so
+    /// token k named the same address in every scan. A 500 ms host's reply to the
+    /// previous scan's probe arrived during the next one, matched that scan's token for
+    /// the same address, and was recorded as a first contact of 46 ms (gate T, G5; the
+    /// fixes brief, F9). Drawn at random, as the SYN scan salts its cookies, another
+    /// sweep's token names nothing here and its reply is a stray.
+    private var nextToken: UInt32
     private var nextSequence: UInt16 = 0
 
     init(
@@ -697,8 +713,10 @@ actor SweepState {
         counters: ProbeCounters,
         spacing: SweepSpacing = .spreadIntoTail,
         budgets: SweepBudgets = .split,
-        reach: ReachPlan? = nil
+        reach: ReachPlan? = nil,
+        tokenBase: UInt32 = .random(in: .min ... .max)
     ) {
+        self.nextToken = tokenBase
         self.spacing = spacing
         self.clock = SweepClock(budgets: budgets)
         self.order = pending
@@ -1272,8 +1290,9 @@ actor SweepState {
     ///
     /// Expired probes are KEPT in `inFlight` so a late reply can still be attributed,
     /// so this is not lateness — that is `lateReplies`. What lands here is a second
-    /// reply to a probe already answered and removed, or a reply whose source is not
-    /// the address its token was issued for.
+    /// reply to a probe already answered and removed, a reply whose source is not
+    /// the address its token was issued for, or a reply to another sweep's probe — the
+    /// previous scan's, when scans run back to back (F9). None of them is evidence.
     ///
     /// This description used to be the one below, which is how the two counters came to
     /// be crossed: the degradation about tight budgets read `lateReplies`, nothing
