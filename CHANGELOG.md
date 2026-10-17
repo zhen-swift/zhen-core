@@ -207,6 +207,18 @@ follow the app's `CFBundleShortVersionString`.
   cookies, and a reply carrying another sweep's token is a stray, never evidence. Each
   discovery stage in `timing.stages` reports `stray_replies` and `late_replies`, absent
   where no echo was sent.
+- **A sighting with less than its record no longer takes anything away (fixes brief,
+  F10).** A run that saw a device without its MAC (a reply ahead of its own ARP), or saw
+  only its link-local because its v4 address was missed or MAC-less, matched the device's
+  record and replaced it: the record lost its MAC, or its v4 address. A record with no v4
+  address is neither expected nor counted, so a slow host was never waited for again and
+  its samples left the network's count (gate T, G5). Such a sighting now fills the record
+  in: the addresses are the union, and what it doesn't carry is kept. A sighting with no
+  MAC joins the record that holds that address now, with a MAC, seen inside the default
+  expected window, ahead of the lease rule. When two records merge, or a samples line
+  joins a record, the newest 32 first-contact samples are kept by time; each sample now
+  carries when its run saw the device (`at_millis`), and one written without it sorts as
+  the oldest.
 - **The Linux CI job is green, and its skips are visible.** It had been red since the split.
   One test's `try!` on the platform scanner crashed the whole test process on Linux, so
   every failure behind it went unreported. Two tests assumed a runner that is not root.

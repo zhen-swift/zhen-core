@@ -483,9 +483,8 @@ public actor LogHistoryStore: HistoryStore {
                 .min { ($0.value.ordinal, $0.key) < ($1.value.ordinal, $1.key) }?
                 .key
             guard let holder, var record = records[holder] else { continue }
-            record.firstContactSamples = Array(
-                ((holder == key ? [] : record.firstContactSamples) + samples)
-                    .suffix(FirstContactSample.retained)
+            record.firstContactSamples = FirstContactSample.newest(
+                (holder == key ? [] : record.firstContactSamples) + samples
             )
             records[holder] = record
         }

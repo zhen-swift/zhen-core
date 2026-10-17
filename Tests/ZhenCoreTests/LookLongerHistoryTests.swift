@@ -86,7 +86,7 @@ struct LookLongerHistoryTests {
         #expect(phone.device.displayName == "Pixel")
         #expect(phone.device.ports.map(\.port) == [62078])
         #expect(phone.device.lastSeen == Self.at(11))
-        #expect(phone.firstContactSamples == [FirstContactSample(millis: 2_400, cold: true)])
+        #expect(phone.firstContactSamples == [FirstContactSample(millis: 2_400, cold: true, at: Self.at(11))])
     }
 
     @Test("A device the network never had joins the latest run")

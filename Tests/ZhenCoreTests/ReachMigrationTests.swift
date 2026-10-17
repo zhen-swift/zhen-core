@@ -186,7 +186,7 @@ struct ReachMigrationTests {
                     "compaction changed mac_history for \(mac)")
         }
         let printer = final.first { $0.device.mac?.description == "20:1C:3A:00:00:60" }
-        #expect(printer?.firstContactSamples == [FirstContactSample(millis: 981, cold: true)])
+        #expect(printer?.firstContactSamples == [FirstContactSample(millis: 981, cold: true, at: day6)])
         let tv = final.first { $0.device.mac?.description == "20:1C:3A:00:00:50" }
         #expect(tv?.firstContactSamples == [], "an absent device was given a sample")
         #expect(tv?.device.ports.map(\.port) == [7000], "an absent device lost its last known ports")

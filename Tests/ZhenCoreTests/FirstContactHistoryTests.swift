@@ -88,7 +88,8 @@ struct FirstContactHistoryTests {
         var ledger = HistoryLedger()
         ledger.record(report([device(12, millis: 900, at: at(0))], at: at(0)))
         ledger.record(report([device(12, millis: nil, at: at(1))], at: at(1)))
-        #expect(ledger.devices()[0].firstContactSamples == [FirstContactSample(millis: 900, cold: true)])
+        // Stamped with the run that measured it (F10).
+        #expect(ledger.devices()[0].firstContactSamples == [FirstContactSample(millis: 900, cold: true, at: at(0))])
     }
 
     @Test("Samples survive a reopen and a compaction, written as their own line")
@@ -133,6 +134,6 @@ struct FirstContactHistoryTests {
         try (lines.joined(separator: "\n") + "\n").write(to: url, atomically: true, encoding: .utf8)
 
         let devices = await LogHistoryStore(url: url).devices()
-        #expect(devices.first?.firstContactSamples == [FirstContactSample(millis: 700, cold: true)])
+        #expect(devices.first?.firstContactSamples == [FirstContactSample(millis: 700, cold: true, at: at(0))])
     }
 }

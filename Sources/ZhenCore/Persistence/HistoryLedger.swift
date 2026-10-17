@@ -177,8 +177,8 @@ public struct HistoryLedger: Sendable {
         /// Appends a run's first-contact time, keeping the newest `retained`.
         mutating func observeFirstContact(of device: Device) {
             guard let millis = device.firstContactMillis, let cold = device.firstContactCold else { return }
-            firstContactSamples.append(FirstContactSample(millis: millis, cold: cold))
-            firstContactSamples = Array(firstContactSamples.suffix(FirstContactSample.retained))
+            firstContactSamples.append(FirstContactSample(millis: millis, cold: cold, at: device.lastSeen))
+            firstContactSamples = FirstContactSample.newest(firstContactSamples)
         }
 
         /// The addresses this device presented before its current one, oldest first.
@@ -197,6 +197,13 @@ public struct HistoryLedger: Sendable {
     /// picker a person can change while the app is open, and a setting that needed a
     /// relaunch to take effect would be the same defect as one that did nothing.
     public var retention: RetentionPolicy
+    /// How recently a record must have been seen at an address for a sighting there
+    /// with no MAC to join it, ahead of the lease rule (F10).
+    ///
+    /// The default expected window, and not `--expected-window`: that flag moves which
+    /// addresses a scan waits for, and a study flag must not change which record a
+    /// sighting joins.
+    public var expectedWindow: Duration = ReachSettings.defaultExpectedWindow
 
     private var nextOrdinal: Int
 
@@ -324,19 +331,25 @@ public struct HistoryLedger: Sendable {
             let candidates = HostIdentifier.candidates(for: device, in: network)
             guard let key = candidates.first else { continue }
 
-            if let match = resolve(candidates), var record = records[match.record] {
+            if let match = joining(device, candidates, in: network, at: at),
+               var record = records[match.record] {
                 let existing = match.record
                 let wasPresent = record.lastRunID == latestRun?.id
-                let ports = Self.portChange(
-                    from: record.device.ports, to: device.ports, holding: device.addresses
+                // F10: a sighting with less than the record fills it in; see `observation`.
+                let seen = Self.observation(
+                    device, joining: record.device, sameRun: record.lastRunID == report.run.id,
+                    in: network
                 )
-                if record.device.primaryAddress != device.primaryAddress {
+                let ports = Self.portChange(
+                    from: record.device.ports, to: seen.ports, holding: seen.addresses
+                )
+                if record.device.primaryAddress != seen.primaryAddress {
                     events.append(DerivedEvent(
-                        at: at, kind: .ipChanged, subject: Self.display(device),
-                        detail: "moved \(record.device.primaryAddress) → \(device.primaryAddress)", runID: report.run.id
+                        at: at, kind: .ipChanged, subject: Self.display(seen),
+                        detail: "moved \(record.device.primaryAddress) → \(seen.primaryAddress)", runID: report.run.id
                     ))
                 }
-                if record.device.displayName != device.displayName, let now = device.displayName {
+                if record.device.displayName != seen.displayName, let now = seen.displayName {
                     events.append(DerivedEvent(
                         at: at, kind: .renamed, subject: now,
                         detail: record.device.displayName.map { "· was \($0)" }
@@ -353,7 +366,7 @@ public struct HistoryLedger: Sendable {
                 events += ports.transitions.map {
                     Self.portEvent($0, device: device, at: at, runID: report.run.id)
                 }
-                var observed = device
+                var observed = seen
                 observed.ports = ports.ports
                 record.device = observed
                 record.observe(device.mac, at: device.lastSeen, matchedBy: match.by.kind)
@@ -466,12 +479,19 @@ public struct HistoryLedger: Sendable {
             if let match = resolve(candidates), var record = records[match.record] {
                 guard record.lastRunID != runID else { continue }
                 var observed = record.device
-                observed.addresses = device.addresses
+                // F10: a sighting without the MAC the record has takes no address away.
+                if device.mac == nil, record.device.mac != nil {
+                    observed.addresses = device.addresses.union(record.device.addresses)
+                    observed.addressSources = record.device.addressSources
+                        .merging(device.addressSources) { _, new in new }
+                } else {
+                    observed.addresses = device.addresses
+                    observed.addressSources = device.addressSources
+                }
                 observed.mac = device.mac ?? observed.mac
                 observed.ttl = device.ttl ?? observed.ttl
                 observed.rtt = device.rtt ?? observed.rtt
                 observed.discoveredVia = device.discoveredVia
-                observed.addressSources = device.addressSources
                 observed.lastSeen = device.lastSeen
                 observed.firstContactMillis = device.firstContactMillis
                 observed.firstContactCold = device.firstContactCold
@@ -748,11 +768,11 @@ public struct HistoryLedger: Sendable {
                 survivor.identifiers.insert(key)
                 survivor.firstSeen = min(survivor.firstSeen, loser.firstSeen)
                 survivor.absorb(loser.macHistory, sharing: shared.kind)
-                // The loser's samples are older than anything the survivor learned after
-                // they split, which is not known; put them first and keep the newest.
-                survivor.firstContactSamples = Array(
-                    (loser.firstContactSamples + survivor.firstContactSamples)
-                        .suffix(FirstContactSample.retained)
+                // F10: the newest of the union by time. Putting the loser's first and
+                // keeping the last 32 dropped the loser's newest whenever it was the
+                // record seen most recently.
+                survivor.firstContactSamples = FirstContactSample.newest(
+                    loser.firstContactSamples + survivor.firstContactSamples
                 )
                 // The most recent observation wins the device and the run it came from,
                 // so a merge never rolls a device's address or name backwards.
@@ -839,6 +859,91 @@ public struct HistoryLedger: Sendable {
         let before = log.count
         log.removeAll { $0.at < cutoff }
         return before - log.count
+    }
+
+    // ── A sighting with less than the record (the fixes brief, F10) ──────────────────
+    //
+    // Gate T's G5 lost its two 500 ms hosts from the expected set, and it happened
+    // here. A run can see a device without its MAC — a reply that arrives before the
+    // sweep's own ARP has resolved — and then the cache's link-local entry, which still
+    // has the MAC, can't fuse with it and is reported as a v6-only device. Both matched
+    // the MAC'd record, and each REPLACED its device: the MAC-less one took the MAC and
+    // the link-local away, the v6-only one took the v4 address away. A record with no
+    // v4 address in the network is neither expected nor counted by `ReachPlan.make`, so
+    // the host was never waited for again, and its samples left the network's count.
+
+    /// The record an observation joins, or nil for a new one.
+    ///
+    /// `resolve`, except for a sighting with no MAC that would join only by its lease: it
+    /// joins the record that holds that address now, with a MAC, seen inside
+    /// `expectedWindow` — the device that is there — rather than whichever record the
+    /// lease rule picks, which can be an older one keyed by the lease alone.
+    private func joining(
+        _ device: Device, _ candidates: [HostIdentifier], in network: IPv4Network, at: Timestamp
+    ) -> (record: HostIdentifier, by: HostIdentifier)? {
+        let resolved = resolve(candidates)
+        guard device.mac == nil, resolved.map({ $0.by.kind == .ipLease }) ?? true else { return resolved }
+        let cutoff = Timestamp(
+            millisecondsSinceEpoch: at.millisecondsSinceEpoch - Int64(expectedWindow.milliseconds.rounded())
+        )
+        for address in device.ipv4Addresses {
+            let holder = records
+                .filter {
+                    $0.value.device.mac != nil && $0.value.device.lastSeen >= cutoff
+                        && $0.value.device.ipv4Addresses.contains(address)
+                }
+                // The most recently seen, then the stated rule's oldest, then the key.
+                .min {
+                    ($1.value.device.lastSeen, $0.value.ordinal, $0.key)
+                        < ($0.value.device.lastSeen, $1.value.ordinal, $1.key)
+                }
+            if let holder { return (holder.key, .ipLease(address, in: network)) }
+        }
+        return resolved
+    }
+
+    /// What a record's device becomes when a run observes it.
+    ///
+    /// A sighting with the MAC and a v4 address is the device as this run saw it, and
+    /// replaces the record's — that is how a move becomes an `ipChanged`. A sighting with
+    /// less than the record — no MAC where it has one, or no v4 address where it has one
+    /// — fills it in and takes nothing away: the addresses are the union, and whatever
+    /// the sighting doesn't carry is kept. Facts about the run (first contact, when it
+    /// was found) are kept only from this same run: a second sighting of one device in a
+    /// run doesn't erase the first one's.
+    static func observation(
+        _ device: Device, joining stored: Device, sameRun: Bool, in network: IPv4Network
+    ) -> Device {
+        let lacksMAC = device.mac == nil && stored.mac != nil
+        let lacksV4 = device.ipv4Addresses.isEmpty && !stored.ipv4Addresses.isEmpty
+        guard lacksMAC || lacksV4 else { return device }
+        var seen = device
+        seen.addresses.formUnion(stored.addresses)
+        seen.addressSources = stored.addressSources.merging(device.addressSources) { _, new in new }
+        seen.discoveredVia = Set(device.discoveredVia).union(stored.discoveredVia).canonical
+        seen.mac = device.mac ?? stored.mac
+        if device.names.isEmpty { seen.names = stored.names }
+        seen.vendor = device.vendor ?? stored.vendor
+        seen.reverseDNS = device.reverseDNS ?? stored.reverseDNS
+        seen.dhcpHostname = device.dhcpHostname ?? stored.dhcpHostname
+        seen.ttl = device.ttl ?? stored.ttl
+        seen.rtt = device.rtt ?? stored.rtt
+        seen.osFingerprint = device.osFingerprint ?? stored.osFingerprint
+        seen.vlan = device.vlan ?? stored.vlan
+        seen.firstSeen = min(device.firstSeen, stored.firstSeen)
+        if stored.identification < device.identification {
+            seen.identification = stored.identification
+            seen.identificationEvidence = stored.identificationEvidence
+        }
+        if sameRun, device.firstContactMillis == nil {
+            seen.firstContactMillis = stored.firstContactMillis
+            seen.firstContactCold = stored.firstContactCold
+        }
+        if sameRun {
+            seen.foundAfterMillis = [device.foundAfterMillis, stored.foundAfterMillis].compactMap(\.self).min()
+        }
+        seen.identityStability = Stability(strongestOf: HostIdentifier.candidates(for: seen, in: network))
+        return seen
     }
 
     /// First hit wins, strongest identifier first — the spec's resolution rule.

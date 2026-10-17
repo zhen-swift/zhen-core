@@ -129,6 +129,9 @@ public struct ReachSettings: Sendable, Hashable {
     /// wait (F1).
     public var unexpectedCold: UnexpectedColdWait
 
+    /// 30 days: see `expectedWindow`. History's identity rules use it too (F10).
+    public static let defaultExpectedWindow: Duration = .seconds(30 * 86_400)
+
     /// The brief's constants.
     public init(
         firstScanWait: Duration = .milliseconds(1_500),
@@ -137,7 +140,7 @@ public struct ReachSettings: Sendable, Hashable {
         attemptsStep: Duration = .milliseconds(500),
         attemptsCap: Int = 8,
         baseAttempts: Int = 3,
-        expectedWindow: Duration = .seconds(30 * 86_400),
+        expectedWindow: Duration = ReachSettings.defaultExpectedWindow,
         unexpectedCold: UnexpectedColdWait = .learned
     ) {
         self.firstScanWait = firstScanWait
@@ -175,15 +178,41 @@ public struct FirstContactSample: Sendable, Hashable, Codable {
     public var millis: Double
     /// Whether the address was ARP-incomplete at its first transmission.
     public var cold: Bool
+    /// When the run that measured it saw the device. Nil for a sample written before
+    /// samples carried it (the fixes brief, F10), which sorts as the oldest.
+    public var at: Timestamp?
 
     /// Creates a value from its fields. Each one is documented on the property it sets.
-    public init(millis: Double, cold: Bool) {
+    public init(millis: Double, cold: Bool, at: Timestamp? = nil) {
         self.millis = millis
         self.cold = cold
+        self.at = at
     }
 
     /// The most samples history keeps per device, newest last.
     public static let retained = 32
+
+    /// The newest `retained` of these, by time, oldest first.
+    ///
+    /// By time, not by order of arrival (F10). Two records joined, or a samples line
+    /// joined to a record, put one set of samples after the other, and keeping the last
+    /// 32 of that order dropped whichever set came first, whatever its age. Samples with
+    /// no time sort first and keep their order among themselves.
+    public static func newest(_ samples: [FirstContactSample]) -> [FirstContactSample] {
+        let ordered = samples.enumerated().sorted { lhs, rhs in
+            let left = lhs.element.at?.millisecondsSinceEpoch ?? .min
+            let right = rhs.element.at?.millisecondsSinceEpoch ?? .min
+            return (left, lhs.offset) < (right, rhs.offset)
+        }
+        return Array(ordered.map(\.element).suffix(retained))
+    }
+
+    /// Wire keys, spelled out.
+    public enum CodingKeys: String, CodingKey {
+        case millis
+        case cold
+        case at = "at_millis"
+    }
 }
 
 /// A wait and an attempt count for every address a sweep will probe.
