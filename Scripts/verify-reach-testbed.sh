@@ -2,10 +2,13 @@
 #
 # verify-reach-testbed.sh — the 0.8.0 gates that need the study testbed, and some need root.
 #
-# JC runs this; an agent does not (it needs sudo, for `arp -a -d` before each cold run and
-# for G9's root row). Every scan writes history to a scratch file under $OUT, never to the
-# store in ~/Library — ZHEN_HISTORY is exported before anything runs, and passed through
-# sudo explicitly where sudo is used.
+# It needs root for three things: `arp -a -d` before each cold run, `ndp -c` in G7, and G9's
+# root scan. Every one goes through `sudo -n` with an absolute path, so it runs unattended
+# under exact NOPASSWD rules and fails at once, rather than prompting, without them. G9's
+# root scan names $OUT in its arguments, so a rule for it can only match a fixed $OUT:
+# gate T used OUT=/tmp/zhen-gates-0.8.0. Every scan writes history to a scratch file under
+# $OUT, never to the store in ~/Library — ZHEN_HISTORY is exported before anything runs, and
+# passed through sudo explicitly where sudo is used.
 #
 # Usage:
 #   swift build -c release
@@ -59,7 +62,7 @@ echo "history: $ZHEN_HISTORY (scratch)"
 
 # A cold run that is secretly warm would pass G4 for the wrong reason, so a failed flush stops
 # the script rather than being swallowed.
-cold() { sudo arp -a -d >/dev/null || { echo "sudo arp -a -d failed — refusing to call a warm run cold"; exit 3 } }
+cold() { sudo -n /usr/sbin/arp -a -d >/dev/null || { echo "sudo -n /usr/sbin/arp -a -d failed — refusing to call a warm run cold"; exit 3 } }
 scan() { $Z scan --cidr $CIDR --iface $IFACE --discovery-only --json --quiet "$@" }
 # IPv4 addresses found, in numeric order, one line.
 hosts() {
@@ -244,7 +247,8 @@ g7() {
   limactl stop $vm
   # The NDP cache too: an entry for the VM's link-local outlives the VM by up to a day and
   # keeps its device present, so it never goes absent and look-longer has nothing to add (Q13).
-  cold; sudo ndp -c >/dev/null; scan > $OUT/g7-down.json
+  cold; sudo -n /usr/sbin/ndp -c >/dev/null || { echo "sudo -n /usr/sbin/ndp -c failed"; exit 3 }
+  scan > $OUT/g7-down.json
   echo "down:     $(summary $OUT/g7-down.json)"
   local gone=$(comm -23 <(hosts $OUT/g7-baseline.json | tr ' ' '\n' | sort) <(hosts $OUT/g7-down.json | tr ' ' '\n' | sort) | tr '\n' ' ')
   echo "gone with $vm: [$gone]   expected_missing: $(jq -c '.run.reach.expected_missing' $OUT/g7-down.json)"
@@ -290,7 +294,8 @@ g9() {
   echo "row 3: $(jq -c '{first_scan: .run.reach.first_scan, history_samples: .run.reach.history_samples, history_read: .run.reach.history_read}' $OUT/g9-3.json) store unchanged: $([[ $before == $(shasum -a 256 $ZHEN_HISTORY | cut -d' ' -f1) ]] && echo yes || echo NO)"
   cold; scan > $OUT/g9-4.json
   echo "rows 4–6: $(jq -c '{stage: (.run.timing.stages[0] | {attempts, concurrency, retransmit_budget_millis, tail_budget_millis}), hosts: [.devices[] | {a: .addresses[0], via: .discovered_via, found_after_millis, first_contact_millis, first_contact_cold}]}' $OUT/g9-4.json)"
-  sudo env ZHEN_HISTORY=$OUT/root-history.ndjson $Z scan --cidr $CIDR --iface $IFACE --discovery-only --json --quiet > $OUT/g9-7.json
+  sudo -n /usr/bin/env ZHEN_HISTORY=$OUT/root-history.ndjson $Z scan --cidr $CIDR --iface $IFACE --discovery-only --json --quiet > $OUT/g9-7.json \
+    || echo "row 7: sudo -n failed — no rule for this exact command (is OUT=/tmp/zhen-gates-0.8.0?)"
   echo "row 7 (root): $(jq -c '{engine: .run.engine, tool: .run.tool, via: ([.devices[].discovered_via[]] | group_by(.) | map({(.[0]): length}) | add)}' $OUT/g9-7.json)"
   echo "row 8: $(jq -c '.run.tool' $OUT/g9-1.json)"
 }
