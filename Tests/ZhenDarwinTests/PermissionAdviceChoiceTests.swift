@@ -10,32 +10,20 @@ import ZhenCore
 struct PermissionAdviceChoiceTests {
     @Test("An app bundle gets the in-app remedy")
     func appBundle() {
-        #expect(ProbePermissionAdvice.apple(bundleURL: URL(fileURLWithPath: "/Applications/Zhen.app"),
-                                                osHasLocalNetworkPrivacy: true)
+        #expect(ProbePermissionAdvice.apple(bundleURL: URL(fileURLWithPath: "/Applications/Zhen.app"))
                 == .appleLocalNetworkInApp)
     }
 
     @Test("A bare executable gets the command-line remedy it has always printed")
     func commandLine() {
-        #expect(ProbePermissionAdvice.apple(bundleURL: URL(fileURLWithPath: "/usr/local/bin"),
-                                                osHasLocalNetworkPrivacy: true)
+        #expect(ProbePermissionAdvice.apple(bundleURL: URL(fileURLWithPath: "/usr/local/bin"))
                 == .appleLocalNetwork)
-    }
-
-    @Test("Without the permission (macOS 14), neither process is told to go and grant it")
-    func noPermissionNoRemedy() {
-        for path in ["/Applications/Zhen.app", "/usr/local/bin"] {
-            #expect(ProbePermissionAdvice.apple(bundleURL: URL(fileURLWithPath: path),
-                                                osHasLocalNetworkPrivacy: false) == .unspecified)
-        }
     }
 
     @Test("This test process is not an app, so the sweep keeps the command-line text")
     func thisProcess() {
-        let expected: ProbePermissionAdvice =
-            ProbePermissionAdvice.osHasLocalNetworkPrivacy ? .appleLocalNetwork : .unspecified
-        #expect(ProbePermissionAdvice.appleForThisProcess == expected)
-        #expect(ICMPSweepEngine().advice == expected)
+        #expect(ProbePermissionAdvice.appleForThisProcess == .appleLocalNetwork)
+        #expect(ICMPSweepEngine().advice == .appleLocalNetwork)
     }
 }
 

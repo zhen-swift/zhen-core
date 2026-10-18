@@ -11,9 +11,7 @@ and this is a bug — please say so.
 
 ## Install
 
-Runs on macOS 14 and later. Building needs Xcode 26 on macOS 15.6 or later. On macOS 14,
-`brew tap zhen-swift/zhen && brew install zhen` installs a prebuilt binary instead
-(`Scripts/release-binary.sh` makes it).
+Needs macOS 15.6 or later and Xcode 26. zhen is built from source on the Mac that runs it.
 
 ```sh
 git clone https://github.com/zhen-swift/zhen-core.git && cd zhen-core

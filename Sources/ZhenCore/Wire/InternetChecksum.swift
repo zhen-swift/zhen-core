@@ -25,7 +25,7 @@
 // `Span<UInt8>` gives the same borrowed zero-copy view with a bounds-checked subscript
 // that is safe, so nothing here needs a marker. (An array's span is spelled
 // `bytes[bytes.indices].span` everywhere in this package. `Array.span` is macOS 26+,
-// while `ArraySlice.span` is back-deployed, and the floor is 14 — see Package.swift.
+// while `ArraySlice.span` is back-deployed, and the floor is 15.6 — see Package.swift.
 // Through the slice it is the same borrowed view and no copy.) Two bytes are combined explicitly
 // rather than loaded as a `UInt16`, which is also the more honest code: wire data is
 // unaligned and big-endian, and `loadUnaligned(as: UInt16.self)` on a little-endian

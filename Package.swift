@@ -52,8 +52,9 @@ let toolSettings: [SwiftSetting] = [
 
 let package = Package(
     name: "zhen",
-    // macOS 14, so the command line runs on the Intel Macs that stopped at Sonoma and
-    // Sequoia. RUNNING needs 14; BUILDING still needs Xcode 26, which needs macOS 15.6.
+    // macOS 15.6, the oldest macOS that runs Xcode 26, so anyone who can build zhen can
+    // run what they built. zhen is only ever built from source, so a lower floor would
+    // describe Macs that have no way to get it.
     //
     // This was 26, on the grounds that no safe way to produce a `Span` from owned
     // storage existed below it. `Array.span` is 26+, and that much is true. But
@@ -62,15 +63,14 @@ let package = Package(
     // an array in this package is spelled that way. Not `bytes[...].span`: the
     // unbounded-range subscript yields a temporary, and the span escapes it.
     //
-    // Why 14 and not lower. Synchronization's `Atomic` is 15+, so below 15
-    // `ProbeCounters` falls back to a lock, which is the one runtime difference. At 13,
-    // `withDiscardingTaskGroup` and `ExecutorJob` go too, and `SMAppService`'s approval
-    // flow differs. Each is a workaround, and the three together outweighed the 2017
-    // Macs they reach.
+    // Going lower is measured and not done. 14 builds once `ProbeCounters` has a lock in
+    // place of Synchronization's `Atomic`, which is 15+. But nothing on 14 can build
+    // zhen, so it would need prebuilt binaries, and keeping those built and checked was
+    // judged not worth it (PR #10).
     //
     // iOS stays at 26. Nothing here builds for iOS yet (`<net/bpf.h>`, a home directory
     // per user), so a lower number would claim support nobody has seen work.
-    platforms: [.macOS(.v14), .iOS(.v26)],
+    platforms: [.macOS("15.6"), .iOS(.v26)],
     products: [
         .library(name: "ZhenCore", targets: ["ZhenCore"]),
         .library(name: "ZhenDarwin", targets: ["ZhenDarwin"]),

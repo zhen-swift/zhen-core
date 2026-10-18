@@ -18,12 +18,7 @@
 // replies than probes, briefly. That is fine here, because the snapshot that reaches
 // the artifact is taken after the stage has retired, and an intermediate snapshot is
 // feeding a progress indicator that is about to be redrawn anyway.
-//
-// Below macOS 15 there is no `Atomic`, and the counters sit behind a lock instead
-// (`LockedCounters`). That trades the argument above for a floor of 14, on the one OS
-// where there is no other choice, and nowhere else.
 
-import Foundation
 import Synchronization
 
 /// An immutable reading of the counters.
@@ -48,66 +43,23 @@ public struct ProbeCounterSnapshot: Sendable, Hashable {
 
 /// Shared counters for one stage of a scan.
 ///
-/// A final class rather than a struct because every probe task shares one instance.
-/// Where `Atomic` exists it holds only atomics, so it is `Sendable` without an actor
-/// and without a lock. Below macOS 15 it holds a lock instead. See `LockedCounters`.
+/// A final class rather than a struct because every probe task shares one instance;
+/// it holds only atomics, so it is `Sendable` without an actor and without a lock.
 public final class ProbeCounters: Sendable {
-    private let storage: any CounterStorage
+    private let sent = Atomic<Int>(0)
+    private let replies = Atomic<Int>(0)
+    private let flight = Atomic<Int>(0)
+    private let peak = Atomic<Int>(0)
 
     /// Fresh counters at zero.
-    public convenience init() {
-        if #available(macOS 15, iOS 18, *) {
-            self.init(storage: AtomicCounters())
-        } else {
-            self.init(storage: LockedCounters())
-        }
-    }
-
-    /// Counters over the given storage. Internal so a test can run both against the
-    /// same expectations; a caller gets the one its OS allows.
-    init(storage: any CounterStorage) {
-        self.storage = storage
-    }
+    public init() {}
 
     /// Records a probe going out, and the in-flight count rising.
     ///
     /// Pair with `probeCompleted()`. The peak is maintained here rather than sampled
     /// on a timer because the interesting moment is by definition the busiest one and
     /// a sampler would miss it.
-    public func probeSent() { storage.probeSent() }
-
-    /// Records a probe finishing, answered or not.
-    public func probeCompleted() { storage.probeCompleted() }
-
-    /// Records a reply arriving.
-    public func replySeen() { storage.replySeen() }
-
-    /// Reads all four counters.
-    ///
-    /// Not a consistent snapshot across the four — see the file header. Take it after
-    /// a stage retires if you need one that is.
-    public func snapshot() -> ProbeCounterSnapshot { storage.snapshot() }
-}
-
-/// Where the four counts live. Two conformances, because `Atomic` is macOS 15+ and
-/// the package floor is 14.
-protocol CounterStorage: Sendable {
-    func probeSent()
-    func probeCompleted()
-    func replySeen()
-    func snapshot() -> ProbeCounterSnapshot
-}
-
-/// The counters as relaxed atomics. What every OS with Synchronization gets, and the
-/// reasoning in the file header is about this one.
-@available(macOS 15, iOS 18, *)
-final class AtomicCounters: CounterStorage {
-    private let sent = Atomic<Int>(0)
-    private let replies = Atomic<Int>(0)
-    private let flight = Atomic<Int>(0)
-    private let peak = Atomic<Int>(0)
-
-    func probeSent() {
+    public func probeSent() {
         sent.wrappingAdd(1, ordering: .relaxed)
         let now = flight.wrappingAdd(1, ordering: .relaxed).newValue
         // Compare-exchange loop rather than a plain store: two tasks raising the peak
@@ -124,55 +76,26 @@ final class AtomicCounters: CounterStorage {
         }
     }
 
-    func probeCompleted() {
+    /// Records a probe finishing, answered or not.
+    public func probeCompleted() {
         flight.wrappingSubtract(1, ordering: .relaxed)
     }
 
-    func replySeen() {
+    /// Records a reply arriving.
+    public func replySeen() {
         replies.wrappingAdd(1, ordering: .relaxed)
     }
 
-    func snapshot() -> ProbeCounterSnapshot {
+    /// Reads all four counters.
+    ///
+    /// Not a consistent snapshot across the four — see the file header. Take it after
+    /// a stage retires if you need one that is.
+    public func snapshot() -> ProbeCounterSnapshot {
         ProbeCounterSnapshot(
             probesSent: sent.load(ordering: .relaxed),
             repliesSeen: replies.load(ordering: .relaxed),
             peakConcurrency: peak.load(ordering: .relaxed),
             inFlight: flight.load(ordering: .relaxed)
         )
-    }
-}
-
-/// The counters behind one lock, for macOS 14, where `Atomic` does not exist.
-///
-/// It is the contention the file header argues against, and it is accepted here
-/// because it is bounded. A /24 deep scan is about 25,000 increments, each holding the
-/// lock for a few additions, against probes that each wait milliseconds on the
-/// network. It also gives the one thing the atomics do not: a snapshot that is
-/// consistent across all four.
-///
-/// `@unchecked Sendable`: every stored `var` is read and written only inside
-/// `lock.withLock`, and `lock` is a `let`.
-final class LockedCounters: CounterStorage, @unchecked Sendable {
-    private let lock = NSLock()
-    private var counts = ProbeCounterSnapshot(probesSent: 0, repliesSeen: 0, peakConcurrency: 0, inFlight: 0)
-
-    func probeSent() {
-        lock.withLock {
-            counts.probesSent += 1
-            counts.inFlight += 1
-            counts.peakConcurrency = max(counts.peakConcurrency, counts.inFlight)
-        }
-    }
-
-    func probeCompleted() {
-        lock.withLock { counts.inFlight -= 1 }
-    }
-
-    func replySeen() {
-        lock.withLock { counts.repliesSeen += 1 }
-    }
-
-    func snapshot() -> ProbeCounterSnapshot {
-        lock.withLock { counts }
     }
 }

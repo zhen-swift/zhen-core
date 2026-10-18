@@ -1,6 +1,7 @@
 // Apple-only, like the target it tests.
 #if canImport(Darwin)
 import Foundation
+import Synchronization
 import Testing
 @testable import ZhenDarwin
 @testable import ZhenPrivilege
@@ -23,7 +24,7 @@ struct HelperProbeTests {
 
     @Test("A request nobody answers is given up on at its bound, and the give-up runs")
     func silenceEndsAtTheBound() async {
-        let gaveUp = Locked(false)
+        let gaveUp = Mutex(false)
         let clock = ContinuousClock()
         let start = clock.now
         let value = await HelperClient.answer(within: .milliseconds(150), otherwise: "nobody") { _ in
@@ -37,7 +38,7 @@ struct HelperProbeTests {
 
     @Test("An answer before the bound wins, and the bound does not fire over it")
     func answerWins() async {
-        let gaveUp = Locked(false)
+        let gaveUp = Mutex(false)
         let value = await HelperClient.answer(within: .milliseconds(150), otherwise: "nobody") { done in
             done.finish("helper")
             return { gaveUp.withLock { $0 = true } }
@@ -49,7 +50,7 @@ struct HelperProbeTests {
 
     @Test("The composition-time probe hands the helper the short bound; a scan, the long one")
     func probeUsesTheShortBound() async {
-        let seen = Locked<[Duration]>([])
+        let seen = Mutex<[Duration]>([])
         let source = CaptureSource { _, _, timeout in
             seen.withLock { $0.append(timeout) }
             return .failure(.helperAbsent)
@@ -58,15 +59,6 @@ struct HelperProbeTests {
         _ = try? await source.open(interface: "en0", filter: BPFFilter.arp())
         #expect(seen.withLock { $0 } == [HelperClient.probeTimeout, HelperClient.acquisitionTimeout])
     }
-}
-
-/// A value behind a lock, for closures the helper client calls from its own queue.
-/// `Synchronization.Mutex` is macOS 15+, and the package floor is 14.
-private final class Locked<Value>: @unchecked Sendable {
-    private let lock = NSLock()
-    private var value: Value
-    init(_ value: Value) { self.value = value }
-    func withLock<T>(_ body: (inout Value) -> T) -> T { lock.withLock { body(&value) } }
 }
 
 #endif

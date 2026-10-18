@@ -155,12 +155,6 @@ jobs:
         run: swift --version
       - name: Build and test
         run: swift test
-      # The binary Sonoma installs is built here, never on Sonoma, so this is where a
-      # slice that lost its minos 14 or its Info.plist would show. It uploads nothing.
-      # It does not depend on the tests, so a failing test does not hide its answer.
-      - name: The macOS 14 binary builds and checks out
-        if: success() || failure()
-        run: ./Scripts/release-binary.sh --check
 
   ci:
     # One check to require and one to read. Everything above can be skipped by the

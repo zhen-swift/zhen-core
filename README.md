@@ -47,10 +47,8 @@ per attempt, on the two hundred addresses where nothing exists.
 
 ## Installing
 
-`zhen` runs on macOS 14 (Sonoma) and later, on Apple silicon and Intel. Building it
-needs Xcode 26, which needs macOS 15.6, so on Sonoma install it through Homebrew
-(`brew tap zhen-swift/zhen && brew install zhen`), which fetches a prebuilt binary there. On 15.6
-and later, from source:
+macOS 15.6 or later, on Apple silicon or Intel, with Xcode 26. zhen is built from source
+on the Mac that runs it:
 
 ```bash
 PREFIX=$HOME/.local ./Scripts/install.sh
