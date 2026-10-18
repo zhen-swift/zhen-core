@@ -89,7 +89,10 @@ struct ReachSweepTests {
         // before the deadline (the gap before it is scattered ±25%), and well after the
         // learned path has finished transmitting.
         let final = try! #require(sent.last[Self.expected])
-        #expect(final > .milliseconds(1_034 * 2 / 4 + 1_034 / 4 * 3 / 4 - 2))
+        // Typed apart from the `#expect`: inline, the literal arithmetic against every
+        // `.milliseconds` overload ran out the type checker's time budget.
+        let earliest: Int = 1_034 * 2 / 4 + 1_034 / 4 * 3 / 4 - 2
+        #expect(final > .milliseconds(earliest))
         #expect(final < .milliseconds(1_034))
         #expect(final > (sent.last[Self.ip(13)] ?? .zero) + .milliseconds(300))
     }
