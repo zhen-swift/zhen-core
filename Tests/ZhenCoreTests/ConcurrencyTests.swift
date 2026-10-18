@@ -68,23 +68,6 @@ struct ConcurrencyTests {
         #expect(counters.snapshot().probesSent == 200)
     }
 
-    @Test("Discarding fan-out returns at its deadline with work unfinished")
-    func fanOutStopsAtDeadline() async {
-        let counters = ProbeCounters()
-        let watch = Stopwatch()
-        await discardingFanOut(
-            over: Array(1...10_000),
-            concurrency: 4,
-            deadline: Deadline(after: .milliseconds(150))
-        ) { _ in
-            counters.probeSent()
-            try? await Task.sleep(for: .milliseconds(5))
-            counters.probeCompleted()
-        }
-        #expect(watch.elapsedMillis < 3000)
-        #expect(counters.snapshot().probesSent < 10_000)
-    }
-
     @Test("Concurrency is derived from the descriptor limit actually granted")
     func concurrencyFromDescriptorLimit() {
         // The macOS default. A quarter of 256 is 64 — not the 25,400 probes a /24
@@ -234,6 +217,26 @@ struct BoundedPoolSemanticsTests {
             ProbeOutcome.observed($0)
         }
         #expect(stalled.results.isEmpty)
+    }
+}
+
+@Suite("Fan-out and pools against the wall clock")
+struct ConcurrencyWallClockTests {
+    @Test("Discarding fan-out returns at its deadline with work unfinished")
+    func fanOutStopsAtDeadline() async {
+        let counters = ProbeCounters()
+        let watch = Stopwatch()
+        await discardingFanOut(
+            over: Array(1...10_000),
+            concurrency: 4,
+            deadline: Deadline(after: .milliseconds(150))
+        ) { _ in
+            counters.probeSent()
+            try? await Task.sleep(for: .milliseconds(5))
+            counters.probeCompleted()
+        }
+        #expect(watch.elapsedMillis < 3000)
+        #expect(counters.snapshot().probesSent < 10_000)
     }
 
     @Test("An already-expired deadline returns immediately with what it has")

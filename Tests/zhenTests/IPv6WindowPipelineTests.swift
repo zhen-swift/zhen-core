@@ -76,7 +76,7 @@ nonisolated final class WindowRecordingMulticast: IPv6MulticastEcho, @unchecked 
 /// full run, and passed alone). What F8 claims is that the scan no longer waits out the 2 s
 /// cap; the window's own length, `run.ipv6_window.millis`, is held to tight bounds.
 @Suite("The IPv6 window in the pipeline (R8, fixture)")
-struct IPv6WindowPipelineTests {
+struct IPv6WindowPipelineWallClockTests {
     private func scan(
         sweep: Duration, window: IPv6Window, multicast: any IPv6MulticastEcho = WindowRecordingMulticast(),
         budget: Duration = .seconds(5)

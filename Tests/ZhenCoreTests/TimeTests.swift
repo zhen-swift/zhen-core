@@ -18,16 +18,6 @@ struct TimeTests {
         #expect(!isCodable(MonotonicInstant.self))
     }
 
-    @Test("Elapsed monotonic time is measured, not computed from wall stamps")
-    func elapsedIsMonotonic() async {
-        let watch = Stopwatch()
-        try? await Task.sleep(for: .milliseconds(30))
-        // Generous bounds: this asserts that the clock advances and is read in
-        // milliseconds, not that the scheduler is precise.
-        #expect(watch.elapsedMillis >= 25)
-        #expect(watch.elapsedMillis < 2000)
-    }
-
     @Test("Durations convert to milliseconds without losing microseconds")
     func subMillisecondPrecision() {
         #expect(Duration.microseconds(412).milliseconds == 0.412)
@@ -157,5 +147,18 @@ struct DeadlineSemanticsTests {
         #expect(Outcome.complete.isComplete)
         // There is no `isError`, deliberately: none of the three outcomes is one.
         #expect(Outcome.allCases.count == 3)
+    }
+}
+
+@Suite("Measurement discipline, against the wall clock")
+struct TimeWallClockTests {
+    @Test("Elapsed monotonic time is measured, not computed from wall stamps")
+    func elapsedIsMonotonic() async {
+        let watch = Stopwatch()
+        try? await Task.sleep(for: .milliseconds(30))
+        // Generous bounds: this asserts that the clock advances and is read in
+        // milliseconds, not that the scheduler is precise.
+        #expect(watch.elapsedMillis >= 25)
+        #expect(watch.elapsedMillis < 2000)
     }
 }

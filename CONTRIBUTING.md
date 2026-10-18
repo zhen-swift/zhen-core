@@ -14,6 +14,13 @@ swift test                               # the whole package
 All three must pass before and after your change. If `verify-linux.sh` says it cannot
 check, that is not a pass — it needs Docker, Podman, or a matching Linux Swift SDK.
 
+A test that bounds real elapsed time (a `Stopwatch`, a `clock.now - start`) goes in a
+suite whose type name contains `WallClock`. CI runs the rest of the suite in parallel,
+then those alone with `--no-parallel`: on a 3-core runner the parallel sweep simulations
+starve the async pool, and a 30 ms sleep has measured 3.7 s. Locally, `swift test` runs
+everything. CI's two passes are `swift test --skip WallClock` and
+`swift test --filter WallClock --no-parallel`.
+
 ## The three rules that are not negotiable
 
 **No subprocesses.** No `Process`, no `posix_spawn`, no shelling out, no bundled

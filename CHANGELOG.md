@@ -19,6 +19,12 @@ follow the app's `CFBundleShortVersionString`.
 ### Fixed
 - `ReachSweepTests` no longer times out the type checker, which stopped the test build on
   Xcode 27.1.
+- **CI is green.** It had been red since 0.8.0 for two reasons. First, wall-clock tests
+  ran alongside CPU-heavy sweep simulations on 3-core runners, where a 30 ms sleep measured
+  3.7 s. Those tests now live in suites named `WallClock`, and CI runs them after the
+  parallel pass, one at a time. Their bounds are unchanged. Second, the Linux job's git
+  refused a checkout owned by another user, so the build had no commit stamp. The job now
+  marks the workspace `safe.directory`.
 
 ## [0.8.0] — 2026-10-17 — reach
 

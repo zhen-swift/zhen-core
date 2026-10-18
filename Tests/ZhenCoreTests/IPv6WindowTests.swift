@@ -9,7 +9,7 @@ import Testing
 @testable import ZhenCore
 
 @Suite("The IPv6 window closes with the sweep, floored and capped (R8, portable)")
-struct IPv6WindowTests {
+struct IPv6WindowWallClockTests {
     static let floor = Duration.milliseconds(100)
     static let cap = Duration.milliseconds(500)
 

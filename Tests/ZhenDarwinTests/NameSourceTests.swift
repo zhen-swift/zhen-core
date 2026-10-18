@@ -253,7 +253,7 @@ struct NetBIOSTests {
 }
 
 @Suite("The naming stage divides a budget it cannot overrun")
-struct NamingBudgetIntegrationTests {
+struct NamingBudgetWallClockTests {
     @Test("With every source switched off the stage still returns an envelope, promptly")
     func emptyStageIsStillAnEnvelope() async {
         // The deadline-invariant check the previous phases established, applied to this
