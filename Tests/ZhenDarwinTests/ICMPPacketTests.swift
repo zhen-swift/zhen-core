@@ -80,7 +80,7 @@ struct ICMPReplyTests {
     @Test("A bare reply decodes, taking the TTL from the control message")
     func decodesBareReply() {
         let bytes = bareReply(sequence: 42)
-        let reply = ICMPReplyDecoder.decode(bytes.span, source: Self.source, controlTTL: 64)
+        let reply = ICMPReplyDecoder.decode(bytes[bytes.indices].span, source: Self.source, controlTTL: 64)
         #expect(reply?.sequence == 42)
         #expect(reply?.token == 0x0102_0304)
         #expect(reply?.ttl == 64)
@@ -101,7 +101,7 @@ struct ICMPReplyTests {
         packet[0] = 0x45                               // IPv4, IHL 5
         packet[8] = 128                                // TTL — a Windows host
         packet += bareReply(sequence: 7)
-        let reply = ICMPReplyDecoder.decode(packet.span, source: Self.source, controlTTL: nil)
+        let reply = ICMPReplyDecoder.decode(packet[packet.indices].span, source: Self.source, controlTTL: nil)
         #expect(reply?.sequence == 7)
         #expect(reply?.ttl == 128)
         #expect(OSHint(ttl: try! #require(reply?.ttl)) == .windows)
@@ -113,13 +113,14 @@ struct ICMPReplyTests {
         packet[0] = 0x45
         packet[8] = 255
         packet += bareReply(sequence: 1)
-        let reply = ICMPReplyDecoder.decode(packet.span, source: Self.source, controlTTL: 64)
+        let reply = ICMPReplyDecoder.decode(packet[packet.indices].span, source: Self.source, controlTTL: 64)
         #expect(reply?.ttl == 255)
     }
 
     @Test("A missing TTL stays nil rather than becoming a confident guess")
     func absentTTLIsNil() {
-        let reply = ICMPReplyDecoder.decode(bareReply(sequence: 3).span,
+        let packet = bareReply(sequence: 3)
+        let reply = ICMPReplyDecoder.decode(packet[packet.indices].span,
                                             source: Self.source, controlTTL: nil)
         #expect(reply?.ttl == nil)
         // Optionality means not-observed. A default of 64 here would put an OS hint in
@@ -130,11 +131,11 @@ struct ICMPReplyTests {
     @Test("A reply whose checksum does not verify is rejected")
     func badChecksumRejected() {
         var packet = bareReply(sequence: 11)
-        #expect(ICMPReplyDecoder.decode(packet.span, source: Self.source, controlTTL: nil) != nil)
+        #expect(ICMPReplyDecoder.decode(packet[packet.indices].span, source: Self.source, controlTTL: nil) != nil)
         // Flip one payload byte without fixing the checksum. Owning the checksum means
         // checking it on the way in, not only computing it on the way out.
         packet[14] ^= 0xFF
-        #expect(ICMPReplyDecoder.decode(packet.span, source: Self.source, controlTTL: nil) == nil)
+        #expect(ICMPReplyDecoder.decode(packet[packet.indices].span, source: Self.source, controlTTL: nil) == nil)
     }
 
     @Test("A reply carrying somebody else's payload is rejected")
@@ -146,7 +147,7 @@ struct ICMPReplyTests {
         packet[2] = 0; packet[3] = 0
         let checksum = InternetChecksum.compute(packet)
         packet[2] = UInt8(checksum >> 8); packet[3] = UInt8(checksum & 0xFF)
-        #expect(ICMPReplyDecoder.decode(packet.span, source: Self.source, controlTTL: nil) == nil)
+        #expect(ICMPReplyDecoder.decode(packet[packet.indices].span, source: Self.source, controlTTL: nil) == nil)
     }
 
     @Test("Anything that is not an echo reply is ignored")
@@ -156,7 +157,7 @@ struct ICMPReplyTests {
         for type in [UInt8(3), 11, 5, 8] {
             var packet = bareReply(sequence: 9)
             packet[0] = type
-            #expect(ICMPReplyDecoder.decode(packet.span, source: Self.source, controlTTL: nil) == nil,
+            #expect(ICMPReplyDecoder.decode(packet[packet.indices].span, source: Self.source, controlTTL: nil) == nil,
                     "type \(type)")
         }
     }
@@ -166,16 +167,16 @@ struct ICMPReplyTests {
         let full = bareReply(sequence: 5)
         for cut in 0..<full.count {
             let prefix = Array(full[0..<cut])
-            _ = ICMPReplyDecoder.decode(prefix.span, source: Self.source, controlTTL: nil)
+            _ = ICMPReplyDecoder.decode(prefix[prefix.indices].span, source: Self.source, controlTTL: nil)
         }
-        #expect(ICMPReplyDecoder.decode([UInt8]().span, source: Self.source, controlTTL: nil) == nil)
+        #expect(ICMPReplyDecoder.decode(Span<UInt8>(), source: Self.source, controlTTL: nil) == nil)
     }
 
     @Test("A claimed IP header longer than the buffer does not run off the end")
     func lyingIPHeader() {
         var packet = [UInt8](repeating: 0, count: 24)
         packet[0] = 0x4F                               // IHL 15 = 60 bytes, but only 24 here
-        #expect(ICMPReplyDecoder.decode(packet.span, source: Self.source, controlTTL: nil) == nil)
+        #expect(ICMPReplyDecoder.decode(packet[packet.indices].span, source: Self.source, controlTTL: nil) == nil)
     }
 }
 

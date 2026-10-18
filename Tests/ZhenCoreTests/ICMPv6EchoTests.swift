@@ -41,7 +41,7 @@ struct ICMPv6ChecksumTests {
         var zeroed = capturedReply
         zeroed[2] = 0; zeroed[3] = 0
         #expect(InternetChecksum.compute(zeroed) != 0x308A)
-        let v4Verifies = InternetChecksum.verifies(capturedReply.span)
+        let v4Verifies = InternetChecksum.verifies(capturedReply[capturedReply.indices].span)
         #expect(!v4Verifies)
     }
 

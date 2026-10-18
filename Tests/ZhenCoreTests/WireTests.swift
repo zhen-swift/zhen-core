@@ -48,7 +48,7 @@ struct ChecksumTests {
 extension Array where Element == UInt8 {
     /// Borrows a span over this array, so a test can exercise the Span-taking entry
     /// point directly rather than only the array convenience.
-    func withSpan<T>(_ body: (Span<UInt8>) -> T) -> T { body(span) }
+    func withSpan<T>(_ body: (Span<UInt8>) -> T) -> T { body(self[indices].span) }
 }
 
 @Suite("Port state is three-valued")

@@ -31,7 +31,7 @@ public struct DarwinNeighborCache: NeighborCache {
         )
         // SAFETY: borrowing a raw view over a buffer this call owns; the span cannot
         // outlive it.
-        let entries = unsafe Self.decode(bytes.span.bytes)
+        let entries = unsafe Self.decode(bytes[bytes.indices].span.bytes)
         return NeighborSnapshot(entries: entries, byteCount: bytes.count)
     }
 
@@ -89,7 +89,7 @@ extension DarwinNeighborCache: IPv6NeighborCache {
         let bytes = try RouteSysctl.fetch(
             [CTL_NET, PF_ROUTE, 0, AF_INET6, NET_RT_FLAGS, RTF_LLINFO]
         )
-        return unsafe Self.decodeIPv6(bytes.span.bytes) { ICMPv6Socket.interfaceName(UInt32($0)) }
+        return unsafe Self.decodeIPv6(bytes[bytes.indices].span.bytes) { ICMPv6Socket.interfaceName(UInt32($0)) }
     }
 
     /// Decodes an AF_INET6 neighbour dump. `interfaceName` turns the message's interface

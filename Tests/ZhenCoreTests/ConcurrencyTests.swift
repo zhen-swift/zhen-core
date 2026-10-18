@@ -36,6 +36,35 @@ struct ConcurrencyTests {
         #expect(snapshot.peakConcurrency == 8)
     }
 
+    @Test("The lock fallback counts what the atomics count", arguments: [false, true])
+    func storagesAgree(locked: Bool) async {
+        // Run on this machine, `ProbeCounters()` always takes the atomics. This drives each
+        // storage directly, so the macOS 14 path is not left to the one OS CI never runs.
+        func fresh() -> ProbeCounters? {
+            if locked { return ProbeCounters(storage: LockedCounters()) }
+            if #available(macOS 15, iOS 18, *) { return ProbeCounters(storage: AtomicCounters()) }
+            return nil
+        }
+        guard let counters = fresh(), let peaks = fresh() else { return }
+        await withTaskGroup(of: Void.self) { group in
+            for _ in 0..<200 {
+                group.addTask {
+                    counters.probeSent()
+                    counters.replySeen()
+                    counters.probeCompleted()
+                }
+            }
+        }
+        #expect(counters.snapshot().probesSent == 200)
+        #expect(counters.snapshot().repliesSeen == 200)
+        #expect(counters.snapshot().inFlight == 0)
+
+        for _ in 0..<8 { peaks.probeSent() }
+        for _ in 0..<8 { peaks.probeCompleted() }
+        #expect(peaks.snapshot().inFlight == 0)
+        #expect(peaks.snapshot().peakConcurrency == 8)
+    }
+
     @Test("Discarding fan-out visits everything and keeps nothing")
     func fanOutVisitsEverything() async {
         let counters = ProbeCounters()

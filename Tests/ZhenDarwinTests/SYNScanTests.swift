@@ -182,13 +182,13 @@ struct SYNReplyTests {
 
         // Bound before the macro: `#require` captures its argument expression and a
         // `Span` is non-escapable, so the parse lands in an ordinary optional first.
-        let openParse = IPv4Packet.parse(synAck.span)
+        let openParse = IPv4Packet.parse(synAck[synAck.indices].span)
         let open = try #require(openParse)
         #expect(open.isSynAck)
         #expect(!open.isReset)
         #expect(open.sourcePort == 443)
 
-        let closedParse = IPv4Packet.parse(reset.span)
+        let closedParse = IPv4Packet.parse(reset[reset.indices].span)
         let closed = try #require(closedParse)
         #expect(closed.isReset)
         #expect(!closed.isSynAck)
@@ -207,7 +207,7 @@ struct SYNReplyTests {
         let withOptions = Self.reply(
             from: host, sourcePort: 8080, to: 45_000, ack: 1234, flags: 0x12, headerWords: 7
         )
-        let parsed = IPv4Packet.parse(withOptions.span)
+        let parsed = IPv4Packet.parse(withOptions[withOptions.indices].span)
         let segment = try #require(parsed)
         #expect(segment.sourcePort == 8080)
         #expect(segment.destinationPort == 45_000)
@@ -217,7 +217,7 @@ struct SYNReplyTests {
 
     @Test("Anything that is not IPv4 TCP is refused")
     func refusesForeignFrames() {
-        func refuses(_ bytes: [UInt8]) -> Bool { IPv4Packet.parse(bytes.span) == nil }
+        func refuses(_ bytes: [UInt8]) -> Bool { IPv4Packet.parse(bytes[bytes.indices].span) == nil }
         let host = IPv4Address("10.10.20.7")!
         var frame = Self.reply(from: host, sourcePort: 443, to: 45_000, ack: 9, flags: 0x12)
 

@@ -11,7 +11,7 @@
 // interface at all. That is also what lets these run on Linux, where the real engines do
 // not exist yet.
 
-import Synchronization
+import Foundation
 import Testing
 @testable import ZhenCore
 
@@ -308,10 +308,11 @@ struct CompositeDiscoveryTests {
 
 /// Collects what a `ProgressSink` was handed.
 private final class EventBox: @unchecked Sendable {
-    private let lock = Mutex<Set<IPv4Address>>([])
+    private let lock = NSLock()
+    private var seen: Set<IPv4Address> = []
     func record(_ event: ProbeEvent) {
         guard case .hostFound(let host) = event else { return }
-        lock.withLock { $0.insert(host.ip) }
+        lock.withLock { _ = seen.insert(host.ip) }
     }
-    var hosts: Set<IPv4Address> { lock.withLock { $0 } }
+    var hosts: Set<IPv4Address> { lock.withLock { seen } }
 }

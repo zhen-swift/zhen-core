@@ -115,7 +115,7 @@ public struct DarwinInterfaceProvider: InterfaceProvider {
     static func defaultRouteInterfaceIndex() throws(PlatformError) -> UInt16 {
         let bytes = try RouteSysctl.fetch([CTL_NET, PF_ROUTE, 0, AF_INET, NET_RT_DUMP, 0])
         // SAFETY: a raw view over a buffer owned by this scope.
-        let messages = unsafe RouteMessageParser.parse(bytes.span.bytes)
+        let messages = unsafe RouteMessageParser.parse(bytes[bytes.indices].span.bytes)
         // The default route: up, via a gateway, with a destination of 0.0.0.0 — which
         // the kernel emits as either a zero address or a truncated sockaddr the parser
         // reports as nil.
