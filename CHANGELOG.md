@@ -6,7 +6,31 @@ nothing is released yet.
 The format is loosely [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions
 follow the app's `CFBundleShortVersionString`.
 
-## [0.8.0] — 2026-10-17 — reach
+## [Unreleased] — macOS 14
+
+### Changed
+- **Runs on macOS 14 (Sonoma) and later, not 26.** The floor was 26 because `Array.span`
+  is, but `ArraySlice.span` is back-deployed to 10.14.4, and every span over an array is
+  now spelled `bytes[bytes.indices].span`: the same borrowed view, no copy, and still no
+  `unsafe` in core. Building still needs Xcode 26 on macOS 15.6 or later. Gained: the Intel
+  Macs that stopped at Sonoma or Sequoia. iOS stays at 26.
+- **`ProbeCounters` takes a lock below macOS 15,** where Synchronization's `Atomic` does not
+  exist (`LockedCounters`). On 15 and later it is the relaxed atomics, unchanged.
+- **No Local Network remedy where the permission does not exist.** It arrived in macOS 15.
+  On 14, `ProbePermissionAdvice.apple(bundleURL:)` returns `.unspecified`, so a silent sweep
+  is reported without sending anyone to a setting that is not there.
+  `ProbePermissionAdvice.osHasLocalNetworkPrivacy` says which.
+
+### Added
+- `Scripts/release-binary.sh`: the universal (arm64 + x86_64) binary for macOS 14, which the
+  Homebrew formula installs on Sonoma because nothing there can build it. It checks both
+  slices' minos, the embedded Info.plist, the commit stamp and the x86_64 slice under
+  Rosetta, then prints the `gh release upload` command and stops. CI runs it with
+  `--check`.
+
+### Fixed
+- `ReachSweepTests` no longer times out the type checker, which stopped the test build on
+  Xcode 27.1.
 
 ### Added
 - **The sweep watches the neighbour table while it runs (0.8.0 change 1).** An entry that
