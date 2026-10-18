@@ -119,6 +119,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # actions/checkout trusts the workspace only under a temporary HOME. This container
+      # runs as root over a checkout it does not own, so without this git refuses the
+      # repository from here on and StampCommit stamps nothing: `--version` says "commit
+      # unknown" and the study contract's build row fails.
+      - name: Trust the checkout for git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       # The portability claim, checked on its own so it cannot be masked by anything
       # else in the package failing for an unrelated reason.
       - name: Build ZhenCore
@@ -141,7 +148,13 @@ jobs:
       # an `#if`, so the run lists it, with its reason, as skipped on Linux. The rest of
       # the suite is portable and has to pass.
       - name: Run the portable tests
-        run: swift test
+        run: swift test --skip WallClock
+      # Bounds on real time only mean something on an otherwise idle machine. In the
+      # parallel pass, the sweep simulations starve the async pool on a 3-core runner (a
+      # 30 ms sleep measured 3.7 s), so the suites named WallClock run afterwards, alone
+      # and one at a time. CONTRIBUTING.md says which tests belong there.
+      - name: Run the wall-clock tests, one at a time
+        run: swift test --skip-build --filter WallClock --no-parallel
 
   tool-macos:
     name: macOS — the tool
@@ -154,7 +167,13 @@ jobs:
       - name: Show toolchain
         run: swift --version
       - name: Build and test
-        run: swift test
+        run: swift test --skip WallClock
+      # Bounds on real time only mean something on an otherwise idle machine. In the
+      # parallel pass, the sweep simulations starve the async pool on a 3-core runner (a
+      # 30 ms sleep measured 3.7 s), so the suites named WallClock run afterwards, alone
+      # and one at a time. CONTRIBUTING.md says which tests belong there.
+      - name: Run the wall-clock tests, one at a time
+        run: swift test --skip-build --filter WallClock --no-parallel
 
   ci:
     # One check to require and one to read. Everything above can be skipped by the
