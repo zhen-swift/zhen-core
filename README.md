@@ -47,6 +47,9 @@ per attempt, on the two hundred addresses where nothing exists.
 
 ## Installing
 
+macOS 15.6 or later, on Apple silicon or Intel, with Xcode 26. zhen is built from source
+on the Mac that runs it:
+
 ```bash
 PREFIX=$HOME/.local ./Scripts/install.sh
 ```

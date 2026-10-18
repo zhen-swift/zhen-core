@@ -173,7 +173,7 @@ struct ARPFrameTests {
         // Bound before the macro: `#require` captures its argument expression, and a
         // `Span` is non-escapable, so the parse has to land in an ordinary optional
         // first. Every check below does the same for the same reason.
-        let parsed = ARPFrame.parse(bytes.span)
+        let parsed = ARPFrame.parse(bytes[bytes.indices].span)
         let message = try #require(parsed)
         #expect(message.isReply)
         #expect(message.senderIP == Self.targetIP)
@@ -187,7 +187,7 @@ struct ARPFrameTests {
         let frame = ARPFrame.request(
             target: Self.targetIP, senderMAC: Self.ourMAC, senderIP: Self.ourIP
         )
-        let parsed = ARPFrame.parse(frame.span)
+        let parsed = ARPFrame.parse(frame[frame.indices].span)
         let message = try #require(parsed)
         #expect(!message.isReply)
         #expect(message.operation == 1)
@@ -208,7 +208,7 @@ struct ARPFrameTests {
         )
         padded += [UInt8](repeating: 0, count: 18)
         #expect(padded.count == 60)
-        let parsed = ARPFrame.parse(padded.span)
+        let parsed = ARPFrame.parse(padded[padded.indices].span)
         let message = try #require(parsed)
         #expect(message.senderIP == Self.targetIP)
     }
@@ -221,7 +221,7 @@ struct ARPFrameTests {
         // The kernel filter should already have rejected these. It is the second of two
         // checks rather than the only one, because a filter that failed to install must
         // not turn every frame on the segment into a host.
-        func refuses(_ bytes: [UInt8]) -> Bool { ARPFrame.parse(bytes.span) == nil }
+        func refuses(_ bytes: [UInt8]) -> Bool { ARPFrame.parse(bytes[bytes.indices].span) == nil }
 
         var wrongEthertype = frame
         wrongEthertype[12] = 0x08; wrongEthertype[13] = 0x00     // IPv4, not ARP
@@ -295,9 +295,9 @@ struct BPFBufferTests {
         #expect(BPFBuffer.structSize == BPFFixture.structSize)
 
         let buffer = BPFFixture.record(Self.reply(1), headerLength: 18)
-        let records = BPFBuffer.records(in: buffer.span)
+        let records = BPFBuffer.records(in: buffer[buffer.indices].span)
         #expect(records.count == 1, "a record with the kernel's own bh_hdrlen must parse")
-        let parsed = ARPFrame.parse(buffer.span.extracting(records[0].packet))
+        let parsed = ARPFrame.parse(buffer[buffer.indices].span.extracting(records[0].packet))
         let message = try #require(parsed)
         #expect(message.senderIP == IPv4Address("10.10.20.1")!)
     }
@@ -306,7 +306,7 @@ struct BPFBufferTests {
     func walksEveryRecord() throws {
         let packets = [Self.reply(1), Self.reply(2), Self.reply(3)]
         let buffer = packets.flatMap { BPFFixture.record($0) }
-        let records = BPFBuffer.records(in: buffer.span)
+        let records = BPFBuffer.records(in: buffer[buffer.indices].span)
 
         #expect(records.count == 3)
         // 20-byte header plus a 42-byte frame is 62, which rounds up to 64 — so the
@@ -325,7 +325,7 @@ struct BPFBufferTests {
         // for, and the one a naive walk gets wrong by exactly three bytes.
         let odd = [UInt8](repeating: 0xAB, count: 43)
         let buffer = BPFFixture.record(odd) + BPFFixture.record(Self.reply(9))
-        let records = BPFBuffer.records(in: buffer.span)
+        let records = BPFBuffer.records(in: buffer[buffer.indices].span)
 
         #expect(records.count == 2)
         #expect(records[0].packet == 18..<61)
@@ -339,10 +339,10 @@ struct BPFBufferTests {
         // to pad beyond `sizeof(struct bpf_hdr)`. Using the struct size instead would
         // read the packet starting four bytes early.
         let buffer = BPFFixture.record(Self.reply(4), headerLength: 24)
-        let records = BPFBuffer.records(in: buffer.span)
+        let records = BPFBuffer.records(in: buffer[buffer.indices].span)
         #expect(records.count == 1)
         #expect(records[0].packet == 24..<66)
-        let parsed = ARPFrame.parse(buffer.span.extracting(records[0].packet))
+        let parsed = ARPFrame.parse(buffer[buffer.indices].span.extracting(records[0].packet))
         let message = try #require(parsed)
         #expect(message.senderIP == IPv4Address("10.10.20.4")!)
     }
@@ -357,7 +357,7 @@ struct BPFBufferTests {
         // before the cut are real observations that must not be thrown away over a byte
         // count.
         let truncated = Array(full.prefix(160))
-        let records = BPFBuffer.records(in: truncated.span)
+        let records = BPFBuffer.records(in: truncated[truncated.indices].span)
 
         #expect(records.count == 2)
         #expect(records[0].packet == 18..<60)
@@ -370,7 +370,7 @@ struct BPFBufferTests {
         // nothing to be gained by guessing, and a walk that read past it would be
         // reading whatever the allocator left behind.
         let buffer = BPFFixture.record(Self.reply(5)) + [UInt8](repeating: 0x7F, count: 19)
-        let records = BPFBuffer.records(in: buffer.span)
+        let records = BPFBuffer.records(in: buffer[buffer.indices].span)
         #expect(records.count == 1)
         #expect(records[0].packet == 18..<60)
     }
@@ -381,7 +381,7 @@ struct BPFBufferTests {
         // record boundary, so nothing after it can be trusted — including the record
         // this header claims to introduce.
         func records(_ bytes: [UInt8]) -> [BPFBuffer.Record] {
-            BPFBuffer.records(in: bytes.span)
+            BPFBuffer.records(in: bytes[bytes.indices].span)
         }
 
         var buffer = BPFFixture.record(Self.reply(6))
@@ -402,7 +402,7 @@ struct BPFBufferTests {
         // advanced by `caplen` alone would sit on this record until the process was
         // killed.
         let buffer = BPFFixture.record([]) + BPFFixture.record(Self.reply(8))
-        let records = BPFBuffer.records(in: buffer.span)
+        let records = BPFBuffer.records(in: buffer[buffer.indices].span)
         #expect(records.count == 2)
         #expect(records[0].packet.isEmpty)
         #expect(records[1].packet == 38..<80)
@@ -413,7 +413,7 @@ struct BPFBufferTests {
         let full = Self.reply(2)
         let clipped = Array(full.prefix(30))
         let buffer = BPFFixture.record(clipped, wireLength: full.count)
-        let records = BPFBuffer.records(in: buffer.span)
+        let records = BPFBuffer.records(in: buffer[buffer.indices].span)
         #expect(records.count == 1)
         #expect(records[0].isTruncated)
         #expect(records[0].wireLength == 42)
@@ -422,7 +422,10 @@ struct BPFBufferTests {
     @Test("The whole path: a read buffer becomes the ARP messages it holds")
     func endToEnd() {
         let buffer = [1, 2, 3].map { Self.reply(UInt8($0)) }.flatMap { BPFFixture.record($0) }
-        let bytes = buffer.span
+        // Bound first: the closure below keeps the span, and a span of an unnamed
+        // slice would outlive it.
+        let slice = buffer[...]
+        let bytes = slice.span
         let messages = BPFBuffer.records(in: bytes).compactMap {
             ARPFrame.parse(bytes.extracting($0.packet))
         }

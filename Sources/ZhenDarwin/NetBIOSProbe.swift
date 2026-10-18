@@ -123,7 +123,7 @@ public struct DarwinNetBIOSQuery: NetBIOSQuerying {
                     guard let source = datagram.source.v4,
                           let expected = transactions[source] else { continue }
                     guard let sighting = NBSTAT.decode(
-                        datagram.payload.span, from: source, expecting: expected
+                        datagram.payload[datagram.payload.indices].span, from: source, expecting: expected
                     ) else { continue }
                     answered.insert(sighting.ip)
                     continuation.yield(sighting)

@@ -337,7 +337,7 @@ private final class ReadScratch: @unchecked Sendable {
     /// gives it one. Arrays are copy-on-write, so this is a retain and not a copy.
     func frames(upTo count: Int) -> [[UInt8]] {
         let buffer = storage
-        let bytes = buffer.span
+        let bytes = buffer[buffer.indices].span
         let usable = bytes.extracting(0..<min(count, bytes.count))
         var found: [[UInt8]] = []
         for record in BPFBuffer.records(in: usable) {

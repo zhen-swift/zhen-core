@@ -169,7 +169,7 @@ struct NetBIOSTests {
         let bytes = [UInt8](try fixture("nbstat-windows", "bin"))
         // Hoisted out of `#require`: `Span` is non-escapable and the macro cannot take
         // an expression that produces one.
-        let decoded = NBSTAT.decode(bytes.span, from: IPv4Address("10.10.20.24")!,
+        let decoded = NBSTAT.decode(bytes[bytes.indices].span, from: IPv4Address("10.10.20.24")!,
                                     expecting: Self.windowsTransaction)
         let sighting = try #require(decoded)
         #expect(sighting.name == "DESKTOP-7Q3M8X2")
@@ -184,7 +184,7 @@ struct NetBIOSTests {
         // machine name gives every host in an office the name WORKGROUP — which looks
         // like a working name resolver right up until someone reads the output.
         let bytes = [UInt8](try fixture("nbstat-samba", "bin"))
-        let decoded = NBSTAT.decode(bytes.span, from: IPv4Address("10.10.20.26")!,
+        let decoded = NBSTAT.decode(bytes[bytes.indices].span, from: IPv4Address("10.10.20.26")!,
                                     expecting: Self.sambaTransaction)
         let sighting = try #require(decoded)
         #expect(sighting.name == "NAS-CLOSET")
@@ -197,7 +197,7 @@ struct NetBIOSTests {
         // one: the identity system joins hosts on identifiers, so every Samba box on the
         // network would merge into a single host.
         let bytes = [UInt8](try fixture("nbstat-samba", "bin"))
-        let decoded = NBSTAT.decode(bytes.span, from: IPv4Address("10.10.20.26")!,
+        let decoded = NBSTAT.decode(bytes[bytes.indices].span, from: IPv4Address("10.10.20.26")!,
                                     expecting: Self.sambaTransaction)
         #expect(try #require(decoded).mac == nil)
     }
@@ -207,22 +207,23 @@ struct NetBIOSTests {
         let bytes = [UInt8](try fixture("nbstat-windows", "bin"))
         let source = IPv4Address("10.10.20.24")!
         let expected = Self.windowsTransaction
-        #expect(NBSTAT.decode([UInt8]().span, from: source, expecting: expected) == nil)
+        #expect(NBSTAT.decode(Span<UInt8>(), from: source, expecting: expected) == nil)
         for length in [1, 12, 40, 56, 57] {
+            let prefix = bytes.prefix(length)
             #expect(
-                NBSTAT.decode(Array(bytes.prefix(length)).span, from: source, expecting: expected) == nil,
+                NBSTAT.decode(prefix[prefix.indices].span, from: source, expecting: expected) == nil,
                 "\(length)"
             )
         }
         // A query echoed back rather than a response: the QR bit is clear.
         var notAResponse = bytes
         notAResponse[2] = 0x00
-        #expect(NBSTAT.decode(notAResponse.span, from: source, expecting: expected) == nil)
+        #expect(NBSTAT.decode(notAResponse[notAResponse.indices].span, from: source, expecting: expected) == nil)
         // A response carrying an error in the low nibble of the flags is a host
         // declining, not a host with no name — either way there is no name here.
         var refused = bytes
         refused[3] = 0x03
-        #expect(NBSTAT.decode(refused.span, from: source, expecting: expected) == nil)
+        #expect(NBSTAT.decode(refused[refused.indices].span, from: source, expecting: expected) == nil)
     }
 
     @Test("A reply carrying the wrong transaction ID is refused")
@@ -234,11 +235,11 @@ struct NetBIOSTests {
         // version that survives.
         let bytes = [UInt8](try fixture("nbstat-windows", "bin"))
         let source = IPv4Address("10.10.20.24")!
-        #expect(NBSTAT.decode(bytes.span, from: source, expecting: 0x0001) == nil)
-        #expect(NBSTAT.decode(bytes.span, from: source, expecting: 0x1338) == nil)
+        #expect(NBSTAT.decode(bytes[bytes.indices].span, from: source, expecting: 0x0001) == nil)
+        #expect(NBSTAT.decode(bytes[bytes.indices].span, from: source, expecting: 0x1338) == nil)
         // And the genuine one still decodes, so the check is not simply refusing
         // everything.
-        let genuine = NBSTAT.decode(bytes.span, from: source, expecting: Self.windowsTransaction)
+        let genuine = NBSTAT.decode(bytes[bytes.indices].span, from: source, expecting: Self.windowsTransaction)
         #expect(try #require(genuine).name == "DESKTOP-7Q3M8X2")
     }
 

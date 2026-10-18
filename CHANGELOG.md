@@ -6,6 +6,20 @@ nothing is released yet.
 The format is loosely [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions
 follow the app's `CFBundleShortVersionString`.
 
+## [Unreleased] — macOS 15.6
+
+### Changed
+- **Runs on macOS 15.6 and later, not 26.** 15.6 is the oldest macOS that runs Xcode 26,
+  so every Mac that can build zhen can now run it, Intel Macs on Sequoia included. The
+  floor was 26 because `Array.span` is, but `ArraySlice.span` is back-deployed to 10.14.4,
+  and every span over an array is now spelled `bytes[bytes.indices].span`: the same
+  borrowed view, no copy, and still no `unsafe` in core. Still built from source only. iOS
+  stays at 26.
+
+### Fixed
+- `ReachSweepTests` no longer times out the type checker, which stopped the test build on
+  Xcode 27.1.
+
 ## [0.8.0] — 2026-10-17 — reach
 
 ### Added

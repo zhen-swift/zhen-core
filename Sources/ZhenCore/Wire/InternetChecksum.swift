@@ -23,10 +23,10 @@
 // and this package's acceptance criterion is no `unsafe` in core at all.
 //
 // `Span<UInt8>` gives the same borrowed zero-copy view with a bounds-checked subscript
-// that is safe, so nothing here needs a marker. (This is also why the package floor is
-// macOS 26: `Span` the type exists earlier, but every safe way to produce one from
-// owned storage — `Array.span` and friends — does not, so at a lower floor this file
-// would compile and be uncallable.) Two bytes are combined explicitly
+// that is safe, so nothing here needs a marker. (An array's span is spelled
+// `bytes[bytes.indices].span` everywhere in this package. `Array.span` is macOS 26+,
+// while `ArraySlice.span` is back-deployed, and the floor is 15.6 — see Package.swift.
+// Through the slice it is the same borrowed view and no copy.) Two bytes are combined explicitly
 // rather than loaded as a `UInt16`, which is also the more honest code: wire data is
 // unaligned and big-endian, and `loadUnaligned(as: UInt16.self)` on a little-endian
 // machine gets the byte order wrong in a way that happens not to matter for a
@@ -72,7 +72,7 @@ public enum InternetChecksum {
 
     /// Convenience over an array, for tests and for callers that already own a buffer.
     public static func compute(_ bytes: [UInt8]) -> UInt16 {
-        compute(bytes.span)
+        compute(bytes[bytes.indices].span)
     }
 
     /// Whether a buffer that already carries its checksum verifies.

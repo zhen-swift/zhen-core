@@ -11,6 +11,8 @@ and this is a bug — please say so.
 
 ## Install
 
+Needs macOS 15.6 or later and Xcode 26. zhen is built from source on the Mac that runs it.
+
 ```sh
 git clone https://github.com/zhen-swift/zhen-core.git && cd zhen-core
 PREFIX=$HOME/.local ./Scripts/install.sh

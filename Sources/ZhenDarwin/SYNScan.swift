@@ -257,7 +257,7 @@ public struct SYNScanEngine: PortScanning {
         let frames = await device.frames()
         let reader = Task {
             for await frame in frames {
-                guard let segment = IPv4Packet.parse(frame.span) else { continue }
+                guard let segment = IPv4Packet.parse(frame[frame.indices].span) else { continue }
                 guard segment.destinationPort == sourcePort else { continue }
                 await state.record(segment, at: .now)
             }

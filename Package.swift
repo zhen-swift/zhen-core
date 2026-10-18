@@ -52,16 +52,25 @@ let toolSettings: [SwiftSetting] = [
 
 let package = Package(
     name: "zhen",
-    // macOS 26 / iOS 26, and this is a deliberate raise from the brief's macOS 15.
+    // macOS 15.6, the oldest macOS that runs Xcode 26, so anyone who can build zhen can
+    // run what they built. zhen is only ever built from source, so a lower floor would
+    // describe Macs that have no way to get it.
     //
-    // Span, RawSpan and InlineArray are load-bearing here, and none of them can be
-    // *produced* from owned storage below 26 — `Array.span` and `InlineArray` are both
-    // 26+. At a macOS 15 floor the only wire logic in core would be uncallable and its
-    // tests would be gated off, so the suite would report green while testing nothing.
-    // The alternative was an `unsafe` block to build a buffer by hand, which would have
-    // bought a wider floor by breaking the stated rule that core contains no `unsafe`
-    // at all. The floor moved instead.
-    platforms: [.macOS(.v26), .iOS(.v26)],
+    // This was 26, on the grounds that no safe way to produce a `Span` from owned
+    // storage existed below it. `Array.span` is 26+, and that much is true. But
+    // `ArraySlice.span` is back-deployed to 10.14.4, so `bytes[bytes.indices].span` is the
+    // same borrowed, bounds-checked view with no `unsafe` at any floor. Every span over
+    // an array in this package is spelled that way. Not `bytes[...].span`: the
+    // unbounded-range subscript yields a temporary, and the span escapes it.
+    //
+    // Going lower is measured and not done. 14 builds once `ProbeCounters` has a lock in
+    // place of Synchronization's `Atomic`, which is 15+. But nothing on 14 can build
+    // zhen, so it would need prebuilt binaries, and keeping those built and checked was
+    // judged not worth it (PR #10).
+    //
+    // iOS stays at 26. Nothing here builds for iOS yet (`<net/bpf.h>`, a home directory
+    // per user), so a lower number would claim support nobody has seen work.
+    platforms: [.macOS("15.6"), .iOS(.v26)],
     products: [
         .library(name: "ZhenCore", targets: ["ZhenCore"]),
         .library(name: "ZhenDarwin", targets: ["ZhenDarwin"]),

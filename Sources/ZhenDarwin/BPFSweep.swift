@@ -218,7 +218,7 @@ public struct BPFDiscoveryEngine: HostDiscovery {
         // own business and happens here.
         let reader = Task {
             for await frame in frames {
-                guard let message = ARPFrame.parse(frame.span) else { continue }
+                guard let message = ARPFrame.parse(frame[frame.indices].span) else { continue }
                 if let event = await state.record(message, at: .now) { sink(event) }
             }
         }

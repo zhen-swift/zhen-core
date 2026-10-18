@@ -123,7 +123,7 @@ public struct OSFingerprintProbe: Sendable {
         let frames = await device.frames()
         let reader = Task {
             for await frame in frames {
-                guard let segment = IPv4Packet.parse(frame.span),
+                guard let segment = IPv4Packet.parse(frame[frame.indices].span),
                       segment.destinationPort == sourcePort,
                       segment.isSynAck
                 else { continue }
@@ -131,9 +131,9 @@ public struct OSFingerprintProbe: Sendable {
                 // headers here rather than carrying them through `Segment` keeps the
                 // scan's parse — which runs nine thousand times — free of fields only
                 // this path needs.
-                guard let header = IPv4Packet.header(frame.span) else { continue }
+                guard let header = IPv4Packet.header(frame[frame.indices].span) else { continue }
                 await collector.record(segment, header: header,
-                                       options: IPv4Packet.options(frame.span))
+                                       options: IPv4Packet.options(frame[frame.indices].span))
             }
         }
 

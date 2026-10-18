@@ -333,7 +333,7 @@ actor ICMPSocket {
         // Decoding happens outside the pointer closures over a bounds-checked `Span`,
         // so the parser itself never sees a pointer.
         return .datagram(ICMPReplyDecoder.decode(
-            buffer.span.extracting(0..<received),
+            buffer[buffer.indices].span.extracting(0..<received),
             source: source, controlTTL: ttl, receivedAt: receivedAt
         ))
     }
