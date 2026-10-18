@@ -6,7 +6,7 @@ nothing is released yet.
 The format is loosely [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions
 follow the app's `CFBundleShortVersionString`.
 
-## [Unreleased] — macOS 15.6
+## [0.8.1] — 2026-10-18 — macOS 15.6
 
 ### Changed
 - **Runs on macOS 15.6 and later, not 26.** 15.6 is the oldest macOS that runs Xcode 26,
