@@ -658,7 +658,8 @@ Verify against the requirements. There is no prior implementation to match.
 
 ## Risks, ranked
 
-1. **TCC Local Network permission — highest impact, and silent.** On macOS 26, ICMP-to-LAN, mDNS,
+1. **TCC Local Network permission — highest impact, and silent.** The permission arrived in
+   macOS 15; on 14 there is none, and a silent sweep gets no Apple remedy. On macOS 26, ICMP-to-LAN, mDNS,
    SSDP multicast and NetBIOS all require it, and **denial returns zero results rather than an
    error**. A bare SPM executable has no bundle, so the grant attaches to Terminal and never
    appears under the tool's own name in System Settings. Mitigations: embed an Info.plist with
