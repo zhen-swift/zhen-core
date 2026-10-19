@@ -3,27 +3,22 @@
 import SwiftUI
 
 struct ProbeView: View {
-    @State private var results: [ProbeResult] = []
-    @State private var running = false
+    @Environment(Harness.self) private var harness
 
     var body: some View {
         List {
             Section {
-                Button(running ? "Probing…" : "Run the probes") {
-                    Task {
-                        running = true
-                        results = await CapabilityProbe.runAll()
-                        running = false
-                    }
+                Button(harness.probing ? "Probing…" : "Run the probes") {
+                    Task { await harness.runProbes() }
                 }
-                .disabled(running)
+                .disabled(harness.probing)
             } footer: {
                 Text("Only a device run counts: the simulator uses the Mac's kernel and sandbox. The SSDP probe sends one multicast datagram on this network.")
             }
 
-            if !results.isEmpty {
+            if !harness.probeResults.isEmpty {
                 Section("Results") {
-                    ForEach(results) { result in
+                    ForEach(harness.probeResults) { result in
                         VStack(alignment: .leading, spacing: 4) {
                             Label(result.name, systemImage: result.asAssumed
                                   ? "checkmark.circle" : "exclamationmark.triangle")
@@ -39,8 +34,8 @@ struct ProbeView: View {
         }
         .navigationTitle("Capability probe")
         .toolbar {
-            if !results.isEmpty {
-                ShareLink(item: Self.text(results)) { Label("Share", systemImage: "square.and.arrow.up") }
+            if !harness.probeResults.isEmpty {
+                ShareLink(item: Self.text(harness.probeResults)) { Label("Share", systemImage: "square.and.arrow.up") }
             }
         }
     }

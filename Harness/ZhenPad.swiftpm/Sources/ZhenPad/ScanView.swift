@@ -5,7 +5,8 @@ import UIKit
 import ZhenCore
 
 struct ScanView: View {
-    @State private var session = ScanSession()
+    @Environment(Harness.self) private var harness
+    private var session: ScanSession { harness.session }
     @State private var withPorts = false
 
     var body: some View {

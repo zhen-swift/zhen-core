@@ -5,18 +5,22 @@ import SwiftUI
 
 @main
 struct ZhenPadApp: App {
+    @State private var harness = Harness()
+
     var body: some Scene {
         WindowGroup {
-            TabView {
-                Tab("Probe", systemImage: "stethoscope") {
+            @Bindable var harness = harness
+            TabView(selection: $harness.tab) {
+                Tab("Probe", systemImage: "stethoscope", value: Harness.Tab.probe) {
                     NavigationStack { ProbeView() }
                 }
-                Tab("Scan", systemImage: "dot.radiowaves.left.and.right") {
+                Tab("Scan", systemImage: "dot.radiowaves.left.and.right", value: Harness.Tab.scan) {
                     NavigationStack { ScanView() }
                 }
             }
+            .environment(harness)
             .task {
-                if Autorun.isRequested { await Autorun.run() }
+                if Autorun.isRequested { await Autorun.run(harness) }
             }
         }
     }
