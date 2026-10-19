@@ -107,6 +107,17 @@ public protocol NeighborCache: Sendable {
     /// assumed, so a reader that knows its byte count says it. Defaulted to `entries()`
     /// with no count, so a conformance that cannot say is not obliged to invent one.
     func snapshot() async throws(PlatformError) -> NeighborSnapshot
+
+    /// Whether this platform lets the process read the table at all.
+    ///
+    /// Not the same as a read failing. A read that fails on a platform that has the table
+    /// is something that went wrong and is reported as one; a platform that never had it
+    /// — iPadOS, whose sandbox does not give an app the ARP cache — is the normal state
+    /// there, and saying so on every scan would train a reader to skip the degradation
+    /// list. A cache that answers false is not read, and discovery does not claim
+    /// `.neighborTable`. Defaulted to true, so every conformance that reads a real table
+    /// says nothing new.
+    var isReadable: Bool { get }
 }
 
 extension NeighborCache {
@@ -114,6 +125,31 @@ extension NeighborCache {
     public func snapshot() async throws(PlatformError) -> NeighborSnapshot {
         NeighborSnapshot(entries: try await entries(), byteCount: nil)
     }
+
+    /// A table that exists.
+    public var isReadable: Bool { true }
+}
+
+/// No neighbour table: the platform does not give this process one.
+///
+/// The sibling of `NoIPv6MulticastEcho`. It is never read — `isReadable` is false, and a
+/// discovery engine holding it neither polls it nor claims the capability — so `entries()`
+/// throws `.unavailable` only to make an accidental read say what it ran into rather than
+/// look like an empty network.
+public struct UnavailableNeighborCache: NeighborCache {
+    /// Why the table is not there, for the error an accidental read gets.
+    public var reason: String
+
+    /// Creates the cache. Each parameter is documented on the property it sets.
+    public init(reason: String = "This platform does not let the process read the neighbour table.") {
+        self.reason = reason
+    }
+
+    public func entries() async throws(PlatformError) -> [NeighborEntry] {
+        throw .unavailable(reason)
+    }
+
+    public var isReadable: Bool { false }
 }
 
 /// One read of the neighbour table.

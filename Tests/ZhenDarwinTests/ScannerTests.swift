@@ -42,7 +42,12 @@ struct DarwinScannerTests {
         #expect(discovery.capabilities.contains(.icmpSweep))
         // Not `.arpSweep`: this engine reads the kernel's neighbour table and emits no
         // ARP of its own. A capture taken on 2026-09-12 settled which of the two it is.
+        // On iPadOS there is no table to read, and the descriptor says so.
+        #if os(macOS)
         #expect(discovery.capabilities.contains(.neighborTable))
+        #else
+        #expect(!discovery.capabilities.contains(.neighborTable))
+        #endif
         #expect(!discovery.capabilities.contains(.arpSweep),
                 "the unprivileged engine cannot sweep layer 2 and must not claim to")
         #expect(!discovery.capabilities.contains(.synScan))

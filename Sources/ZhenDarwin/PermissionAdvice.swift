@@ -14,8 +14,14 @@ extension ProbePermissionAdvice {
     ///
     /// An `.app` gets `appleLocalNetworkInApp`; anything else — a bare executable, a test
     /// runner — gets `appleLocalNetwork`, which is the text `zhen` has always printed.
+    /// On iPadOS it is always `appleLocalNetworkOnIPad`: an iOS bundle is an `.app` too,
+    /// but the setting is somewhere else, and there is no command line to word for.
     public static func apple(bundleURL: URL) -> ProbePermissionAdvice {
+        #if os(macOS)
         bundleURL.pathExtension == "app" ? .appleLocalNetworkInApp : .appleLocalNetwork
+        #else
+        .appleLocalNetworkOnIPad
+        #endif
     }
 
     /// The Apple remedy for this process.

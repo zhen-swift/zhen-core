@@ -637,6 +637,16 @@ struct PermissionAdviceTests {
                 "the command line lost the sentence it needs")
     }
 
+    @Test("An iPad is pointed at Settings, not at a macOS pane or a terminal")
+    func iPadAdvice() {
+        let reason = degradation(.appleLocalNetworkOnIPad).reason
+        #expect(reason.contains("Settings › Privacy & Security › Local Network"))
+        #expect(reason.contains("iPadOS"))
+        #expect(!reason.contains("macOS"))
+        #expect(!reason.contains("terminal"))
+        #expect(reason.contains("likely cause"))
+    }
+
     @Test("Linux gets the sysctl that actually governs unprivileged ICMP there")
     func linuxAdvice() {
         let reason = degradation(.linuxPingGroupRange).reason

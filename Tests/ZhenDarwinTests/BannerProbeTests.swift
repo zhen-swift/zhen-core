@@ -132,11 +132,13 @@ struct BannerCompositionTests {
         #expect(overConnect.descriptor.kind == .unprivileged)
         #expect(overConnect.descriptor.name == "tcp-connect+banner")
 
+        #if os(macOS)
         let overSYN = BannerProbingPortScan(base: SYNScanEngine())
         #expect(overSYN.descriptor.capabilities.contains(.synScan))
         #expect(overSYN.descriptor.capabilities.contains(.bannerProbe))
         // The privilege of the composition is the privilege of the thing that needs it.
         #expect(overSYN.descriptor.kind == .privilegedBPF)
+        #endif
     }
 }
 

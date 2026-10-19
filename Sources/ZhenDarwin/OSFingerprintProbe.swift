@@ -31,7 +31,9 @@
 // there is nothing in it to fingerprint. The SYN-ACK from an open port is the only
 // packet in this exchange that discloses the stack's preferences, so the probe runs
 // after the port scan and only against hosts that have one.
-#if canImport(Darwin)
+// macOS only. iOS has no `/dev/bpf*` and its SDK no `<net/bpf.h>`, so on iPadOS this
+// layer is absent and the scanner composes without it (see `DarwinScanner.make`).
+#if os(macOS)
 
 import Darwin
 import ZhenCore

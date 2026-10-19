@@ -1,5 +1,5 @@
-// Apple-only, like the target it tests.
-#if canImport(Darwin)
+// macOS only, like the sources it tests (see their guards): iPadOS has none of them.
+#if os(macOS)
 import Foundation
 import Synchronization
 import Testing

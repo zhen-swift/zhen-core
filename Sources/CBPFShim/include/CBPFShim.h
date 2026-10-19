@@ -29,7 +29,13 @@
 
 #include <stddef.h>
 
+// macOS only. `__APPLE__` is also defined for iOS, whose SDK has no `<net/bpf.h>`, so the
+// test is the target OS: on iPadOS, as on Linux, this is an empty translation unit.
 #if defined(__APPLE__)
+#include <TargetConditionals.h>
+#endif
+
+#if defined(__APPLE__) && TARGET_OS_OSX
 
 #include <sys/types.h>
 #include <sys/time.h>
@@ -126,6 +132,6 @@ static inline size_t ns_bpf_ifreq_size(void) { return sizeof(struct ifreq); }
 /// `IFNAMSIZ` — the interface-name field's capacity, including its terminator.
 static inline size_t ns_bpf_ifnamsiz(void) { return (size_t)IFNAMSIZ; }
 
-#endif /* __APPLE__ */
+#endif /* __APPLE__ && TARGET_OS_OSX */
 
 #endif /* ZHEN_CBPF_SHIM_H */

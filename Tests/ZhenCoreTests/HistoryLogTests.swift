@@ -557,6 +557,8 @@ struct HistoryLogTests {
     // A subprocess in a test is not the rule CONTRIBUTING sets. That rule is about how
     // zhen scans — no shelling out to reach the network — and a test of
     // cross-process locking cannot be written without a second process by definition.
+    // Not on iOS, which has no `Process` and no second process an app may start.
+    #if os(macOS) || os(Linux)
     @Test("A lock held by a different process excludes this one")
     func lockExcludesASecondProcess() async throws {
         let perl = "/usr/bin/perl"
@@ -622,6 +624,7 @@ struct HistoryLogTests {
                 "the lock outlived the process that held it")
         #expect(flock(mine, LOCK_UN) == 0)
     }
+    #endif
 
     @Test("The lock lives beside the file, so compaction cannot replace it")
     func lockIsASidecar() async throws {

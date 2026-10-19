@@ -6,6 +6,33 @@ nothing is released yet.
 The format is loosely [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions
 follow the app's `CFBundleShortVersionString`.
 
+## [Unreleased] — iPadOS
+
+### Added
+- **The engine builds for iPadOS, and scans from an iPad.**
+  - `ZhenCore`, `ZhenDarwin` and `ZhenScan` compile for the device and the simulator.
+  - What runs there is the unprivileged composition: ICMP sweep, connect scan with
+    banners, Bonjour and NetBIOS naming.
+  - Not built for iPadOS: BPF, the SYN scan, OS fingerprinting and the helper. The
+    neighbour table is absent and SSDP is off until the multicast entitlement is granted.
+    `Docs/IPADOS.md` has the full list and why.
+- `Harness/ZhenPad.swiftpm`: an iPad-only harness app that depends on this checkout by
+  path. It probes what the sandbox allows, runs a scan, and has an `-autorun` mode.
+- CI: a `tool-ipados` job builds `ZhenScan` for the device and runs core's and the
+  engine's tests on an iPad simulator.
+- `NeighborCache.isReadable` (defaulted to true) and `UnavailableNeighborCache`. A sweep
+  with no table neither reads it nor claims `.neighborTable`.
+- `ProbePermissionAdvice.appleLocalNetworkOnIPad`, which points at Settings rather than
+  System Settings.
+
+### Changed
+- BPF, the route socket and the helper are guarded by `os(macOS)` rather than
+  `canImport(Darwin)`, which is also true on iOS. On macOS the same code compiles.
+- `CapturePolicy` moved to its own file so it exists on every Apple platform.
+- An interface's MAC of `02:00:00:00:00:00`, iOS's placeholder, reads as no MAC.
+- The `sudo` re-home in `HistoryLocation` uses `URL.homeDirectory(forUser:)`. The
+  `FileManager` spelling is unavailable on iOS.
+
 ## [0.8.1] — 2026-10-18 — macOS 15.6
 
 ### Changed

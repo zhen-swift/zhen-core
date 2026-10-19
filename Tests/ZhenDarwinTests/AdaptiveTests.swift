@@ -886,6 +886,8 @@ struct BudgetSplitTests {
 }
 
 
+// macOS only, like the BPF refusals it maps: iPadOS has no capture device to refuse.
+#if os(macOS)
 @Suite("What the artifact says about a privileged engine that did not run")
 struct PrivilegedNoticeTests {
     @Test("Silence for the two states that are normal, a sentence for the rest")
@@ -910,5 +912,6 @@ struct PrivilegedNoticeTests {
         #expect(DarwinScanner.notice(for: .notEthernet(dataLinkType: 12)) != nil)
     }
 }
+#endif
 
 #endif

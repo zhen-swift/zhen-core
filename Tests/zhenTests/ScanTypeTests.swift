@@ -67,7 +67,9 @@ struct ScanTypeArgumentTests {
 /// A trait rather than `#if`: on Linux the suite below is reported as skipped, with the
 /// reason, instead of compiling to nothing. A skip nobody can see is how a platform
 /// quietly stops being tested.
-#if canImport(Darwin)
+// `os(macOS)`, like the CLI's own factory: an iOS build of the package compiles the
+// command line too, and it has no engine there — the iPad engine belongs to an app.
+#if os(macOS)
 nonisolated private let platformHasScanningEngine = true
 #else
 nonisolated private let platformHasScanningEngine = false

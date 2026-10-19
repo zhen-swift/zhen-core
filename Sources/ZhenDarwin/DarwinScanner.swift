@@ -93,6 +93,7 @@ public struct DarwinScanner: Sendable {
             concurrency: effective, budgets: budgets, neighborWatch: neighborWatch
         )
 
+        #if os(macOS)
         // ── Which engines exist is decided by attempting, never by asking who we are ─
         //
         // `geteuid() == 0` is the wrong question in both directions. Root with every
@@ -187,19 +188,49 @@ public struct DarwinScanner: Sendable {
                 name: "darwin-composite"
             )
             : unprivileged
+        let naming = DarwinNameResolver()
+        let notice = Self.notice(for: refusal)
+        #else
+        // ── iPadOS: the unprivileged composition, and nothing to attempt ──────────
+        //
+        // There is no `/dev/bpf*` to open and no helper to ask, so `capture` has nothing
+        // to choose between and the composition is the one macOS falls back to: the
+        // ICMP sweep, and connect with banners. Silent, as a refused open is silent on
+        // macOS — this is the platform's normal state, and the descriptor already
+        // says which capabilities are absent.
+        //
+        // SSDP is off because the M-SEARCH is a multicast send, which iOS gives only to
+        // an app holding the managed `com.apple.developer.networking.multicast`
+        // entitlement. Without it the send fails and the source would be counted as
+        // asked; off, it is never named as a source that went quiet.
+        _ = primary  // asked for its failure above; nothing here probes it
+        if portScanType == .syn {
+            throw PlatformError.unavailable(
+                "--scan-type syn needs a packet-capture device, and iPadOS has none. "
+                + "Use --scan-type connect, which is what runs here anyway."
+            )
+        }
+        let ports: any PortScanning = BannerProbingPortScan(
+            base: TCPConnectScanEngine(concurrency: effective)
+        )
+        let discovery: any HostDiscovery = unprivileged
+        let naming = DarwinNameResolver(usesSSDP: false)
+        let notice: Degradation? = nil
+        #endif
 
         return DarwinScanner(
             interfaces: interfaces,
-            neighbors: DarwinNeighborCache(),
+            neighbors: SystemNeighborCache.current,
             discovery: discovery,
             ports: ports,
-            naming: DarwinNameResolver(),
+            naming: naming,
             descriptorLimit: granted,
             concurrency: effective,
-            privilegedEngineNotice: Self.notice(for: refusal)
+            privilegedEngineNotice: notice
         )
     }
 
+    #if os(macOS)
     /// Turns a refused BPF open into something worth putting in the artifact, or
     /// nothing.
     ///
@@ -218,6 +249,7 @@ public struct DarwinScanner: Sendable {
         }
         return Degradation(stage: .setup, reason: refusal.reason, recoverable: true)
     }
+    #endif
 
     /// What this platform can do, for a surface that wants to explain an absence.
     public var capabilities: EngineCapabilities {

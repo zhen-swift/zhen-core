@@ -26,7 +26,8 @@
 // rather than in the manifest because SPM can conditionalise a target's DEPENDENCIES and
 // not its existence — a target always compiles, so a target that cannot compile
 // everywhere has to say so here. On Linux this module is empty, which is correct: it is
-// the app's adapter and the app is macOS.
+// the app's adapter, and the app runs on Apple platforms only — macOS, and iPadOS with
+// the unprivileged composition `DarwinScanner.make` assembles there.
 //
 // It was not guarded until the reorganisation moved this target into a package whose CI
 // builds on Linux. It has always been Apple-only; only the check is new.
@@ -424,9 +425,16 @@ extension CapturePolicy {
     ///
     /// It also answers "does it still work without the helper", which is the first
     /// question anybody with a misbehaving daemon will have.
+    ///
+    /// On iPadOS there is no helper to try, so it is `.directOnly`, which there means
+    /// no capture device at all.
     public static var fromEnvironment: CapturePolicy {
+        #if os(macOS)
         ProcessInfo.processInfo.environment["ZHEN_CAPTURE"] == "direct"
             ? .directOnly : .helperThenDirect
+        #else
+        .directOnly
+        #endif
     }
 }
 

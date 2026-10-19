@@ -94,6 +94,7 @@ public struct DarwinInterfaceProvider: InterfaceProvider {
     /// because the machine has no path to the internet would be absurd.
     public func primaryInterface() throws(PlatformError) -> NetworkInterface {
         let candidates = try interfaces()
+        #if os(macOS)
         guard let index = try? Self.defaultRouteInterfaceIndex() else { return candidates[0] }
         // Map the routing table's interface index back to a name via if_indextoname,
         // which is the only direction the kernel offers cheaply.
@@ -109,8 +110,36 @@ public struct DarwinInterfaceProvider: InterfaceProvider {
             return candidates[0]
         }
         return match
+        #else
+        return Self.preferredWithoutRoutes(candidates)
+        #endif
     }
 
+    /// The interface a scan most likely means, when there is no routing table to ask.
+    ///
+    /// iPadOS: its SDK has no `<net/route.h>`, so the default route cannot be read the
+    /// way macOS reads it. The first enumerated interface is not a safe stand-in on a
+    /// cellular iPad, where `pdp_ip0` carries an address too. So the order is by kind:
+    /// `en*` first (Wi-Fi is `en0`, a USB Ethernet adapter a later `en`), then anything
+    /// that is not cellular (`pdp_ip*`), a VPN tunnel (`utun*`, `ipsec*`) or the Personal
+    /// Hotspot bridge (`bridge*`), then those. Enumeration order breaks ties.
+    ///
+    /// Pure and unguarded, so it is tested on every platform. `NWPathMonitor` would
+    /// name the path's interface exactly, but it answers through a callback, and waiting
+    /// for one inside this synchronous call is a blocked thread on the cooperative pool.
+    static func preferredWithoutRoutes(_ candidates: [NetworkInterface]) -> NetworkInterface {
+        func rank(_ name: String) -> Int {
+            if name.hasPrefix("en") { return 0 }
+            for prefix in ["pdp_ip", "utun", "ipsec", "bridge"] where name.hasPrefix(prefix) {
+                return 2
+            }
+            return 1
+        }
+        // `min(by:)` keeps the first of equal elements, which is the tie-break.
+        return candidates.min { rank($0.name) < rank($1.name) } ?? candidates[0]
+    }
+
+    #if os(macOS)
     /// The interface index of the IPv4 default route, from the routing table.
     static func defaultRouteInterfaceIndex() throws(PlatformError) -> UInt16 {
         let bytes = try RouteSysctl.fetch([CTL_NET, PF_ROUTE, 0, AF_INET, NET_RT_DUMP, 0])
@@ -128,6 +157,7 @@ public struct DarwinInterfaceProvider: InterfaceProvider {
         }
         throw PlatformError.notFound("No IPv4 default route.")
     }
+    #endif
 
     /// Counts the leading one-bits of a netmask.
     ///
@@ -156,6 +186,10 @@ public struct DarwinInterfaceProvider: InterfaceProvider {
             )
             packed = (packed << 8) | UInt64(byte)
         }
+        // iOS reports `02:00:00:00:00:00` for every interface rather than its address.
+        // That is a placeholder, not a hardware address, and stamping it on this
+        // device's row would give every iPad the same identity.
+        guard packed != 0x0200_0000_0000 else { return nil }
         return MACAddress(raw: packed)
     }
 }

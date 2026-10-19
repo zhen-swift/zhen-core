@@ -68,8 +68,11 @@ let package = Package(
     // zhen, so it would need prebuilt binaries, and keeping those built and checked was
     // judged not worth it (PR #10).
     //
-    // iOS stays at 26. Nothing here builds for iOS yet (`<net/bpf.h>`, a home directory
-    // per user), so a lower number would claim support nobody has seen work.
+    // iOS is 26, and it is iPadOS that has been built: ZhenCore, ZhenDarwin and ZhenScan
+    // compile for the device and the simulator, and the engine's tests run on an iPad
+    // simulator in CI. What iPadOS gets is the unprivileged composition — no BPF, no
+    // route socket, no helper, no SSDP — see Docs/IPADOS.md. The floor is not lowered
+    // for the same reason as before: below 26 is support nobody has seen work.
     platforms: [.macOS("15.6"), .iOS(.v26)],
     products: [
         .library(name: "ZhenCore", targets: ["ZhenCore"]),

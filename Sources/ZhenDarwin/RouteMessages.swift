@@ -27,7 +27,9 @@
 //                            nlen@5:u8 alen@6:u8    data@8
 //     sockaddr_in (16)       len@0:u8  family@1:u8  addr@4:u32be
 //     sockaddr_in6 (28)      len@0:u8  family@1:u8  addr@8..<24  scope_id@24:u32
-#if canImport(Darwin)
+// macOS only. The iOS SDK has no `<net/route.h>`, and the iOS sandbox does not hand an app
+// the ARP table anyway, so on iPadOS the neighbour cache is `UnavailableNeighborCache`.
+#if os(macOS)
 
 import Darwin
 import ZhenCore

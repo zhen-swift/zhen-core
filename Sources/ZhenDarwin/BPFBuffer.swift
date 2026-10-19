@@ -36,7 +36,9 @@
 // kernel for this machine, not sent by a peer. That is the opposite of `ARPFrame`,
 // which combines its bytes big-endian because they came off a wire, and the two must
 // not be copied into each other.
-#if canImport(Darwin)
+// macOS only. iOS has no `/dev/bpf*` and its SDK no `<net/bpf.h>`, so on iPadOS this
+// layer is absent and the scanner composes without it (see `DarwinScanner.make`).
+#if os(macOS)
 
 import CBPFShim
 import Darwin

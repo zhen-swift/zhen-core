@@ -11,7 +11,10 @@
 
 import ZhenCore
 
-#if canImport(Darwin)
+// `os(macOS)`, not `canImport(Darwin)`: the manifest links ZhenDarwin into this binary on
+// macOS only, and an iOS build of the package still builds that module for the app, so
+// `canImport` would say yes and the link would then fail.
+#if os(macOS)
 import ZhenDarwin
 #endif
 
@@ -72,7 +75,7 @@ nonisolated struct PlatformScanner: Sendable {
         portScanType: PortScanType = .auto,
         neighborWatch: Bool = true
     ) async throws(ScanSetupError) -> PlatformScanner {
-        #if canImport(Darwin)
+        #if os(macOS)
         let scanner: DarwinScanner
         do {
             scanner = try await DarwinScanner.make(

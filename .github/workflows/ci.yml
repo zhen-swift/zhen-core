@@ -175,13 +175,55 @@ jobs:
       - name: Run the wall-clock tests, one at a time
         run: swift test --skip-build --filter WallClock --no-parallel
 
+  tool-ipados:
+    # The engine on iPadOS: the unprivileged composition, built for the device and tested
+    # on an iPad simulator. The command line and the helper are macOS-only and are not
+    # tested here; `tool-macos` covers them. The simulator runs on the host's kernel, so
+    # this proves the build and the composition, not the iPad sandbox — that needs a
+    # device (see Docs/SPEC.md, the iPadOS section).
+    name: iPadOS — the engine
+    needs: changes
+    if: needs.changes.outputs.tool == 'true'
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the app's adapter for an iPad
+        run: xcodebuild build -scheme ZhenScan -destination 'generic/platform=iOS' -quiet
+      - name: Pick an iPad simulator
+        id: ipad
+        run: |
+          set -euo pipefail
+          udid=$(xcrun simctl list devices available -j \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; print(next(x["udid"] for r,v in d.items() if "iOS" in r for x in v if x["name"].startswith("iPad")))')
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+      # The same two passes as macOS, for the same reason.
+      - name: Test core and the engine on the iPad simulator
+        run: >
+          xcodebuild test -scheme zhen-Package -quiet
+          -destination 'id=${{ steps.ipad.outputs.udid }}'
+          -only-testing:ZhenCoreTests -only-testing:ZhenDarwinTests
+          -skip-testing:ZhenCoreTests/TimeWallClockTests
+          -skip-testing:ZhenCoreTests/IPv6WindowWallClockTests
+          -skip-testing:ZhenCoreTests/ConcurrencyWallClockTests
+          -skip-testing:ZhenDarwinTests/NamingBudgetWallClockTests
+      - name: Run the wall-clock tests, one at a time
+        run: >
+          xcodebuild test -scheme zhen-Package -quiet
+          -destination 'id=${{ steps.ipad.outputs.udid }}'
+          -parallel-testing-enabled NO
+          -only-testing:ZhenCoreTests/TimeWallClockTests
+          -only-testing:ZhenCoreTests/IPv6WindowWallClockTests
+          -only-testing:ZhenCoreTests/ConcurrencyWallClockTests
+          -only-testing:ZhenDarwinTests/NamingBudgetWallClockTests
+
   ci:
     # One check to require and one to read. Everything above can be skipped by the
     # filter, and a skipped job is not a passed job: branch protection requiring
     # `tool-macos` directly would block every docs-only change forever, waiting for a
     # run that correctly decided not to happen.
     name: CI
-    needs: [changes, docs, tool-linux, tool-macos]
+    needs: [changes, docs, tool-linux, tool-macos, tool-ipados]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -189,13 +231,15 @@ jobs:
       - name: Report
         run: |
           set -euo pipefail
-          printf 'docs       %s\ntool-linux %s\ntool-macos %s\n' \
+          printf 'docs        %s\ntool-linux  %s\ntool-macos  %s\ntool-ipados %s\n' \
             "${{ needs.docs.result }}" \
             "${{ needs.tool-linux.result }}" \
-            "${{ needs.tool-macos.result }}"
+            "${{ needs.tool-macos.result }}" \
+            "${{ needs.tool-ipados.result }}"
           for r in "${{ needs.docs.result }}" \
                    "${{ needs.tool-linux.result }}" \
-                   "${{ needs.tool-macos.result }}"; do
+                   "${{ needs.tool-macos.result }}" \
+                   "${{ needs.tool-ipados.result }}"; do
             case "$r" in
               success|skipped) ;;
               *) echo "A required job did not succeed."; exit 1 ;;

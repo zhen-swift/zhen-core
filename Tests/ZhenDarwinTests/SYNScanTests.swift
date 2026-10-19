@@ -9,7 +9,8 @@
 // The expected bytes below are written out from RFC 791 and RFC 793 rather than
 // produced by calling the builder. A test that asks the builder what it built checks
 // nothing, which is the same trap the BPF header-length bug went through last week.
-#if canImport(Darwin)
+// macOS only, like the sources it tests (see their guards): iPadOS has none of them.
+#if os(macOS)
 
 import Darwin
 import Foundation

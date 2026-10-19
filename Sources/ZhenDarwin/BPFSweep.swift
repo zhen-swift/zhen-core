@@ -44,7 +44,9 @@
 // `SweepClock`, because a schedule that adapts is the mechanism under test and a sample
 // that is occasionally short makes the sweep ask again sooner rather than declare
 // absence earlier — the tail's floor is what bounds that, and it does not move.
-#if canImport(Darwin)
+// macOS only. iOS has no `/dev/bpf*` and its SDK no `<net/bpf.h>`, so on iPadOS this
+// layer is absent and the scanner composes without it (see `DarwinScanner.make`).
+#if os(macOS)
 
 import Darwin
 import ZhenCore
