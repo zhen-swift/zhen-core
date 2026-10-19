@@ -197,11 +197,16 @@ jobs:
           udid=$(xcrun simctl list devices available -j \
             | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; print(next(x["udid"] for r,v in d.items() if "iOS" in r for x in v if x["name"].startswith("iPad")))')
           echo "udid=$udid" >> "$GITHUB_OUTPUT"
-      # The same two passes as macOS, for the same reason.
+      # The same two passes as macOS, for the same reason. In the first, xcodebuild's
+      # parallel testing is off: it clones the simulator once per worker, and on a
+      # 3-core runner the clones starved a 5-second deadline over 100 no-op probes
+      # (BoundedPoolSemanticsTests, first run of this job). Swift Testing still runs
+      # the tests in parallel inside the one simulator.
       - name: Test core and the engine on the iPad simulator
         run: >
           xcodebuild test -scheme zhen-Package -quiet
           -destination 'id=${{ steps.ipad.outputs.udid }}'
+          -parallel-testing-enabled NO
           -only-testing:ZhenCoreTests -only-testing:ZhenDarwinTests
           -skip-testing:ZhenCoreTests/TimeWallClockTests
           -skip-testing:ZhenCoreTests/IPv6WindowWallClockTests
