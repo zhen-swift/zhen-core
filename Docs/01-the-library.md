@@ -32,7 +32,8 @@ both want it, it belongs here.
 
 > Naming note: the Apple-side package is called `zhen-app` per the agreed
 > diagram, but it ships macOS first. The name keeps room for iOS later; nothing in
-> core assumes either platform.
+> core assumes either platform. The engine now builds for iPadOS, without the
+> privileged half; see `IPADOS.md`.
 
 The portability rule is load-bearing and it constrains the design more than
 anything else here: **the public API of core must compile on Linux.** Darwin-only

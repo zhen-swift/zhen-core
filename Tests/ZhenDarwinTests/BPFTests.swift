@@ -32,7 +32,8 @@
 // these buffers are written at against `offsetof` on the SDK being compiled for, so the
 // builder below and the parser under test cannot drift together into agreeing about a
 // layout the kernel does not use.
-#if canImport(Darwin)
+// macOS only, like the sources it tests (see their guards): iPadOS has none of them.
+#if os(macOS)
 
 import CBPFShim
 import Darwin

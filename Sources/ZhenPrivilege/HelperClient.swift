@@ -16,7 +16,9 @@
 // helper is removed mid-session — and removal is a button in Settings, so mid-session is
 // a normal case rather than an edge one. A connection costs a few milliseconds against a
 // scan measured in seconds, and a scan opens at most a handful of devices.
-#if canImport(Darwin)
+// macOS only. The helper is a launch daemon reached over a Mach service, and iOS has
+// neither; an iPadOS build composes without a capture device at all.
+#if os(macOS)
 
 import Darwin
 import Foundation

@@ -13,7 +13,9 @@
 // a SYN-ACK needs an open port, and an open port is what the scan just established. It
 // sends one probe per host rather than one per port — the stack is a property of the
 // host, and asking it twice would only cost the target packets.
-#if canImport(Darwin)
+// macOS only. iOS has no `/dev/bpf*` and its SDK no `<net/bpf.h>`, so on iPadOS this
+// layer is absent and the scanner composes without it (see `DarwinScanner.make`).
+#if os(macOS)
 
 import Darwin
 import ZhenCore

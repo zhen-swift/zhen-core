@@ -8,6 +8,7 @@ import ZhenCore
 // Which Apple remedy a process gives is decided by whether it is an app.
 @Suite("The Local Network remedy is chosen by the running bundle")
 struct PermissionAdviceChoiceTests {
+    #if os(macOS)
     @Test("An app bundle gets the in-app remedy")
     func appBundle() {
         #expect(ProbePermissionAdvice.apple(bundleURL: URL(fileURLWithPath: "/Applications/Zhen.app"))
@@ -25,6 +26,14 @@ struct PermissionAdviceChoiceTests {
         #expect(ProbePermissionAdvice.appleForThisProcess == .appleLocalNetwork)
         #expect(ICMPSweepEngine().advice == .appleLocalNetwork)
     }
+    #else
+    @Test("On iPadOS every bundle gets the Settings remedy, an .app included")
+    func iPad() {
+        #expect(ProbePermissionAdvice.apple(bundleURL: URL(fileURLWithPath: "/Applications/Zhen.app"))
+                == .appleLocalNetworkOnIPad)
+        #expect(ProbePermissionAdvice.appleForThisProcess == .appleLocalNetworkOnIPad)
+    }
+    #endif
 }
 
 #endif

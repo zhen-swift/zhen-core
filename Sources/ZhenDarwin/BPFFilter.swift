@@ -21,7 +21,9 @@
 // loads that nibble, multiplies by four, and puts it in the index register, after which
 // the TCP fields are addressed indirectly. A filter that assumed twenty would read the
 // wrong two bytes of any packet carrying options and silently drop the reply.
-#if canImport(Darwin)
+// macOS only. iOS has no `/dev/bpf*` and its SDK no `<net/bpf.h>`, so on iPadOS this
+// layer is absent and the scanner composes without it (see `DarwinScanner.make`).
+#if os(macOS)
 
 import Darwin
 import ZhenCore

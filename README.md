@@ -59,6 +59,9 @@ Builds release and installs `zhen` and its man page under the prefix. It never c
 exact command and stops. `sudo PREFIX=/usr/local ./Scripts/install.sh` for system-wide,
 and the same command with `uninstall` to remove it.
 
+The command line is macOS-only. The engine also builds for iPadOS, without the privileged
+half and without the neighbour table; `Docs/IPADOS.md` says what that leaves.
+
 If a command behaves unlike the manual, check which copy you are running: `type -a zhen`.
 An older install earlier on `PATH` shadows a newer one, and macOS puts `/usr/local/bin`
 ahead of `~/.local/bin`.
@@ -129,7 +132,7 @@ feeling.
 | `ZhenCore` | Model, time, concurrency, protocols. No platform code. Builds and tests on Linux | non-isolated |
 | `CBPFShim` | Header-only C for the `BIOCSETIF` family, which are macros ClangImporter will not evaluate | — |
 | `ZhenPrivilege` | The one privileged resource. Small enough to read in a sitting, because a root process should not carry a TLS client around | non-isolated |
-| `ZhenDarwin` | Sockets, BPF, `dns_sd`, the route table. Every file behind `#if canImport(Darwin)` | non-isolated |
+| `ZhenDarwin` | Sockets, BPF, `dns_sd`, the route table. Every file behind `#if canImport(Darwin)`; BPF and the route table behind `#if os(macOS)` | non-isolated |
 | `ZhenScan` | The app's adapter over the engine — sibling to the CLI's `ScanPipeline` | non-isolated |
 | `zhen` | The command line | **MainActor** |
 | `zhen-helper` | The launch daemon the app bundle embeds | non-isolated |

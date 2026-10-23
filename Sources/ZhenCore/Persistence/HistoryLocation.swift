@@ -107,7 +107,10 @@ public enum HistoryLocation {
             in: CharacterSet(charactersIn: "/")
         )
         guard !suffix.isEmpty else { return nil }
-        let target = FileManager.default.homeDirectory(forUser: user)
+        // `URL`'s, not `FileManager`'s: the same lookup, but the `FileManager` spelling is
+        // unavailable on iOS and would stop core compiling there for a branch that only
+        // `sudo` can reach.
+        let target = URL.homeDirectory(forUser: user)
         guard let target, target.path != homePath else { return nil }
         return target.appendingPathComponent(suffix, isDirectory: true)
     }

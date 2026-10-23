@@ -27,6 +27,7 @@ prefix. A path they name outside `zhen/` is in one of these:
 | `MANUAL.md` | **How to use the tool.** Task-shaped: the two questions it answers, every subcommand, how to read a port result, and what it deliberately does not do. `man zhen` is the reference; this is the guide |
 | `AUDIT.md` | The state of the documentation and of maintainability, measured on the monorepo before the split. Says what was wrong and in what order to fix it |
 | `DIRECTION.md` | What the tool is for, and why it goes deeper at layer 2 rather than wider at layer 7 |
+| `IPADOS.md` | The engine on iPadOS: what the sandbox leaves of it, what was cut and why, and what only a device can still answer |
 
 ## The specification
 

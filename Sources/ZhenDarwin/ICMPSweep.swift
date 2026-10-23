@@ -75,11 +75,17 @@ import ZhenCore
 /// Unprivileged host discovery: an ICMP echo sweep plus the kernel's neighbour table.
 public struct ICMPSweepEngine: HostDiscovery {
     /// How this engine identifies itself in the artifact.
-    public let descriptor = EngineDescriptor(
-        name: "unprivileged-icmp",
-        kind: .unprivileged,
-        capabilities: [.icmpSweep, .neighborTable]
-    )
+    ///
+    /// `.neighborTable` only where there is one to read. On iPadOS there is not, and a
+    /// descriptor that claimed it anyway would be the hard-coded capability claim the
+    /// study withdrew H3 over.
+    public var descriptor: EngineDescriptor {
+        EngineDescriptor(
+            name: "unprivileged-icmp",
+            kind: .unprivileged,
+            capabilities: neighbors.isReadable ? [.icmpSweep, .neighborTable] : [.icmpSweep]
+        )
+    }
 
     /// How many times an unanswered address is probed before it is called silent.
     ///
@@ -119,7 +125,7 @@ public struct ICMPSweepEngine: HostDiscovery {
     public init(
         attempts: Int = 3,
         concurrency: Int = 256,
-        neighbors: any NeighborCache = DarwinNeighborCache(),
+        neighbors: any NeighborCache = SystemNeighborCache.current,
         advice: ProbePermissionAdvice = .appleForThisProcess,
         spacing: SweepSpacing = .spreadIntoTail,
         budgets: SweepBudgets = .split,
@@ -183,7 +189,10 @@ public struct ICMPSweepEngine: HostDiscovery {
         var retransmitBudget = Duration.zero
         var tailBudget = Duration.zero
         var spreadBudget = Duration.zero
-        var watchReport: NeighborWatchReport = neighborWatch
+        // Watching a table the platform does not have would poll nothing for the whole
+        // sweep and then report the watch as enabled, so the platform decides first.
+        let watching = neighborWatch && neighbors.isReadable
+        var watchReport: NeighborWatchReport = watching
             ? NeighborWatchReport(enabled: true, mechanism: "poll", polls: 0, resolved: 0)
             : .disabled
         // The plan resolved against the baseline, once the sweep has one. Until then —
@@ -241,22 +250,26 @@ public struct ICMPSweepEngine: HostDiscovery {
 
         // The neighbour table first: free, instant, needs no permission, and it is the
         // control for the denial heuristic below.
+        // A platform without one (iPadOS) skips it silently: there the absence is the
+        // normal state, and the descriptor already says the capability is not claimed.
         var neighborsByIP: [IPv4Address: MACAddress] = [:]
         var largestDump: Int?
-        do {
-            let first = try await neighbors.snapshot()
-            largestDump = first.byteCount
-            for entry in first.entries where entry.isComplete {
-                guard target.network.contains(entry.ip) else { continue }
-                neighborsByIP[entry.ip] = entry.mac
+        if neighbors.isReadable {
+            do {
+                let first = try await neighbors.snapshot()
+                largestDump = first.byteCount
+                for entry in first.entries where entry.isComplete {
+                    guard target.network.contains(entry.ip) else { continue }
+                    neighborsByIP[entry.ip] = entry.mac
+                }
+                used.insert(.neighborTable)
+            } catch {
+                degrade(Degradation(
+                    stage: .discovery,
+                    reason: "The system's neighbour table could not be read, so hardware addresses and vendors will be missing.",
+                    recoverable: true
+                ))
             }
-            used.insert(.neighborTable)
-        } catch {
-            degrade(Degradation(
-                stage: .discovery,
-                reason: "The system's neighbour table could not be read, so hardware addresses and vendors will be missing.",
-                recoverable: true
-            ))
         }
 
         let socket: ICMPSocket
@@ -309,7 +322,7 @@ public struct ICMPSweepEngine: HostDiscovery {
         // `NeighborWatch` for why this polls rather than listens.
         let baseline = Set(neighborsByIP.keys)
         let interval = NeighborWatch.interval(targets: addresses.count)
-        let watcher: Task<WatchTally, Never>? = neighborWatch ? Task { [neighbors] in
+        let watcher: Task<WatchTally, Never>? = watching ? Task { [neighbors] in
             var tally = WatchTally()
             var reported: Set<IPv4Address> = []
             while !Task.isCancelled {
@@ -432,8 +445,8 @@ public struct ICMPSweepEngine: HostDiscovery {
         //
         // Cheap: one sysctl over a table of a few kilobytes, once, after all the
         // probing is done.
-        if let refreshed = try? await neighbors.snapshot() {
-            if let bytes = refreshed.byteCount, neighborWatch {
+        if neighbors.isReadable, let refreshed = try? await neighbors.snapshot() {
+            if let bytes = refreshed.byteCount, watching {
                 watchReport.largestDumpBytes = max(watchReport.largestDumpBytes ?? 0, bytes)
             }
             for entry in refreshed.entries where entry.isComplete {
@@ -442,7 +455,7 @@ public struct ICMPSweepEngine: HostDiscovery {
                 // Resolved after the last poll. It is still this sweep's evidence, but
                 // the moment is unknown — somewhere in the final interval — so it is
                 // reported without a first-contact time rather than with a guess.
-                if neighborWatch, !baseline.contains(entry.ip) {
+                if watching, !baseline.contains(entry.ip) {
                     if let event = await state.recordResolution(entry.ip, mac: entry.mac, at: nil) {
                         watchReport.resolved = (watchReport.resolved ?? 0) + 1
                         sink(event)

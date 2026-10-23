@@ -35,7 +35,9 @@
 // this stage began. The distinction is exactly the one the study had to settle with a
 // packet capture, and it is worth keeping sharp in the direction that costs us
 // something as well as in the direction that flatters us.
-#if canImport(Darwin)
+// macOS only. iOS has no `/dev/bpf*` and its SDK no `<net/bpf.h>`, so on iPadOS this
+// layer is absent and the scanner composes without it (see `DarwinScanner.make`).
+#if os(macOS)
 
 import Darwin
 import ZhenCore

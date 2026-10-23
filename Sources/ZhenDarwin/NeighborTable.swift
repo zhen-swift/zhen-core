@@ -5,7 +5,9 @@
 // is readable even when the Local Network permission has been denied. That asymmetry
 // is the control in the denial heuristic: probes hearing nothing while the cache is
 // populated is the signature of a grant we cannot query.
-#if canImport(Darwin)
+// macOS only. The iOS SDK has no `<net/route.h>`, and the iOS sandbox does not hand an app
+// the ARP table anyway, so on iPadOS the neighbour cache is `UnavailableNeighborCache`.
+#if os(macOS)
 
 import Darwin
 import ZhenCore

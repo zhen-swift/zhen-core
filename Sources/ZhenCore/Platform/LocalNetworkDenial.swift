@@ -46,6 +46,9 @@ public enum ProbePermissionAdvice: Sendable, Hashable, CaseIterable {
     /// that sentence from this text at runtime, which is a consumer re-wording a finding;
     /// the right fix is for the finding to be worded for where it is read.
     case appleLocalNetworkInApp
+    /// iPadOS: the same grant, which lives in Settings rather than System Settings and is
+    /// always listed under the app, because on iPadOS everything that probes is one.
+    case appleLocalNetworkOnIPad
     /// Linux: unprivileged ICMP datagram sockets are gated by a sysctl, and a user
     /// outside the permitted group range gets silence in much the same way.
     case linuxPingGroupRange
@@ -67,6 +70,12 @@ public enum ProbePermissionAdvice: Sendable, Hashable, CaseIterable {
             On macOS this is usually the Local Network privacy permission, which cannot \
             be checked directly — grant it under Privacy & Security › Local Network, where \
             this app is listed under its own name.
+            """
+        case .appleLocalNetworkOnIPad:
+            """
+            On iPadOS this is usually the Local Network privacy permission, which cannot \
+            be checked directly — turn it on under Settings › Privacy & Security › Local \
+            Network, where this app is listed under its own name.
             """
         case .linuxPingGroupRange:
             """

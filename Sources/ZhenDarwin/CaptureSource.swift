@@ -21,30 +21,13 @@
 // whether or not it finds anything. So the command line asks for `.directOnly` and gets
 // precisely the composition it had before this file existed, while the app — which is
 // the thing a helper is for — asks for `.helperThenDirect`.
-#if canImport(Darwin)
+// macOS only. iOS has no `/dev/bpf*` and its SDK no `<net/bpf.h>`, so on iPadOS this
+// layer is absent and the scanner composes without it (see `DarwinScanner.make`).
+#if os(macOS)
 
 import CBPFShim
 import Darwin
 import ZhenPrivilege
-
-/// Which routes to a capture device a scanner may use.
-public enum CapturePolicy: Sendable, Hashable {
-    /// Open `/dev/bpf*` in this process, and nothing else.
-    ///
-    /// Exactly what this codebase did before the helper existed. The command line uses
-    /// it, because it is the binary the study measures and an extra probe on the
-    /// startup path is a change to what is being measured.
-    case directOnly
-
-    /// Try a direct open first, then ask the helper.
-    ///
-    /// Direct first, deliberately, though `Docs/04-privileged-helper.md` sketched it the
-    /// other way round. Under `sudo` the direct open succeeds and the helper is never
-    /// contacted, so a privileged run does not acquire a dependency on a daemon it does
-    /// not need — and the path that `Scripts/verify-privileged.sh` has been measuring
-    /// all along stays the path that runs.
-    case helperThenDirect
-}
 
 /// A way to obtain a configured capture device.
 public struct CaptureSource: Sendable {

@@ -26,7 +26,9 @@
 //   BIOCSSEESENT off, so a read does not return our own requests.
 //   BIOCSETF last, so nothing arrives unfiltered between binding and filtering.
 //   BIOCFLUSH after that, to drop whatever the device buffered while being set up.
-#if canImport(Darwin)
+// macOS only. iOS has no `/dev/bpf*` and its SDK no `<net/bpf.h>`, so on iPadOS this
+// layer is absent and the scanner composes without it (see `DarwinScanner.make`).
+#if os(macOS)
 
 import CBPFShim
 import Darwin

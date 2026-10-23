@@ -36,7 +36,9 @@
 // Promiscuous mode is deliberately not requested. An ARP reply to our own request is
 // unicast to our own hardware address, so there is nothing to gain — and a segment's
 // entire traffic to read, parse and discard if we asked for it.
-#if canImport(Darwin)
+// macOS only. iOS has no `/dev/bpf*` and its SDK no `<net/bpf.h>`, so on iPadOS this
+// layer is absent and the scanner composes without it (see `DarwinScanner.make`).
+#if os(macOS)
 
 import CBPFShim
 import Darwin

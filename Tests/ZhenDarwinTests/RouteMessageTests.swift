@@ -4,7 +4,8 @@
 // empty module rather than a failure. Its tests were not, which meant `swift test` could
 // not run at all on Linux — so core's own tests, which are portable and are the ones
 // worth running there, could only ever be compiled. Same rule, same reason.
-#if canImport(Darwin)
+// macOS only, like the sources it tests (see their guards): iPadOS has none of them.
+#if os(macOS)
 
 import Foundation
 import Testing
