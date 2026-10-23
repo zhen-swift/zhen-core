@@ -123,7 +123,7 @@ final class HelperDelegate: NSObject, NSXPCListenerDelegate, @unchecked Sendable
 
 /// What this build is, so a stale helper left by an older install can say so.
 enum HelperBuild {
-    static let version = "0.8.1"
+    static let version = "0.9.0"
 }
 
 let delegate = HelperDelegate()

@@ -6,7 +6,7 @@ nothing is released yet.
 The format is loosely [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions
 follow the app's `CFBundleShortVersionString`.
 
-## [Unreleased] — iPadOS
+## [0.9.0] — 2026-10-22 — iPadOS
 
 ### Added
 - **The engine builds for iPadOS, and scans from an iPad.**
