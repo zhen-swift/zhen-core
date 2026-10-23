@@ -373,10 +373,12 @@ public struct ScanRunner: Sendable {
     /// - Parameters:
     ///   - addresses: what to probe. Discovery is not run, so an address that answers no
     ///     ping is still probed.
-    ///   - spec: which ports. Defaults to the common set the deep stage uses.
-    ///   - budget: the total time allowed.
+    ///   - spec: which ports. Defaults to the common set the deep stage uses. Both halves
+    ///     are probed: `ports` by the TCP engine and `udpPorts` by the UDP one, as
+    ///     `zhen ports` does. Until 0.9.0 the UDP half was dropped without a word.
+    ///   - budget: the total time allowed, shared by the two halves.
     ///   - progress: display only.
-    /// - Returns: what the engine observed, and the port events history derived from it.
+    /// - Returns: what the engines observed, and the port events history derived from it.
     ///   Never throws; a deadline and a cancellation are normal returns.
     public func probePorts(
         _ addresses: [IPAddress],
@@ -384,9 +386,11 @@ public struct ScanRunner: Sendable {
         budget: Duration,
         progress: ProgressSink
     ) async -> CompletedPortScan {
-        let result = await scanner.ports.scan(
+        let engines = TransportSplitPortScan(tcp: scanner.ports, udp: scanner.udpPorts)
+        let result = await engines.scan(
             addresses, ports: spec,
-            // The ceiling `run` uses; the engine narrows it per host.
+            // The TCP ceiling `run` uses; the engine narrows it per host. The UDP half
+            // has its own, see `TransportSplitPortScan.udpPerHostDeadline`.
             perHostDeadline: .milliseconds(600),
             deadline: Deadline(after: budget),
             progress: progress

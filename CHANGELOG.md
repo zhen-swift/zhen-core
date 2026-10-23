@@ -26,6 +26,13 @@ follow the app's `CFBundleShortVersionString`.
 - `ProbePermissionAdvice.appleLocalNetworkOnIPad`, which points at Settings rather than
   System Settings.
 
+### Fixed
+- **`ScanRunner.probePorts` probes a spec's UDP ports.** It handed the whole spec to the
+  TCP engine, which reads only `ports`, so `U:` ports were dropped without a word. It now
+  goes through `TransportSplitPortScan` (new, in core): TCP to the TCP engine, UDP to the
+  unprivileged UDP engine with the one-second per-host budget `zhen ports` uses, joined by
+  `PortScanResult.combined(with:)`. A TCP-only spec runs exactly as before.
+
 ### Changed
 - BPF, the route socket and the helper are guarded by `os(macOS)` rather than
   `canImport(Darwin)`, which is also true on iOS. On macOS the same code compiles.
