@@ -69,7 +69,7 @@ ahead of `~/.local/bin`.
 ## Using it as a library
 
 ```swift
-.package(url: "https://github.com/zhen-swift/zhen-core.git", from: "0.8.1")
+.package(url: "https://github.com/zhen-swift/zhen-core.git", from: "0.9.0")
 ```
 
 ## Building
