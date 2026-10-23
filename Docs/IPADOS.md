@@ -62,8 +62,9 @@ of the cooperative pool.
 
 The simulator runs on the Mac's kernel. It confirms the build and the composition, not the
 iPad sandbox. On the simulator, for example, the SSDP send succeeds; on a device without
-the entitlement it shouldn't. The harness in `Harness/ZhenPad.swiftpm` exists to answer
-these on an iPad:
+the entitlement it shouldn't. The iPad app,
+[`zhen-ios`](https://github.com/zhen-swift/zhen-ios), has a Diagnostics screen built to
+answer these on a device:
 
 - Is `NET_RT_DUMP` readable? If so, the interface could come from the route, as on macOS.
 - Is the ARP dump really empty, or does it carry real MACs?
@@ -86,8 +87,7 @@ xcodebuild test -scheme zhen-Package -destination 'platform=iOS Simulator,name=i
 ```
 
 The WallClock suites run afterwards, alone and serially, as on macOS. CI's `tool-ipados`
-job is the authority on the exact list. `Harness/ZhenPad.swiftpm/README.md` covers the
-harness.
+job is the authority on the exact list.
 
 ## The Mac app's distribution decision still holds
 

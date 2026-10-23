@@ -180,7 +180,7 @@ jobs:
     # on an iPad simulator. The command line and the helper are macOS-only and are not
     # tested here; `tool-macos` covers them. The simulator runs on the host's kernel, so
     # this proves the build and the composition, not the iPad sandbox — that needs a
-    # device (see Docs/SPEC.md, the iPadOS section).
+    # device (see Docs/IPADOS.md, "What only a device answers").
     name: iPadOS — the engine
     needs: changes
     if: needs.changes.outputs.tool == 'true'

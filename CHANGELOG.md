@@ -16,8 +16,9 @@ follow the app's `CFBundleShortVersionString`.
   - Not built for iPadOS: BPF, the SYN scan, OS fingerprinting and the helper. The
     neighbour table is absent and SSDP is off until the multicast entitlement is granted.
     `Docs/IPADOS.md` has the full list and why.
-- `Harness/ZhenPad.swiftpm`: an iPad-only harness app that depends on this checkout by
-  path. It probes what the sandbox allows, runs a scan, and has an `-autorun` mode.
+- The iPad app that runs it is its own repository,
+  [`zhen-ios`](https://github.com/zhen-swift/zhen-ios). The throwaway harness that first
+  ran the engine on an iPad lived here during review and was retired before merge.
 - CI: a `tool-ipados` job builds `ZhenScan` for the device and runs core's and the
   engine's tests on an iPad simulator.
 - `NeighborCache.isReadable` (defaulted to true) and `UnavailableNeighborCache`. A sweep
