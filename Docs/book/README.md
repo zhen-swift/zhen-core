@@ -37,25 +37,29 @@ each chapter it either updates it now or says that the chapter waits for the nex
 grep -rln "ICMPSocket.swift" Docs/book/chapters
 ```
 
-For a first look, this map is close enough:
+For a first look, this map is close enough. It gives the chapter that explains each file.
+Run the search anyway, because other chapters cite most of these files in passing, and a
+passing citation can go stale too.
 
-| Area | Chapters |
-|---|---|
-| Descriptors, `errno`, resource limits, `sockaddr`, non-blocking I/O, kqueue | 2, 3, 4 |
-| The ICMP sweep socket and packet | 5 |
-| TCP connect scan, banners, TLS | 6 |
-| UDP probing and payloads | 7 |
-| Interfaces and the default route | 8 |
-| Bonjour, NetBIOS, SSDP, `NSBonjourServices` | 9 |
-| Sweep timing, Wi-Fi spacing, the Local Network permission | 10 |
-| BPF and the C shim | 11 |
-| The routing socket, ARP table, neighbour watch | 12 |
-| SYN scan, raw frames, fingerprinting | 13 |
-| The helper, XPC, code signing, capture policy | 14 |
-| `DarwinScanner.make` and every `#if os(macOS)` gate | 15 |
-| `ScanRunner`, the two channels, the zhen-ios call path | 16 |
-| zhen-ios Diagnostics and what only a device can answer | 17 |
-| A new syscall, errno or term; code that disagrees with its docs | Appendices B, C, A, D |
+| File | Explained in | Also cited in |
+|---|---|---|
+| `DarwinPlatform.swift` (descriptors, `errno`, limits, `sockaddr`) | 2, 3 | 4, 16 |
+| `Readiness.swift` (non-blocking I/O, kqueue) | 4 | 1, 6 |
+| `ICMPSocket.swift`, `ICMPPacket.swift`, `InternetChecksum.swift` | 5 | 2, 3, 4, 16 |
+| `ICMPSweep.swift`, `SweepSpacing.swift` (when to resend, how long to wait) | 10 | 12, 15, 16 |
+| `LocalNetworkDenial.swift`, `PermissionAdvice.swift` | 10 | 15, 17 |
+| `TCPConnectScan.swift`, `BannerProbe.swift`, `BannerProbingPortScan.swift` | 6 | 1, 3, 4, 16 |
+| `UDPProbe.swift`, `UDPPortScan.swift`, `UDPPayloads.swift` | 7 | 3 |
+| `Interfaces.swift` | 8 | 3, 12, 15, 16 |
+| `MDNSBrowser.swift`, `NameResolver.swift`, `NetBIOSProbe.swift`, `SSDPProbe.swift` | 9 | 1, 8, 16 |
+| `CBPFShim.h`, `BPFAcquisition.swift`, `BPFDevice.swift`, `BPFBuffer.swift`, `BPFFilter.swift`, `BPFSweep.swift` | 11 | 1, 14, 15 |
+| `RouteMessages.swift`, `NeighborTable.swift`, `NeighborWatch.swift` | 12 | 1, 3, 8, 15 |
+| `SYNScan.swift`, `IPv4Packet.swift`, `OSFingerprintProbe.swift` | 13 | 15 |
+| `HelperProtocol.swift`, `HelperClient.swift`, `zhen-helper/main.swift`, `CapturePolicy.swift`, `CaptureSource.swift` | 14 | 1, 15 |
+| `DarwinScanner.swift` and every `#if os(macOS)` gate | 15 | 2, 5, 6, 7, 9, 11, 13, 14 |
+| `ScanRunner.swift`, the zhen-ios scan path | 16 | 15, 17 |
+| zhen-ios Diagnostics (`CapabilityProbe.swift`) | 17 | 2, 5 |
+| A new syscall, errno or term; code that disagrees with its docs | Appendices B, C, A, D | |
 
 **A new feature that reaches the kernel** gets:
 

@@ -10,6 +10,15 @@
       not proof, Swift does not type-check inactive `#if` branches
 - [ ] `python3 Scripts/generate-xcodeproj.py` produces no diff if the project changed
 - [ ] Anything that could regress has a test that fails without the fix
+- [ ] If this touches the Darwin surface (`ZhenDarwin`, `ZhenPrivilege`, `zhen-helper`,
+      `CBPFShim`, `ZhenScan`, core's `Platform/`), the book chapters it affects are named
+      below, each either updated or waiting for the next re-pin. Find them with
+      `grep -rln "<File>.swift" Docs/book/chapters`; see `Docs/book/README.md`
+
+## Book chapters affected
+
+<!-- e.g. "5 (updated), 10 (waits for the re-pin to 0.10.0)". Or "none": the change does
+     not touch the Darwin surface. -->
 
 ## The rules this repository does not bend
 
