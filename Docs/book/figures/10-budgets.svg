@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <rect x="4" y="4" width="792" height="492" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <text x="400" y="52" class="t b mid">Two clocks, two questions</text>
+
+  <!-- lanes -->
+  <text x="40" y="132" class="m">.7</text>
+  <text x="40" y="202" class="m">.8</text>
+  <text x="40" y="272" class="m">.9</text>
+  <g stroke="#EADFCC" stroke-width="3">
+    <path d="M90 124 H520"/><path d="M90 194 H520"/><path d="M90 264 H520"/>
+  </g>
+
+  <!-- probes: three per lane, tight -->
+  <g>
+    <use href="#pip" x="96" y="102" width="40" height="40"/>
+    <use href="#pip" x="216" y="102" width="40" height="40"/>
+    <use href="#pip" x="336" y="102" width="40" height="40"/>
+    <use href="#pip" x="110" y="172" width="40" height="40"/>
+    <use href="#pip" x="230" y="172" width="40" height="40"/>
+    <use href="#pip" x="350" y="172" width="40" height="40"/>
+    <use href="#pip" x="124" y="242" width="40" height="40"/>
+    <use href="#pip" x="244" y="242" width="40" height="40"/>
+    <use href="#pip" x="364" y="242" width="40" height="40"/>
+  </g>
+  <path d="M138 300 v10 h100 v-10" fill="none" stroke="#33335C" stroke-width="3"/>
+  <text x="188" y="338" class="t s mid" font-weight="700">retransmit</text>
+  <text x="188" y="366" class="t s mid">short, paid</text>
+  <text x="188" y="394" class="t s mid">every try</text>
+
+  <!-- the tail -->
+  <rect x="440" y="96" width="320" height="196" rx="18" fill="#B9A3F5" stroke="#33335C" stroke-width="3"/>
+  <text x="600" y="164" class="t b mid">tail</text>
+  <text x="600" y="200" class="t s mid">one long wait,</text>
+  <text x="600" y="228" class="t s mid">for everyone,</text>
+  <text x="600" y="256" class="t s mid">paid once</text>
+
+  <use href="#pip-yay" x="560" y="316" width="84" height="84"/>
+  <text x="400" y="460" class="t s mid">No backoff: silence means “not there”, not “slow”.</text>
+</svg>

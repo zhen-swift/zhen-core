@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" width="800" height="560">
+  <rect x="4" y="4" width="792" height="552" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- silent socket -->
+  <use href="#mailbox" x="40" y="40" width="96" height="120"/>
+  <text x="156" y="82" class="t b">A PF_ROUTE socket?</text>
+  <text x="156" y="118" class="t s">No message when an entry fills in.</text>
+  <text x="156" y="150" class="t s" opacity="0.75">(measured on macOS 26.6.2)</text>
+  <text x="128" y="50" class="t b" opacity="0.6">z z</text>
+
+  <!-- polling -->
+  <text x="400" y="222" class="t b mid">So Zhen peeks at the book</text>
+  <path d="M60 330 H740" stroke="#33335C" stroke-width="4" stroke-linecap="round" marker-end="url(#arrow)"/>
+  <g stroke="#33335C" stroke-width="3">
+    <path d="M90 316 V344"/><path d="M170 316 V344"/><path d="M250 316 V344"/><path d="M330 316 V344"/>
+    <path d="M410 316 V344"/><path d="M490 316 V344"/><path d="M570 316 V344"/><path d="M650 316 V344"/>
+  </g>
+  <path d="M90 360 H170" stroke="#33335C" stroke-width="2.5" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text x="130" y="392" class="t s mid">25 ms</text>
+  <use href="#pip" x="63" y="254" width="54" height="54"/>
+  <use href="#pip" x="143" y="254" width="54" height="54"/>
+  <use href="#pip" x="223" y="254" width="54" height="54"/>
+  <use href="#pip" x="303" y="254" width="54" height="54"/>
+  <use href="#pip" x="383" y="254" width="54" height="54"/>
+  <use href="#pip" x="463" y="254" width="54" height="54"/>
+  <use href="#pip-yay" x="540" y="250" width="60" height="60"/>
+  <use href="#sparkle" x="598" y="240" width="24" height="24"/>
+  <rect x="470" y="376" width="270" height="70" rx="16" fill="#BDEBD6" stroke="#33335C" stroke-width="3"/>
+  <text x="605" y="406" class="m mid">10.10.20.42</text>
+  <text x="605" y="434" class="t s mid">just resolved!</text>
+  <path d="M570 348 V372" stroke="#33335C" stroke-width="3"/>
+
+  <!-- scaling -->
+  <text x="40" y="496" class="t s">≤ 1,024 targets: every 25 ms</text>
+  <text x="40" y="530" class="t s">a /16 (65,536): every 1.6 s</text>
+  <text x="760" y="496" class="t s" text-anchor="end">already full at the start?</text>
+  <text x="760" y="530" class="t s" text-anchor="end"><tspan font-weight="700">inherited</tspan>, not new</text>
+</svg>

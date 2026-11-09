@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" width="800" height="400">
+  <rect x="4" y="4" width="792" height="392" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- a long castle wall full of doors -->
+  <rect x="40" y="110" width="720" height="210" fill="#D9D3EC" stroke="#33335C" stroke-width="4"/>
+  <path d="M40 110 v-18 h30 v18 h30 v-18 h30 v18 h30 v-18 h30 v18 h30 v-18 h30 v18 h30 v-18 h30 v18 h30 v-18 h30 v18 h30 v-18 h30 v18 h30 v-18 h30 v18 h30 v-18 h30 v18 h30 v-18 h30 v18 h30 v-18 h30 v18 h30 v-18 h30 v18" fill="#D9D3EC" stroke="#33335C" stroke-width="4" stroke-linejoin="round"/>
+
+  <use href="#door" x="70" y="200" width="80" height="112"/>
+  <text x="110" y="186" class="m mid">socket</text>
+  <use href="#door" x="210" y="200" width="80" height="112"/>
+  <text x="250" y="186" class="m mid">connect</text>
+  <use href="#door" x="350" y="200" width="80" height="112"/>
+  <text x="390" y="186" class="m mid">sendto</text>
+  <use href="#door" x="490" y="200" width="80" height="112"/>
+  <text x="530" y="186" class="m mid">ioctl</text>
+  <use href="#door" x="630" y="200" width="80" height="112"/>
+  <text x="670" y="186" class="m mid">sysctl</text>
+
+  <path d="M30 330 H770" stroke="#EADFCC" stroke-width="6" stroke-linecap="round"/>
+  <text x="400" y="372" class="t b mid">Every door Zhen knocks on</text>
+</svg>

@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" width="800" height="560">
+  <rect x="4" y="4" width="792" height="552" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <text x="190" y="56" class="t b mid">your app’s tickets</text>
+  <text x="600" y="56" class="t b mid">inside the castle</text>
+
+  <!-- the wall -->
+  <rect x="388" y="76" width="24" height="456" rx="6" fill="#D9D3EC" stroke="#33335C" stroke-width="3"/>
+  <path d="M388 120 h24 M388 180 h24 M388 240 h24 M388 300 h24 M388 360 h24 M388 420 h24 M388 480 h24" stroke="#A79FD0" stroke-width="3"/>
+
+  <!-- tickets -->
+  <g>
+    <use href="#ticket" x="40" y="80" width="110" height="64"/><text x="108" y="125" class="t h mid">0</text>
+    <text x="166" y="120" class="t s">keyboard in</text>
+
+    <use href="#ticket" x="40" y="152" width="110" height="64"/><text x="108" y="197" class="t h mid">1</text>
+    <text x="166" y="192" class="t s">screen out</text>
+
+    <use href="#ticket" x="40" y="224" width="110" height="64"/><text x="108" y="269" class="t h mid">2</text>
+    <text x="166" y="264" class="t s">errors out</text>
+
+    <use href="#ticket" x="40" y="296" width="110" height="64"/><text x="108" y="341" class="t h mid">3</text>
+    <text x="166" y="336" class="t s">ping socket</text>
+
+    <use href="#ticket" x="40" y="368" width="110" height="64"/><text x="108" y="413" class="t h mid">4</text>
+    <text x="166" y="408" class="t s">TCP knock</text>
+
+    <use href="#ticket" x="40" y="440" width="110" height="64"/><text x="108" y="485" class="t h mid">5</text>
+    <text x="166" y="480" class="t s">TCP knock</text>
+  </g>
+
+  <!-- kernel objects -->
+  <g>
+    <rect x="456" y="84" width="300" height="180" rx="18" fill="#D9D3EC" fill-opacity="0.5" stroke="#33335C" stroke-width="3"/>
+    <text x="606" y="128" class="t s mid">terminal</text>
+    <text x="606" y="160" class="t s mid" opacity="0.7">(the first three are</text>
+    <text x="606" y="188" class="t s mid" opacity="0.7">there from birth)</text>
+    <path d="M520 214 h170 M520 240 h130" stroke="#A79FD0" stroke-width="5" stroke-linecap="round"/>
+
+    <use href="#mailbox" x="452" y="300" width="96" height="120"/>
+    <text x="500" y="298" class="t s mid">ICMP</text>
+    <use href="#mailbox" x="566" y="300" width="96" height="120"/>
+    <text x="614" y="298" class="t s mid">TCP</text>
+    <use href="#mailbox" x="672" y="300" width="96" height="120"/>
+    <text x="720" y="298" class="t s mid">TCP</text>
+  </g>
+
+  <!-- arrows across the wall -->
+  <g fill="none" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)">
+    <path d="M300 112 C 380 112, 400 150, 452 150"/>
+    <path d="M300 184 C 380 184, 400 186, 452 186"/>
+    <path d="M300 256 C 380 256, 400 222, 452 222"/>
+    <path d="M300 328 C 380 328, 420 350, 460 350"/>
+    <path d="M300 400 C 420 410, 540 480, 608 426"/>
+    <path d="M300 472 C 480 530, 680 510, 714 426"/>
+  </g>
+</svg>

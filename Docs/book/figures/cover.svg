@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1500" width="1000" height="1500">
+  <rect width="1000" height="1500" fill="#FFF8EE"/>
+  <!-- sky stripes -->
+  <circle cx="880" cy="110" r="70" fill="#FFD45E" opacity="0.7"/>
+  <path d="M0 1080 Q250 1000 500 1060 T1000 1040 V1500 H0 Z" fill="#BDEBD6"/>
+  <path d="M0 1160 Q300 1100 600 1150 T1000 1130 V1500 H0 Z" fill="#5DBE85" opacity="0.5"/>
+
+  <text x="500" y="200" class="t mid" style="font-size:96px;font-weight:800">Zhen</text>
+  <text x="500" y="300" class="t mid" style="font-size:96px;font-weight:800">&amp; Darwin</text>
+  <text x="500" y="380" class="t mid" style="font-size:46px;font-weight:600;fill:#A79FD0">Illustrated</text>
+
+  <use href="#castle" x="260" y="470" width="480" height="420"/>
+
+  <!-- door labels like syscalls -->
+  <use href="#pip-yay" x="110" y="880" width="230" height="230"/>
+  <use href="#mailbox" x="700" y="860" width="150" height="190"/>
+  <g transform="rotate(-12 420 1000)">
+    <use href="#ticket" x="350" y="960" width="150" height="86"/>
+    <text x="448" y="1022" class="t mid" style="font-size:48px;font-weight:800">3</text>
+  </g>
+  <use href="#sparkle" x="560" y="930" width="40" height="40"/>
+  <use href="#sparkle" x="90" y="840" width="30" height="30"/>
+  <use href="#sparkle" x="870" y="820" width="34" height="34"/>
+
+  <text x="500" y="1290" class="t mid" style="font-size:40px;font-weight:600">How a network scanner talks</text>
+  <text x="500" y="1345" class="t mid" style="font-size:40px;font-weight:600">to the Apple kernel</text>
+  <text x="500" y="1430" class="t mid" style="font-size:30px;opacity:0.7">zhen-core 0.9.0 · with pictures</text>
+</svg>

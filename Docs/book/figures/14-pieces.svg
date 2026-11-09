@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <rect x="4" y="4" width="792" height="592" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- the bundle -->
+  <rect x="40" y="36" width="720" height="250" rx="22" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="66" y="80" class="m">Zhen.app/Contents/</text>
+  <text x="96" y="126" class="m">MacOS/zhen-helper</text>
+  <text x="440" y="126" class="t s">the daemon</text>
+  <text x="96" y="172" class="m">Library/LaunchDaemons/</text>
+  <text x="126" y="214" class="m">com.jctec.zhen.helper.plist</text>
+  <text x="126" y="254" class="t s">the launchd job: Label, BundleProgram, MachServices</text>
+  <path d="M80 92 V214 M80 118 h10 M80 164 h10 M110 182 V206 h10" fill="none" stroke="#A79FD0" stroke-width="3"/>
+
+  <!-- the flow -->
+  <text x="400" y="334" class="t b mid">SMAppService.daemon(plistName:)</text>
+  <rect x="34" y="360" width="204" height="80" rx="16" fill="#D9D3EC" stroke="#33335C" stroke-width="3"/>
+  <text x="136" y="396" class="m mid">.notRegistered</text>
+  <text x="136" y="428" class="t s mid">not installed</text>
+  <rect x="270" y="360" width="260" height="80" rx="16" fill="#FFD45E" stroke="#33335C" stroke-width="3"/>
+  <text x="400" y="396" class="m mid">.requiresApproval</text>
+  <text x="400" y="428" class="t s mid">waiting for you</text>
+  <rect x="566" y="360" width="200" height="80" rx="16" fill="#5DBE85" stroke="#33335C" stroke-width="3"/>
+  <text x="666" y="396" class="m mid">.enabled</text>
+  <text x="666" y="428" class="t s mid">installed</text>
+  <path d="M240 400 H264" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M532 400 H560" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="200" y="474" class="m mid">register()</text>
+  <text x="600" y="474" class="t s mid">you approve in Login Items</text>
+
+  <use href="#pip" x="40" y="490" width="80" height="80"/>
+  <text x="134" y="526" class="t s">launchd starts it when the app calls,</text>
+  <text x="134" y="560" class="t s">and may stop it any time. It keeps nothing.</text>
+</svg>

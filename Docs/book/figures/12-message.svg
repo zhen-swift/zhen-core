@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" width="800" height="520">
+  <rect x="4" y="4" width="792" height="512" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+  <text x="400" y="54" class="t b mid">One message from the routing table</text>
+
+  <!-- the bitmask -->
+  <text x="40" y="104" class="m">rtm_addrs</text>
+  <g>
+    <rect x="200" y="74" width="66" height="44" rx="8" fill="#5DBE85" stroke="#33335C" stroke-width="3"/>
+    <rect x="272" y="74" width="66" height="44" rx="8" fill="#5DBE85" stroke="#33335C" stroke-width="3"/>
+    <rect x="344" y="74" width="66" height="44" rx="8" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <rect x="416" y="74" width="66" height="44" rx="8" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <rect x="488" y="74" width="66" height="44" rx="8" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <rect x="560" y="74" width="66" height="44" rx="8" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <rect x="632" y="74" width="66" height="44" rx="8" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <rect x="704" y="74" width="66" height="44" rx="8" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  </g>
+  <g class="m mid"><text x="233" y="105">1</text><text x="305" y="105">1</text><text x="377" y="105">0</text><text x="449" y="105">0</text><text x="521" y="105">0</text><text x="593" y="105">0</text><text x="665" y="105">0</text><text x="737" y="105">0</text></g>
+  <text x="233" y="148" class="t s mid">DST</text>
+  <text x="305" y="148" class="t s mid">GW</text>
+  <text x="560" y="148" class="t s mid" opacity="0.7">NETMASK, IFP, … not here</text>
+
+  <!-- the record -->
+  <rect x="40"  y="190" width="300" height="90" fill="#B9A3F5" stroke="#33335C" stroke-width="3"/>
+  <rect x="340" y="190" width="170" height="90" fill="#6FA8FF" stroke="#33335C" stroke-width="3"/>
+  <rect x="510" y="190" width="220" height="90" fill="#FFB38A" stroke="#33335C" stroke-width="3"/>
+  <rect x="730" y="190" width="30"  height="90" fill="#D9D3EC" stroke="#33335C" stroke-width="3"/>
+  <g class="t mid">
+    <text x="190" y="230" class="m mid">rt_msghdr</text>
+    <text x="190" y="262" class="t s mid">92 bytes</text>
+    <text x="425" y="230" class="t s mid">DST</text>
+    <text x="425" y="262" class="m mid">10.10.20.7</text>
+    <text x="620" y="230" class="t s mid">GW (AF_LINK)</text>
+    <text x="620" y="262" class="t s mid">the MAC</text>
+  </g>
+  <path d="M233 156 C 233 176, 400 160, 420 186" fill="none" stroke="#33335C" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <path d="M305 156 C 305 180, 600 150, 612 186" fill="none" stroke="#33335C" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="745" y="312" class="t s mid">pad</text>
+
+  <!-- ROUNDUP -->
+  <rect x="40" y="340" width="720" height="150" rx="18" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="66" y="382" class="t b">Each address is rounded up to 4 bytes</text>
+  <text x="66" y="424" class="m">sa_len 5 → 8</text>
+  <text x="330" y="424" class="m">sa_len 16 → 16</text>
+  <text x="66" y="464" class="m">sa_len 0 → 4</text>
+  <text x="330" y="464" class="t s">(zero still moves one word!)</text>
+</svg>

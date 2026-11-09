@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <rect x="4" y="4" width="792" height="592" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- Mac -->
+  <use href="#laptop" x="40" y="40" width="130" height="85"/>
+  <text x="190" y="66" class="t b">On the Mac</text>
+  <text x="190" y="98" class="t s">probes out: 254 · replies: 0</text>
+
+  <rect x="40" y="140" width="330" height="140" rx="14" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="58" y="174" class="t s" font-weight="700">ARP table</text>
+  <text x="58" y="208" class="m">.1   a4:83:…</text>
+  <text x="58" y="238" class="m">.31  3c:22:…</text>
+  <text x="58" y="268" class="m">… 12 entries</text>
+
+  <path d="M380 210 H430" stroke="#33335C" stroke-width="3.5" marker-end="url(#arrow)"/>
+  <rect x="440" y="140" width="320" height="140" rx="14" fill="#FFD45E" stroke="#33335C" stroke-width="3"/>
+  <text x="600" y="184" class="t s mid">The Mac talks to them.</text>
+  <text x="600" y="214" class="t s mid">We heard nothing.</text>
+  <text x="600" y="254" class="t s mid" font-weight="700">Likely the permission.</text>
+
+  <path d="M40 310 H760" stroke="#EADFCC" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- iPad -->
+  <use href="#phone" x="56" y="330" width="52" height="90"/>
+  <text x="190" y="366" class="t b">On the iPad</text>
+  <text x="190" y="398" class="t s">probes out: 254 · replies: 0</text>
+
+  <rect x="40" y="436" width="330" height="140" rx="14" fill="#fff" stroke="#33335C" stroke-width="3" stroke-dasharray="10 8"/>
+  <text x="58" y="470" class="t s" font-weight="700">ARP table</text>
+  <use href="#lock" x="64" y="490" width="50" height="62"/>
+  <text x="130" y="530" class="t s">none to read</text>
+
+  <path d="M380 506 H430" stroke="#33335C" stroke-width="3.5" marker-end="url(#arrow)"/>
+  <rect x="440" y="436" width="320" height="140" rx="14" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="600" y="476" class="t s mid" font-weight="700">Nothing answered</text>
+  <text x="600" y="506" class="t s mid" opacity="0.75">usually the permission</text>
+  <rect x="512" y="520" width="176" height="42" rx="21" fill="#6FA8FF" stroke="#33335C" stroke-width="2.5"/>
+  <text x="600" y="548" class="t s mid" style="fill:#fff">Open Settings</text>
+</svg>

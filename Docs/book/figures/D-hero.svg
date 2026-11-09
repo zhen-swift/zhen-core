@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" width="800" height="400">
+  <rect x="4" y="4" width="792" height="392" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- the doc page -->
+  <rect x="60" y="50" width="220" height="260" rx="10" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="170" y="96" class="t b mid">the docs</text>
+  <path d="M90 130 h160 M90 160 h130 M90 190 h150 M90 220 h110 M90 250 h140" stroke="#A79FD0" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- not-equals -->
+  <text x="400" y="210" class="t mid" style="font-size:96px;font-weight:800;fill:#F26B6B">≠</text>
+
+  <!-- the code page -->
+  <rect x="520" y="50" width="220" height="260" rx="10" fill="#33335C" stroke="#33335C" stroke-width="3"/>
+  <text x="630" y="96" class="t b mid" style="fill:#FFF8EE">the code</text>
+  <path d="M550 130 h60 M560 160 h120 M560 190 h90 M550 220 h40 M560 250 h110" stroke="#BDEBD6" stroke-width="6" stroke-linecap="round"/>
+
+  <use href="#pip-worried" x="340" y="240" width="120" height="120"/>
+  <text x="170" y="350" class="t s mid">what it says</text>
+  <text x="630" y="350" class="t s mid">what it does</text>
+</svg>

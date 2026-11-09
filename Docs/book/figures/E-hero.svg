@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 380" width="800" height="380">
+  <rect x="4" y="4" width="792" height="372" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- a stack of books -->
+  <rect x="120" y="270" width="340" height="54" rx="8" fill="#6FA8FF" stroke="#33335C" stroke-width="3.5"/>
+  <text x="290" y="306" class="m mid" style="fill:#fff">socket(2)</text>
+  <rect x="140" y="214" width="300" height="54" rx="8" fill="#5DBE85" stroke="#33335C" stroke-width="3.5"/>
+  <text x="290" y="250" class="m mid" style="fill:#fff">bpf(4)</text>
+  <rect x="110" y="158" width="330" height="54" rx="8" fill="#B9A3F5" stroke="#33335C" stroke-width="3.5"/>
+  <text x="275" y="194" class="m mid">RFC 792</text>
+  <rect x="150" y="102" width="290" height="54" rx="8" fill="#FFD45E" stroke="#33335C" stroke-width="3.5"/>
+  <text x="295" y="138" class="m mid">IPADOS.md</text>
+
+  <path d="M90 326 H490" stroke="#C98A5E" stroke-width="8" stroke-linecap="round"/>
+
+  <use href="#pip-yay" x="540" y="170" width="160" height="160"/>
+  <use href="#sparkle" x="520" y="120" width="26" height="26"/>
+  <use href="#sparkle" x="700" y="150" width="20" height="20"/>
+  <text x="620" y="110" class="t b mid">keep going!</text>
+</svg>

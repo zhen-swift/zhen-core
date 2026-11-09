@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 720" width="800" height="720">
+  <rect x="4" y="4" width="792" height="712" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+  <text x="400" y="58" class="t h mid">Ten knobs, in this order</text>
+
+  <g>
+    <rect x="40" y="82" width="720" height="50" rx="12" fill="#fff"/>
+    <rect x="40" y="186" width="720" height="50" rx="12" fill="#fff"/>
+    <rect x="40" y="290" width="720" height="50" rx="12" fill="#fff"/>
+    <rect x="40" y="446" width="720" height="50" rx="12" fill="#FFD45E" stroke="#33335C" stroke-width="3"/>
+    <rect x="40" y="550" width="720" height="50" rx="12" fill="#fff"/>
+  </g>
+
+  <g class="m">
+    <text x="104" y="115">BIOCSBLEN</text>
+    <text x="104" y="167">BIOCSETIF</text>
+    <text x="104" y="219">BIOCGBLEN</text>
+    <text x="104" y="271">BIOCGDLT</text>
+    <text x="104" y="323">BIOCIMMEDIATE = 1</text>
+    <text x="104" y="375">BIOCSHDRCMPLT = 1</text>
+    <text x="104" y="427">BIOCSSEESENT = 0</text>
+    <text x="104" y="479">BIOCSETF</text>
+    <text x="104" y="531">BIOCFLUSH</text>
+    <text x="104" y="583">fcntl O_NONBLOCK</text>
+  </g>
+  <g class="t s">
+    <text x="420" y="115">ask for 256 KiB, first</text>
+    <text x="420" y="167">plug into en0</text>
+    <text x="420" y="219">read what we got</text>
+    <text x="420" y="271">must be Ethernet</text>
+    <text x="420" y="323">deliver at once</text>
+    <text x="420" y="375">we write our MAC</text>
+    <text x="420" y="427">don’t echo our own</text>
+    <text x="420" y="479" font-weight="700">the filter, last</text>
+    <text x="420" y="531">empty the bucket</text>
+    <text x="420" y="583">never wait</text>
+  </g>
+  <g>
+    <circle cx="72" cy="107" r="19" fill="#6FA8FF" stroke="#33335C" stroke-width="3"/>
+    <circle cx="72" cy="159" r="19" fill="#6FA8FF" stroke="#33335C" stroke-width="3"/>
+    <circle cx="72" cy="211" r="19" fill="#6FA8FF" stroke="#33335C" stroke-width="3"/>
+    <circle cx="72" cy="263" r="19" fill="#6FA8FF" stroke="#33335C" stroke-width="3"/>
+    <circle cx="72" cy="315" r="19" fill="#6FA8FF" stroke="#33335C" stroke-width="3"/>
+    <circle cx="72" cy="367" r="19" fill="#6FA8FF" stroke="#33335C" stroke-width="3"/>
+    <circle cx="72" cy="419" r="19" fill="#6FA8FF" stroke="#33335C" stroke-width="3"/>
+    <circle cx="72" cy="471" r="19" fill="#6FA8FF" stroke="#33335C" stroke-width="3"/>
+    <circle cx="72" cy="523" r="19" fill="#6FA8FF" stroke="#33335C" stroke-width="3"/>
+    <circle cx="72" cy="575" r="19" fill="#6FA8FF" stroke="#33335C" stroke-width="3"/>
+  </g>
+  <g class="t mid" style="font-size:22px;font-weight:700">
+    <text x="72" y="115">1</text><text x="72" y="167">2</text><text x="72" y="219">3</text>
+    <text x="72" y="271">4</text><text x="72" y="323">5</text><text x="72" y="375">6</text>
+    <text x="72" y="427">7</text><text x="72" y="479">8</text><text x="72" y="531">9</text>
+    <text x="72" y="583">10</text>
+  </g>
+
+  <!-- never promiscuous -->
+  <rect x="40" y="620" width="720" height="70" rx="16" fill="#fff" stroke="#33335C" stroke-width="3" stroke-dasharray="10 8"/>
+  <use href="#cross" x="58" y="634" width="42" height="42"/>
+  <text x="114" y="664" class="m">BIOCPROMISC</text>
+  <text x="300" y="664" class="t s">never asked: replies come to our MAC</text>
+</svg>

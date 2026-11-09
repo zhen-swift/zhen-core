@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" width="800" height="480">
+  <rect x="4" y="4" width="792" height="472" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- datagram -->
+  <rect x="24" y="24" width="368" height="380" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <use href="#check" x="44" y="42" width="44" height="44"/>
+  <text x="100" y="74" class="m">SOCK_DGRAM</text>
+  <text x="100" y="104" class="m">IPPROTO_ICMP</text>
+  <use href="#pip-yay" x="128" y="140" width="160" height="160"/>
+  <text x="208" y="340" class="t s mid">any user may open it</text>
+  <text x="208" y="374" class="t s mid">Darwin’s ping socket</text>
+
+  <!-- raw -->
+  <rect x="408" y="24" width="368" height="380" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <use href="#lock" x="428" y="36" width="44" height="54"/>
+  <text x="484" y="74" class="m">SOCK_RAW</text>
+  <text x="484" y="104" class="t s">the classic way</text>
+  <use href="#crown" x="537" y="134" width="110" height="78"/>
+  <use href="#pip-worried" x="532" y="196" width="120" height="120"/>
+  <text x="592" y="340" class="t s mid">root only</text>
+  <text x="592" y="374" class="t s mid">(a password prompt)</text>
+
+  <text x="400" y="446" class="t s mid">Zhen picks the left one, on Mac and iPhone</text>
+</svg>

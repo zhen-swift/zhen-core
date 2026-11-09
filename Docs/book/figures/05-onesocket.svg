@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" width="800" height="560">
+  <rect x="4" y="4" width="792" height="552" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <text x="40" y="56" class="t b">ICMP has no ports</text>
+  <text x="40" y="92" class="t s">so the kernel stamps an id on the way out</text>
+
+  <!-- Pip's mailbox: ticket 3 -->
+  <use href="#mailbox" x="34" y="200" width="120" height="150"/>
+  <use href="#ticket" x="40" y="360" width="100" height="58"/>
+  <text x="102" y="399" class="t b mid">3</text>
+
+  <!-- the castle with the stamp -->
+  <use href="#castle" x="290" y="170" width="220" height="187"/>
+  <g transform="translate(436 120) rotate(14)">
+    <rect x="0" y="34" width="66" height="18" rx="4" fill="#F26B6B" stroke="#33335C" stroke-width="3"/>
+    <rect x="22" y="4" width="22" height="32" rx="6" fill="#C98A5E" stroke="#33335C" stroke-width="3"/>
+  </g>
+
+  <!-- out -->
+  <g transform="translate(182 172)">
+    <rect x="0" y="0" width="90" height="44" rx="6" fill="#fff" stroke="#33335C" stroke-width="2.5"/>
+    <text x="45" y="31" class="m mid">id 0</text>
+  </g>
+  <path d="M150 230 C 166 214, 176 206, 180 200" fill="none" stroke="#33335C" stroke-width="3"/>
+  <path d="M274 196 H300" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <g transform="translate(540 172)">
+    <rect x="0" y="0" width="110" height="44" rx="6" fill="#fff" stroke="#33335C" stroke-width="2.5"/>
+    <text x="55" y="31" class="m mid">id 4711</text>
+  </g>
+  <path d="M504 196 H534" stroke="#33335C" stroke-width="3"/>
+  <path d="M652 196 H690" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <use href="#device" x="690" y="160" width="84" height="74"/>
+
+  <!-- back -->
+  <use href="#device" x="690" y="300" width="84" height="74"/>
+  <path d="M686 336 H656" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <g transform="translate(540 314)">
+    <rect x="0" y="0" width="110" height="44" rx="6" fill="#BDEBD6" stroke="#33335C" stroke-width="2.5"/>
+    <text x="55" y="31" class="m mid">id 4711</text>
+  </g>
+  <path d="M536 336 H512" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M300 320 C 240 330, 200 300, 160 290" fill="none" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="400" y="400" class="t s mid">“4711? that’s ticket 3’s”</text>
+
+  <rect x="24" y="436" width="752" height="96" rx="16" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="48" y="474" class="t s">One socket for a whole /24: 254 hosts, one ticket.</text>
+  <text x="48" y="510" class="t s">The kernel owns the id, so Zhen matches on its own token.</text>
+</svg>

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" width="800" height="520">
+  <rect x="4" y="4" width="792" height="512" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+  <text x="400" y="54" class="t b mid">The sequence number is a cookie</text>
+
+  <!-- ingredients -->
+  <rect x="40"  y="84" width="200" height="54" rx="14" fill="#6FA8FF" stroke="#33335C" stroke-width="3"/>
+  <rect x="300" y="84" width="200" height="54" rx="14" fill="#B9A3F5" stroke="#33335C" stroke-width="3"/>
+  <rect x="560" y="84" width="200" height="54" rx="14" fill="#FFD45E" stroke="#33335C" stroke-width="3"/>
+  <text x="140" y="120" class="t s mid">target IP</text>
+  <text x="400" y="120" class="t s mid">port</text>
+  <text x="660" y="120" class="t s mid">salt (per scan)</text>
+  <path d="M140 140 L330 196 M400 140 V190 M660 140 L470 196" stroke="#33335C" stroke-width="3"/>
+
+  <!-- mixer -->
+  <path d="M310 196 H490 L460 286 H340 Z" fill="#fff" stroke="#33335C" stroke-width="4" stroke-linejoin="round"/>
+  <text x="400" y="248" class="t s mid">mix</text>
+  <path d="M400 288 V316" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <rect x="300" y="322" width="200" height="54" rx="14" fill="#FFB38A" stroke="#33335C" stroke-width="3"/>
+  <text x="400" y="358" class="m mid">seq</text>
+  <text x="530" y="358" class="t s">never 0</text>
+
+  <!-- reply -->
+  <rect x="40" y="406" width="720" height="84" rx="18" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="66" y="442" class="t s">reply’s ack − 1 = cookie(source, port)?</text>
+  <use href="#check" x="650" y="420" width="52" height="52"/>
+  <text x="66" y="474" class="t s" opacity="0.8">No table of probes to keep.</text>
+</svg>

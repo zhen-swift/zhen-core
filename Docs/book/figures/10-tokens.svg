@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" width="800" height="520">
+  <rect x="4" y="4" width="792" height="512" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- panel 1: stale reply -->
+  <rect x="24" y="24" width="368" height="472" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="208" y="64" class="t b mid">A ghost from</text>
+  <text x="208" y="96" class="t b mid">the last scan</text>
+
+  <use href="#pip-worried" x="50" y="130" width="96" height="96"/>
+  <g transform="rotate(-8 100 248)">
+    <use href="#ticket" x="56" y="226" width="96" height="52"/>
+    <text x="114" y="261" class="m mid">#7</text>
+  </g>
+  <path d="M160 180 H214" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <rect x="222" y="128" width="150" height="150" rx="12" fill="#D9D3EC" stroke="#33335C" stroke-width="3"/>
+  <text x="297" y="160" class="t s mid">expected</text>
+  <text x="297" y="196" class="m mid">#48213</text>
+  <text x="297" y="226" class="m mid">#48214</text>
+  <text x="297" y="256" class="m mid">…</text>
+
+  <use href="#cross" x="190" y="300" width="36" height="36"/>
+  <text x="208" y="372" class="t s mid">no match: a stray</text>
+  <text x="208" y="420" class="t s mid">Each scan starts its</text>
+  <text x="208" y="448" class="t s mid">tokens at a <tspan font-weight="700">random</tspan> number.</text>
+
+  <!-- panel 2: early reply -->
+  <rect x="408" y="24" width="368" height="472" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="592" y="64" class="t b mid">An answer before</text>
+  <text x="592" y="96" class="t b mid">the paperwork</text>
+
+  <circle cx="446" cy="150" r="18" fill="#FFD45E" stroke="#33335C" stroke-width="3"/>
+  <text x="446" y="158" class="t s mid" font-weight="700">1</text>
+  <text x="476" y="158" class="t s">send #48213</text>
+
+  <circle cx="446" cy="214" r="18" fill="#FFD45E" stroke="#33335C" stroke-width="3"/>
+  <text x="446" y="222" class="t s mid" font-weight="700">2</text>
+  <text x="476" y="222" class="t s">reply arrives</text>
+  <rect x="476" y="240" width="220" height="64" rx="12" fill="#B9A3F5" stroke="#33335C" stroke-width="3"/>
+  <text x="586" y="280" class="t s mid">waiting room</text>
+
+  <circle cx="446" cy="344" r="18" fill="#FFD45E" stroke="#33335C" stroke-width="3"/>
+  <text x="446" y="352" class="t s mid" font-weight="700">3</text>
+  <text x="476" y="352" class="t s">send written down</text>
+
+  <use href="#check" x="430" y="384" width="34" height="34"/>
+  <text x="476" y="408" class="t s">matched, with its</text>
+  <text x="476" y="436" class="t s">real arrival time</text>
+  <use href="#pip-yay" x="690" y="410" width="70" height="70"/>
+</svg>

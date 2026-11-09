@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" width="800" height="560">
+  <rect x="4" y="4" width="792" height="552" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- app -->
+  <rect x="24" y="24" width="368" height="512" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="208" y="66" class="t b mid">the app</text>
+  <use href="#phone" x="56" y="90" width="110" height="190"/>
+  <rect x="176" y="96" width="196" height="184" rx="16" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="274" y="130" class="t s mid">Find devices on</text>
+  <text x="274" y="158" class="t s mid">local networks?</text>
+  <path d="M176 178 H372 M176 230 H372" stroke="#33335C" stroke-width="2"/>
+  <text x="274" y="212" class="t s mid" font-weight="700">Allow</text>
+  <text x="274" y="264" class="t s mid" opacity="0.7">Don’t Allow</text>
+
+  <rect x="48" y="304" width="320" height="196" rx="14" fill="#FFD45E" stroke="#33335C" stroke-width="3"/>
+  <text x="66" y="340" class="m">NSBonjourServices</text>
+  <text x="84" y="378" class="m">_airplay._tcp</text>
+  <text x="84" y="410" class="m">_googlecast._tcp</text>
+  <text x="84" y="442" class="m">…</text>
+  <text x="208" y="482" class="t s mid">every type, 17 in all</text>
+
+  <!-- CLI -->
+  <rect x="408" y="24" width="368" height="512" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="592" y="66" class="t b mid">the command line</text>
+  <rect x="466" y="96" width="250" height="250" rx="12" fill="#D9D3EC" stroke="#33335C" stroke-width="3"/>
+  <text x="482" y="130" class="m" opacity="0.6">01101001 0111</text>
+  <text x="482" y="160" class="m" opacity="0.6">10010110 1001</text>
+  <text x="482" y="320" class="m" opacity="0.6">00110101 1100</text>
+  <g transform="rotate(-4 592 240)">
+    <rect x="488" y="184" width="210" height="104" fill="#FFD45E" stroke="#33335C" stroke-width="3"/>
+    <rect x="560" y="174" width="64" height="20" fill="#B9A3F5" opacity="0.85"/>
+    <text x="593" y="228" class="t s mid" font-weight="700">Info.plist</text>
+    <text x="593" y="264" class="m mid">__info_plist</text>
+  </g>
+  <text x="592" y="384" class="m mid">zhen</text>
+  <text x="592" y="424" class="t s mid">sewn in by the linker</text>
+  <text x="592" y="452" class="m mid">-sectcreate</text>
+  <use href="#pip-yay" x="548" y="460" width="70" height="70"/>
+</svg>

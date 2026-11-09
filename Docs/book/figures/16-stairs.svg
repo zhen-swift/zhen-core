@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1250" width="800" height="1250">
+  <rect x="4" y="4" width="792" height="1242" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- legend -->
+  <rect x="40" y="36" width="34" height="34" rx="8" fill="#BDEBD6" stroke="#33335C" stroke-width="2.5"/>
+  <text x="84" y="62" class="t s">app (zhen-ios)</text>
+  <rect x="270" y="36" width="34" height="34" rx="8" fill="#B9A3F5" stroke="#33335C" stroke-width="2.5"/>
+  <text x="314" y="62" class="t s">engine (zhen-core)</text>
+  <rect x="540" y="36" width="34" height="34" rx="8" fill="#D9D3EC" stroke="#33335C" stroke-width="2.5"/>
+  <text x="584" y="62" class="t s">kernel door</text>
+
+  <use href="#pip-yay" x="40" y="80" width="80" height="80"/>
+
+  <!-- steps: x = 40 + 26*i, y = 160 + 88*i -->
+  <g>
+    <rect x="40" y="160" width="450" height="80" rx="14" fill="#BDEBD6" stroke="#33335C" stroke-width="3"/>
+    <text x="64" y="194" class="t b">1</text><text x="100" y="194" class="t b">one NetworkModel</text>
+    <text x="100" y="224" class="m">ZhenApp.swift</text>
+
+    <rect x="66" y="248" width="450" height="80" rx="14" fill="#BDEBD6" stroke="#33335C" stroke-width="3"/>
+    <text x="90" y="282" class="t b">2</text><text x="126" y="282" class="t b">tap Scan</text>
+    <text x="126" y="312" class="m">model.startScan()</text>
+
+    <rect x="92" y="336" width="450" height="80" rx="14" fill="#BDEBD6" stroke="#33335C" stroke-width="3"/>
+    <text x="116" y="370" class="t b">3</text><text x="152" y="370" class="t b">a fresh token</text>
+    <text x="152" y="400" class="m">scanToken = UUID()</text>
+
+    <rect x="118" y="424" width="450" height="80" rx="14" fill="#BDEBD6" stroke="#33335C" stroke-width="3"/>
+    <text x="142" y="458" class="t b">4</text><text x="178" y="458" class="t b">the task wakes up</text>
+    <text x="178" y="488" class="m">.task(id: scanToken)</text>
+
+    <rect x="144" y="512" width="450" height="80" rx="14" fill="#BDEBD6" stroke="#33335C" stroke-width="3"/>
+    <text x="168" y="546" class="t b">5</text><text x="204" y="546" class="t b">stream + watcher</text>
+    <text x="204" y="576" class="m">performScan()</text>
+
+    <rect x="170" y="600" width="450" height="80" rx="14" fill="#BDEBD6" stroke="#33335C" stroke-width="3"/>
+    <text x="194" y="634" class="t b">6</text><text x="230" y="634" class="t b">a new runner, every time</text>
+    <text x="230" y="664" class="m">LiveScanRunner</text>
+
+    <rect x="196" y="688" width="450" height="80" rx="14" fill="#B9A3F5" stroke="#33335C" stroke-width="3"/>
+    <text x="220" y="722" class="t b">7</text><text x="256" y="722" class="t b">build the scanner</text>
+    <text x="256" y="752" class="m">DarwinScanner.make</text>
+
+    <rect x="222" y="776" width="450" height="80" rx="14" fill="#D9D3EC" stroke="#33335C" stroke-width="3"/>
+    <text x="246" y="810" class="t b">8</text><text x="282" y="810" class="t b">first doors</text>
+    <text x="282" y="840" class="m">setrlimit · getifaddrs</text>
+
+    <rect x="248" y="864" width="450" height="80" rx="14" fill="#D9D3EC" stroke="#33335C" stroke-width="3"/>
+    <text x="272" y="898" class="t b">9</text><text x="308" y="898" class="t b">first network door</text>
+    <text x="308" y="928" class="m">socket(…ICMP) · sendto</text>
+
+    <rect x="274" y="952" width="450" height="80" rx="14" fill="#D9D3EC" stroke="#33335C" stroke-width="3"/>
+    <text x="290" y="986" class="t b">10</text><text x="334" y="986" class="t b">names</text>
+    <text x="334" y="1016" class="m">Bonjour, then NetBIOS</text>
+
+    <rect x="300" y="1040" width="450" height="80" rx="14" fill="#D9D3EC" stroke="#33335C" stroke-width="3"/>
+    <text x="316" y="1074" class="t b">11</text><text x="360" y="1074" class="t b">ports, only if asked</text>
+    <text x="360" y="1104" class="m">socket · connect</text>
+
+    <rect x="326" y="1128" width="450" height="80" rx="14" fill="#B9A3F5" stroke="#33335C" stroke-width="3"/>
+    <text x="342" y="1162" class="t b">12</text><text x="386" y="1162" class="t b">write it down</text>
+    <text x="386" y="1192" class="m">store.record(report)</text>
+  </g>
+
+  <!-- the castle at the bottom left, where the doors are -->
+  <use href="#castle" x="40" y="930" width="200" height="170"/>
+  <use href="#phone" x="620" y="110" width="70" height="120"/>
+  <text x="655" y="262" class="t s mid">you tap</text>
+  <text x="655" y="290" class="t s mid">here</text>
+</svg>

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" width="800" height="560">
+  <rect x="4" y="4" width="792" height="552" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+  <text x="400" y="54" class="t b mid">Try each rung. Never ask “am I root?”</text>
+
+  <!-- CLI ladder -->
+  <text x="200" y="104" class="t b mid">the zhen command</text>
+  <text x="200" y="134" class="m mid">.directOnly</text>
+  <path d="M90 150 V500 M310 150 V500" stroke="#C98A5E" stroke-width="10" stroke-linecap="round"/>
+  <rect x="100" y="176" width="200" height="74" rx="14" fill="#6FA8FF" stroke="#33335C" stroke-width="3"/>
+  <text x="200" y="210" class="t s mid">open /dev/bpf</text>
+  <text x="200" y="238" class="t s mid">here</text>
+  <rect x="100" y="400" width="200" height="74" rx="14" fill="#BDEBD6" stroke="#33335C" stroke-width="3"/>
+  <text x="200" y="434" class="t s mid">no BPF:</text>
+  <text x="200" y="462" class="t s mid">unprivileged</text>
+  <path d="M200 252 V396" stroke="#33335C" stroke-width="3" stroke-dasharray="8 7" marker-end="url(#arrow)"/>
+
+  <!-- App ladder -->
+  <text x="600" y="104" class="t b mid">the app</text>
+  <text x="600" y="134" class="m mid">.helperThenDirect</text>
+  <path d="M490 150 V500 M710 150 V500" stroke="#C98A5E" stroke-width="10" stroke-linecap="round"/>
+  <rect x="500" y="176" width="200" height="74" rx="14" fill="#6FA8FF" stroke="#33335C" stroke-width="3"/>
+  <text x="600" y="210" class="t s mid">open /dev/bpf</text>
+  <text x="600" y="238" class="t s mid">here (sudo?)</text>
+  <rect x="500" y="288" width="200" height="74" rx="14" fill="#B9A3F5" stroke="#33335C" stroke-width="3"/>
+  <text x="600" y="322" class="t s mid">ask the</text>
+  <text x="600" y="350" class="t s mid">helper</text>
+  <use href="#crown" x="660" y="268" width="44" height="32"/>
+  <rect x="500" y="400" width="200" height="74" rx="14" fill="#BDEBD6" stroke="#33335C" stroke-width="3"/>
+  <text x="600" y="434" class="t s mid">no BPF:</text>
+  <text x="600" y="462" class="t s mid">unprivileged</text>
+  <path d="M600 252 V284" stroke="#33335C" stroke-width="3" stroke-dasharray="8 7" marker-end="url(#arrow)"/>
+  <path d="M600 364 V396" stroke="#33335C" stroke-width="3" stroke-dasharray="8 7" marker-end="url(#arrow)"/>
+
+  <text x="400" y="534" class="t s mid">If a rung fails, step down. Nothing hard-fails.</text>
+</svg>

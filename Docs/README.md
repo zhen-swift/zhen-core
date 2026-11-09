@@ -28,6 +28,7 @@ prefix. A path they name outside `zhen/` is in one of these:
 | `AUDIT.md` | The state of the documentation and of maintainability, measured on the monorepo before the split. Says what was wrong and in what order to fix it |
 | `DIRECTION.md` | What the tool is for, and why it goes deeper at layer 2 rather than wider at layer 7 |
 | `IPADOS.md` | The engine on iPadOS: what the sandbox leaves of it, what was cut and why, and what only a device can still answer |
+| `book/` | **Zhen & Darwin, Illustrated**: a picture-first EPUB about every place the engine talks to the Darwin kernel, with what an iPhone or iPad gets. Pinned to 0.9.0; read it at <https://zhen-swift.github.io/zhen-core/>, or build it with `Scripts/build-book.sh` |
 
 ## The specification
 

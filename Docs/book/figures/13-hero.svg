@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 460" width="800" height="460">
+  <rect x="4" y="4" width="792" height="452" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+  <path d="M30 380 H770" stroke="#EADFCC" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- the house with a door: a port -->
+  <path d="M470 180 L610 80 L750 180 Z" fill="#F26B6B" stroke="#33335C" stroke-width="4" stroke-linejoin="round"/>
+  <rect x="490" y="180" width="240" height="198" fill="#BDEBD6" stroke="#33335C" stroke-width="4"/>
+  <use href="#door" x="570" y="246" width="80" height="132"/>
+  <rect x="580" y="200" width="60" height="34" rx="6" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="610" y="225" class="m mid">443</text>
+
+  <!-- knock -->
+  <use href="#pip" x="230" y="226" width="150" height="150"/>
+  <rect x="40" y="70" width="260" height="96" rx="22" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="170" y="112" class="t b mid">knock: SYN</text>
+  <text x="170" y="148" class="t s mid">one packet</text>
+  <path d="M220 166 L262 228" stroke="#33335C" stroke-width="3"/>
+
+  <!-- answer -->
+  <rect x="330" y="40" width="250" height="60" rx="18" fill="#5DBE85" stroke="#33335C" stroke-width="3"/>
+  <text x="455" y="80" class="t b mid">“SYN-ACK!”</text>
+  <path d="M520 100 L560 196" stroke="#33335C" stroke-width="3"/>
+
+  <text x="230" y="420" class="t s">…and never finish the handshake.</text>
+  <use href="#sparkle" x="390" y="200" width="26" height="26"/>
+</svg>

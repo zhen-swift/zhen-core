@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" width="800" height="520">
+  <rect x="4" y="4" width="792" height="512" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <text x="400" y="56" class="t b mid">open("/dev/bpfN", O_RDWR), N = 0, 1, 2 …</text>
+
+  <!-- four doors -->
+  <g>
+    <use href="#door" x="50" y="90" width="96" height="134"/>
+    <text x="98" y="256" class="m mid">bpf0</text>
+    <use href="#lock" x="76" y="128" width="44" height="54"/>
+    <text x="98" y="292" class="t s mid">EBUSY</text>
+    <text x="98" y="320" class="t s mid" opacity="0.75">Wireshark</text>
+
+    <use href="#door" x="230" y="90" width="96" height="134"/>
+    <text x="278" y="256" class="m mid">bpf1</text>
+    <use href="#lock" x="256" y="128" width="44" height="54"/>
+    <text x="278" y="292" class="t s mid">EBUSY</text>
+    <text x="278" y="320" class="t s mid" opacity="0.75">a VPN</text>
+
+    <use href="#door" x="410" y="90" width="96" height="134"/>
+    <text x="458" y="256" class="m mid">bpf2</text>
+    <use href="#check" x="430" y="124" width="56" height="56"/>
+    <text x="458" y="292" class="t s mid">free!</text>
+    <use href="#pip-yay" x="504" y="152" width="76" height="76"/>
+
+    <path d="M590 160 h170" stroke="#A79FD0" stroke-width="4" stroke-dasharray="4 12" stroke-linecap="round"/>
+    <text x="680" y="140" class="m mid">… bpf255</text>
+  </g>
+  <path d="M150 160 h70" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M330 160 h70" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- the rules -->
+  <rect x="40" y="352" width="720" height="138" rx="18" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="66" y="392" class="m">EBUSY</text>
+  <text x="250" y="392" class="t s">→ try the next one</text>
+  <text x="66" y="428" class="m">EACCES</text>
+  <text x="250" y="428" class="t s">→ stop now: not root</text>
+  <text x="66" y="464" class="m">ENOENT</text>
+  <text x="250" y="464" class="t s">→ end of the row</text>
+  <use href="#crown" x="650" y="396" width="70" height="50"/>
+  <use href="#cross" x="690" y="420" width="40" height="40"/>
+</svg>

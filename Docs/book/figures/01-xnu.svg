@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 640" width="800" height="640">
+  <rect x="4" y="4" width="792" height="632" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- Apple's helpers on top -->
+  <text x="40" y="58" class="t b">Apple’s helpers, on top</text>
+  <g>
+    <rect x="40" y="78" width="168" height="52" rx="26" fill="#BDEBD6" stroke="#33335C" stroke-width="3"/>
+    <text x="124" y="112" class="m mid">Dispatch</text>
+    <rect x="224" y="78" width="168" height="52" rx="26" fill="#FFD45E" stroke="#33335C" stroke-width="3"/>
+    <text x="308" y="112" class="m mid">Network</text>
+    <rect x="408" y="78" width="168" height="52" rx="26" fill="#B9A3F5" stroke="#33335C" stroke-width="3"/>
+    <text x="492" y="112" class="m mid">dns_sd</text>
+    <rect x="592" y="78" width="168" height="52" rx="26" fill="#FFB38A" stroke="#33335C" stroke-width="3"/>
+    <text x="676" y="112" class="m mid">Security</text>
+  </g>
+  <g fill="none" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)">
+    <path d="M124 134 V196"/><path d="M308 134 V196"/><path d="M492 134 V196"/><path d="M676 134 V196"/>
+  </g>
+
+  <!-- XNU -->
+  <rect x="40" y="202" width="720" height="300" rx="20" fill="#D9D3EC" stroke="#33335C" stroke-width="4"/>
+  <text x="64" y="244" class="t b">XNU, Darwin’s kernel</text>
+
+  <rect x="62" y="266" width="200" height="210" rx="16" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="162" y="310" class="t h mid">Mach</text>
+  <text x="162" y="352" class="t s mid">threads</text>
+  <text x="162" y="384" class="t s mid">messages</text>
+
+  <rect x="290" y="258" width="220" height="226" rx="16" fill="#BDEBD6" stroke="#33335C" stroke-width="5"/>
+  <text x="400" y="304" class="t h mid">BSD</text>
+  <text x="400" y="346" class="t s mid">sockets</text>
+  <text x="400" y="378" class="t s mid">files, tickets</text>
+  <use href="#pip-yay" x="364" y="392" width="72" height="72"/>
+  <use href="#sparkle" x="470" y="270" width="26" height="26"/>
+
+  <rect x="538" y="266" width="200" height="210" rx="16" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="638" y="310" class="t h mid">IOKit</text>
+  <text x="638" y="352" class="t s mid">drivers</text>
+  <text x="638" y="384" class="t s mid">devices</text>
+
+  <!-- hardware -->
+  <rect x="40" y="526" width="720" height="56" rx="14" fill="#A79FD0" stroke="#33335C" stroke-width="3"/>
+  <text x="400" y="562" class="t b mid">hardware</text>
+  <text x="400" y="616" class="t s mid">Zhen lives almost entirely in the BSD part</text>
+</svg>

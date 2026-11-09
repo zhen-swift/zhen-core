@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" width="800" height="560">
+  <rect x="4" y="4" width="792" height="552" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- row 1: not connected -->
+  <text x="40" y="54" class="t b">not connected</text>
+  <text x="40" y="86" class="m" opacity="0.8">sendto() only</text>
+  <use href="#mailbox" x="52" y="110" width="88" height="110"/>
+  <text x="96" y="252" class="t s mid">hears nothing</text>
+
+  <use href="#castle" x="340" y="80" width="170" height="145"/>
+  <use href="#device" x="660" y="130" width="96" height="84"/>
+  <g transform="rotate(-6 580 140)">
+    <rect x="536" y="118" width="96" height="48" rx="6" fill="#F26B6B" stroke="#33335C" stroke-width="2.5"/>
+    <text x="584" y="150" class="t s mid" style="fill:#fff" font-weight="700">ICMP</text>
+  </g>
+  <path d="M650 190 H526" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M425 230 V252" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M402 258 h46 l-6 34 h-34 Z" fill="#D9D3EC" stroke="#33335C" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M396 258 h58" stroke="#33335C" stroke-width="4" stroke-linecap="round"/>
+  <text x="480" y="284" class="t s">dropped</text>
+
+  <path d="M40 316 H760" stroke="#EADFCC" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- row 2: connected -->
+  <text x="40" y="360" class="t b">connected</text>
+  <text x="40" y="392" class="m" opacity="0.8">connect(fd, peer)</text>
+  <use href="#mailbox" x="52" y="414" width="88" height="110"/>
+  <use href="#pip-yay" x="136" y="444" width="70" height="70"/>
+
+  <use href="#castle" x="340" y="384" width="170" height="145"/>
+  <use href="#device" x="660" y="434" width="96" height="84"/>
+  <g transform="rotate(-6 580 444)">
+    <rect x="536" y="422" width="96" height="48" rx="6" fill="#F26B6B" stroke="#33335C" stroke-width="2.5"/>
+    <text x="584" y="454" class="t s mid" style="fill:#fff" font-weight="700">ICMP</text>
+  </g>
+  <path d="M650 494 H526" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M352 470 H214" stroke="#33335C" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <rect x="144" y="404" width="190" height="36" rx="10" fill="#FFD45E" stroke="#33335C" stroke-width="2.5"/>
+  <text x="239" y="429" class="m mid">ECONNREFUSED</text>
+</svg>

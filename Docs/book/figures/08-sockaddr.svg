@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" width="800" height="520">
+  <rect x="4" y="4" width="792" height="512" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <text x="400" y="52" class="t b mid">Inside a <tspan class="m" style="font-size:26px">sockaddr_dl</tspan>, byte by byte</text>
+
+  <!-- header row: offsets -->
+  <g class="m" opacity="0.7">
+    <text x="80" y="98" class="m mid">0</text>
+    <text x="160" y="98" class="m mid">1</text>
+    <text x="240" y="98" class="m mid">2</text>
+    <text x="400" y="98" class="m mid">4</text>
+    <text x="480" y="98" class="m mid">5</text>
+    <text x="560" y="98" class="m mid">6</text>
+    <text x="640" y="98" class="m mid">7</text>
+  </g>
+  <g stroke="#33335C" stroke-width="3">
+    <rect x="40" y="110" width="80" height="60" fill="#D9D3EC"/>
+    <rect x="120" y="110" width="80" height="60" fill="#D9D3EC"/>
+    <rect x="200" y="110" width="160" height="60" fill="#D9D3EC"/>
+    <rect x="360" y="110" width="80" height="60" fill="#D9D3EC"/>
+    <rect x="440" y="110" width="80" height="60" fill="#FFD45E"/>
+    <rect x="520" y="110" width="80" height="60" fill="#FFD45E"/>
+    <rect x="600" y="110" width="80" height="60" fill="#D9D3EC"/>
+  </g>
+  <text x="80" y="148" class="t s mid">len</text>
+  <text x="160" y="148" class="t s mid">fam</text>
+  <text x="280" y="148" class="t s mid">index</text>
+  <text x="400" y="148" class="t s mid">type</text>
+  <text x="480" y="148" class="t s mid">nlen</text>
+  <text x="560" y="148" class="t s mid">alen</text>
+  <text x="640" y="148" class="t s mid">slen</text>
+  <text x="480" y="202" class="m mid">3</text>
+  <text x="560" y="202" class="m mid">6</text>
+
+  <!-- data row -->
+  <text x="80" y="256" class="m mid" opacity="0.7">8</text>
+  <text x="290" y="256" class="m mid" opacity="0.7">8 + nlen</text>
+  <g stroke="#33335C" stroke-width="3">
+    <rect x="40" y="268" width="70" height="60" fill="#fff"/>
+    <rect x="110" y="268" width="70" height="60" fill="#fff"/>
+    <rect x="180" y="268" width="70" height="60" fill="#fff"/>
+    <rect x="250" y="268" width="80" height="60" fill="#BDEBD6"/>
+    <rect x="330" y="268" width="80" height="60" fill="#BDEBD6"/>
+    <rect x="410" y="268" width="80" height="60" fill="#BDEBD6"/>
+    <rect x="490" y="268" width="80" height="60" fill="#BDEBD6"/>
+    <rect x="570" y="268" width="80" height="60" fill="#BDEBD6"/>
+    <rect x="650" y="268" width="80" height="60" fill="#BDEBD6"/>
+  </g>
+  <text x="75" y="306" class="m mid">e</text>
+  <text x="145" y="306" class="m mid">n</text>
+  <text x="215" y="306" class="m mid">0</text>
+  <text x="290" y="306" class="m mid">a4</text>
+  <text x="370" y="306" class="m mid">83</text>
+  <text x="450" y="306" class="m mid">e7</text>
+  <text x="530" y="306" class="m mid">12</text>
+  <text x="610" y="306" class="m mid">34</text>
+  <text x="690" y="306" class="m mid">56</text>
+
+  <path d="M42 346 v10 h206 v-10" fill="none" stroke="#33335C" stroke-width="3"/>
+  <text x="145" y="388" class="t s mid">name</text>
+  <path d="M252 346 v10 h476 v-10" fill="none" stroke="#33335C" stroke-width="3"/>
+  <text x="490" y="388" class="t s mid">the MAC: 6 bytes</text>
+
+  <use href="#pip" x="40" y="414" width="80" height="80"/>
+  <text x="136" y="448" class="t s">Different lengths, maybe unaligned.</text>
+  <text x="136" y="480" class="t s"><tspan font-weight="700">Read by byte offset.</tspan> Never cast.</text>
+</svg>

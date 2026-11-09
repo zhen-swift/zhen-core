@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" width="800" height="560">
+  <rect x="4" y="4" width="792" height="552" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- the shared connection -->
+  <rect x="200" y="70" width="380" height="404" rx="24" fill="#BDEBD6" stroke="#33335C" stroke-width="3" stroke-dasharray="10 8"/>
+  <text x="390" y="504" class="t s mid">one shared connection</text>
+
+  <!-- Zhen -->
+  <rect x="24" y="70" width="168" height="404" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="108" y="108" class="t b mid">Zhen</text>
+  <use href="#pip" x="62" y="124" width="92" height="92"/>
+  <text x="108" y="262" class="t s mid">replies on</text>
+  <text x="108" y="290" class="t s mid">one serial</text>
+  <text x="108" y="318" class="t s mid">queue</text>
+  <g stroke="#33335C" stroke-width="2.5">
+    <rect x="70" y="340" width="76" height="30" rx="6" fill="#FFB38A"/>
+    <rect x="70" y="378" width="76" height="30" rx="6" fill="#FFB38A"/>
+    <rect x="70" y="416" width="76" height="30" rx="6" fill="#FFB38A"/>
+  </g>
+
+  <!-- mDNSResponder -->
+  <rect x="588" y="70" width="188" height="404" rx="20" fill="#D9D3EC" stroke="#33335C" stroke-width="3"/>
+  <text x="682" y="112" class="m mid">mDNSResponder</text>
+  <circle cx="682" cy="194" r="40" fill="none" stroke="#33335C" stroke-width="12" stroke-dasharray="10 9"/>
+  <circle cx="682" cy="194" r="34" fill="#B9A3F5" stroke="#33335C" stroke-width="3"/>
+  <circle cx="682" cy="194" r="11" fill="#FFF8EE" stroke="#33335C" stroke-width="3"/>
+  <text x="682" y="270" class="t s mid">system</text>
+  <text x="682" y="298" class="t s mid">helper</text>
+  <text x="682" y="326" class="t s mid">(a daemon)</text>
+
+  <!-- step 1 -->
+  <text x="390" y="110" class="m mid">1 Browse</text>
+  <path d="M210 124 H570" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M570 152 H210" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)" stroke-dasharray="8 6"/>
+  <text x="390" y="186" class="t s mid">“Living Room”</text>
+
+  <!-- step 2 -->
+  <text x="390" y="232" class="m mid">2 Resolve</text>
+  <path d="M210 246 H570" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M570 274 H210" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)" stroke-dasharray="8 6"/>
+  <text x="390" y="308" class="m mid">Living-Room.local</text>
+
+  <!-- step 3 -->
+  <text x="390" y="354" class="m mid">3 GetAddrInfo (v4)</text>
+  <path d="M210 368 H570" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M570 396 H210" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)" stroke-dasharray="8 6"/>
+  <text x="390" y="430" class="m mid">192.168.1.31</text>
+
+  <text x="400" y="540" class="t s mid">Ask, then ask again from inside the answer.</text>
+</svg>

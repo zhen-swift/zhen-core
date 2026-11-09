@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 570" width="800" height="570">
+  <rect x="4" y="4" width="792" height="562" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- row 1 -->
+  <g>
+    <rect x="24" y="24" width="182" height="250" rx="18" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <use href="#pip" x="55" y="40" width="120" height="120"/>
+    <text x="115" y="206" class="t b mid">Pip</text>
+    <text x="115" y="244" class="t s mid">our app</text>
+
+    <rect x="216" y="24" width="182" height="250" rx="18" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <use href="#castle" x="237" y="44" width="140" height="119"/>
+    <text x="307" y="206" class="t b mid">castle</text>
+    <text x="307" y="244" class="t s mid">the kernel</text>
+
+    <rect x="408" y="24" width="182" height="250" rx="18" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <use href="#door" x="459" y="48" width="80" height="112"/>
+    <text x="499" y="206" class="t b mid">door</text>
+    <text x="499" y="244" class="t s mid">a system call</text>
+
+    <rect x="600" y="24" width="182" height="250" rx="18" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <use href="#ticket" x="621" y="66" width="140" height="81"/>
+    <text x="707" y="120" class="t h mid">3</text>
+    <text x="691" y="206" class="t b mid">ticket</text>
+    <text x="691" y="244" class="t s mid">a descriptor</text>
+  </g>
+
+  <!-- row 2 -->
+  <g>
+    <rect x="24" y="292" width="182" height="250" rx="18" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <use href="#mailbox" x="65" y="310" width="100" height="125"/>
+    <text x="115" y="474" class="t b mid">mailbox</text>
+    <text x="115" y="512" class="t s mid">a socket</text>
+
+    <rect x="216" y="292" width="182" height="250" rx="18" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <use href="#periscope" x="271" y="310" width="72" height="124"/>
+    <text x="307" y="474" class="t b mid">periscope</text>
+    <text x="307" y="512" class="t s mid">BPF (Mac only)</text>
+
+    <rect x="408" y="292" width="182" height="250" rx="18" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <use href="#crown" x="434" y="330" width="130" height="93"/>
+    <text x="499" y="474" class="t b mid">crown</text>
+    <text x="499" y="512" class="t s mid">root</text>
+
+    <rect x="600" y="292" width="182" height="250" rx="18" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <use href="#lock" x="643" y="314" width="96" height="117"/>
+    <text x="691" y="474" class="t b mid">padlock</text>
+    <text x="691" y="512" class="t s mid">not allowed</text>
+  </g>
+</svg>

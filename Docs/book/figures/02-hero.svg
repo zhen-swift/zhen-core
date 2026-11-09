@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 460" width="800" height="460">
+  <rect x="4" y="4" width="792" height="452" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- ground -->
+  <path d="M30 372 H770" stroke="#EADFCC" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- the castle (kernel) -->
+  <use href="#castle" x="440" y="70" width="330" height="300"/>
+  <text x="605" y="58" class="t b mid">the kernel</text>
+
+  <!-- Pip asks -->
+  <rect x="34" y="40" width="330" height="96" rx="22" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <path d="M120 136 L136 168 L160 136" fill="#fff" stroke="#33335C" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M122 134 L158 134" stroke="#fff" stroke-width="5"/>
+  <text x="199" y="82" class="t b mid">“A socket, please!”</text>
+  <text x="199" y="118" class="m mid">socket(…)</text>
+  <use href="#pip" x="60" y="196" width="170" height="170"/>
+
+  <!-- the ticket coming back -->
+  <path d="M560 340 C 520 420, 380 400, 340 330" fill="none" stroke="#33335C" stroke-width="3.5" stroke-dasharray="9 8" marker-end="url(#arrow)"/>
+  <g transform="rotate(-10 330 270)">
+    <use href="#ticket" x="250" y="232" width="150" height="86"/>
+    <text x="350" y="292" class="t mid" style="font-size:46px;font-weight:800">3</text>
+  </g>
+  <use href="#sparkle" x="414" y="210" width="26" height="26"/>
+  <use href="#sparkle" x="236" y="214" width="18" height="18"/>
+
+  <text x="400" y="430" class="t s mid">The kernel keeps the real thing. You get a number.</text>
+</svg>

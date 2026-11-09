@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 440" width="800" height="440">
+  <rect x="4" y="4" width="792" height="432" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+  <text x="400" y="58" class="t h mid">One read() = many records</text>
+
+  <!-- labels above -->
+  <text x="81" y="112" class="t s mid">header</text>
+  <text x="191" y="112" class="t s mid">packet</text>
+  <text x="278" y="112" class="t s mid">pad</text>
+  <path d="M278 118 V128" stroke="#33335C" stroke-width="2"/>
+
+  <!-- record 1 -->
+  <rect x="46" y="132" width="70" height="70" fill="#B9A3F5" stroke="#33335C" stroke-width="3"/>
+  <rect x="116" y="132" width="150" height="70" fill="#FFB38A" stroke="#33335C" stroke-width="3"/>
+  <rect x="266" y="132" width="24" height="70" fill="#D9D3EC" stroke="#33335C" stroke-width="3"/>
+  <!-- record 2 -->
+  <rect x="290" y="132" width="70" height="70" fill="#B9A3F5" stroke="#33335C" stroke-width="3"/>
+  <rect x="360" y="132" width="150" height="70" fill="#FFB38A" stroke="#33335C" stroke-width="3"/>
+  <rect x="510" y="132" width="24" height="70" fill="#D9D3EC" stroke="#33335C" stroke-width="3"/>
+  <!-- record 3 -->
+  <rect x="534" y="132" width="70" height="70" fill="#B9A3F5" stroke="#33335C" stroke-width="3"/>
+  <rect x="604" y="132" width="150" height="70" fill="#FFB38A" stroke="#33335C" stroke-width="3"/>
+
+  <g class="t s mid">
+    <text x="191" y="175">ARP reply</text>
+    <text x="435" y="175">ARP reply</text>
+    <text x="679" y="175">ARP reply</text>
+  </g>
+
+  <!-- the step -->
+  <path d="M46 222 V236 H290 V222" fill="none" stroke="#33335C" stroke-width="3"/>
+  <path d="M168 236 C 168 270, 250 270, 284 214" fill="none" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="46" y="300" class="m">next = BPF_WORDALIGN(hdrlen + caplen)</text>
+  <text x="46" y="334" class="t s">round up to 4 bytes, every time</text>
+
+  <use href="#pip-worried" x="40" y="344" width="80" height="80"/>
+  <text x="132" y="396" class="t s">Forget the pad and you read from the middle</text>
+  <text x="132" y="424" class="t s">of a packet: plausible garbage, no error.</text>
+</svg>

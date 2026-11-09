@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 460" width="800" height="460">
+  <rect x="4" y="4" width="792" height="452" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+  <path d="M30 372 H770" stroke="#EADFCC" stroke-width="6" stroke-linecap="round"/>
+
+  <use href="#castle" x="30" y="126" width="270" height="230"/>
+  <!-- the bell over the door -->
+  <path d="M250 150 H300 V176" fill="none" stroke="#33335C" stroke-width="3"/>
+  <g transform="translate(268 176) rotate(14 34 30)"><path d="M8 50 Q13 45 13 32 Q13 10 34 8 Q55 10 55 32 Q55 45 60 50 Z" fill="#FFD45E" stroke="#33335C" stroke-width="3.5" stroke-linejoin="round"/><circle cx="34" cy="56" r="6" fill="#33335C"/><circle cx="34" cy="6" r="4" fill="#33335C"/></g>
+  <text x="380" y="190" class="t b">ding!</text>
+  <path d="M352 196 l14 -6 M352 214 l16 2 M350 232 l12 8" stroke="#33335C" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Pip, busy elsewhere -->
+  <use href="#pip-yay" x="540" y="210" width="150" height="150"/>
+  <g transform="rotate(-18 520 120)"><use href="#ticket" x="480" y="100" width="70" height="40"/></g>
+  <g transform="rotate(12 620 80)"><use href="#ticket" x="585" y="62" width="70" height="40"/></g>
+  <g transform="rotate(-6 720 130)"><use href="#ticket" x="685" y="112" width="70" height="40"/></g>
+  <path d="M530 190 C 540 140, 570 110, 600 104 M650 96 C 690 100, 712 130, 716 170" fill="none" stroke="#33335C" stroke-width="2.5" stroke-dasharray="6 7"/>
+
+  <text x="400" y="424" class="t s mid">Never stand at a door. Let the bell call you.</text>
+</svg>

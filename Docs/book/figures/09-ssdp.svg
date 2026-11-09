@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 640" width="800" height="640">
+  <rect x="4" y="4" width="792" height="632" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- part 1: the right door -->
+  <text x="40" y="56" class="t b">1 · Shout out of the right door</text>
+  <use href="#laptop" x="40" y="104" width="150" height="99"/>
+  <text x="115" y="236" class="m mid">IP_MULTICAST_IF</text>
+
+  <path d="M196 140 H412" stroke="#5DBE85" stroke-width="7" stroke-linecap="round"/>
+  <text x="250" y="126" class="m">en0</text>
+  <path d="M412 140 H462" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <use href="#router" x="468" y="104" width="96" height="62"/>
+  <text x="574" y="132" class="m">239.255.255.250</text>
+  <text x="574" y="160" class="t s" opacity="0.8">port 1900</text>
+  <use href="#check" x="420" y="90" width="34" height="34"/>
+
+  <path d="M196 184 H412" stroke="#A79FD0" stroke-width="7" stroke-linecap="round" stroke-dasharray="14 10"/>
+  <text x="250" y="216" class="m">utun3</text>
+  <use href="#cross" x="420" y="168" width="34" height="34"/>
+  <text x="468" y="194" class="t s">the VPN: somebody</text>
+  <text x="468" y="222" class="t s">else’s printers</text>
+
+  <path d="M40 262 H760" stroke="#EADFCC" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- part 2: the LOCATION gate -->
+  <text x="40" y="306" class="t b">2 · Fetch LOCATION, carefully</text>
+  <rect x="40" y="326" width="350" height="190" rx="16" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <use href="#check" x="56" y="342" width="28" height="28"/>
+  <text x="94" y="364" class="t s"><tspan class="m">http</tspan> only</text>
+  <use href="#check" x="56" y="384" width="28" height="28"/>
+  <text x="94" y="406" class="t s">a number, not a name</text>
+  <use href="#check" x="56" y="426" width="28" height="28"/>
+  <text x="94" y="448" class="t s">= who sent the reply</text>
+  <use href="#check" x="56" y="468" width="28" height="28"/>
+  <text x="94" y="490" class="t s">no redirects, ≤ 256 KB</text>
+
+  <use href="#lock" x="412" y="336" width="48" height="58"/>
+  <text x="474" y="372" class="t s" font-weight="700">before any fetch</text>
+  <use href="#pip" x="660" y="320" width="90" height="90"/>
+
+  <text x="420" y="440" class="m">http://192.168.1.40/d</text>
+  <use href="#check" x="420" y="456" width="28" height="28"/>
+  <text x="456" y="478" class="t s">it describes itself</text>
+
+  <text x="40" y="560" class="m">file:///…/.ssh/id_rsa</text>
+  <use href="#cross" x="340" y="538" width="28" height="28"/>
+  <text x="420" y="560" class="m">http://127.0.0.1:…</text>
+  <use href="#cross" x="680" y="538" width="28" height="28"/>
+  <text x="400" y="610" class="t s mid">A reply may only describe <tspan font-weight="700">itself</tspan>.</text>
+</svg>

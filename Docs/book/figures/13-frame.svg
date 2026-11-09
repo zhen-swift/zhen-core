@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <rect x="4" y="4" width="792" height="492" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+  <text x="400" y="54" class="t b mid">A SYN, built byte by byte: 54 bytes</text>
+
+  <rect x="40"  y="84" width="190" height="80" fill="#6FA8FF" stroke="#33335C" stroke-width="3"/>
+  <rect x="230" y="84" width="265" height="80" fill="#B9A3F5" stroke="#33335C" stroke-width="3"/>
+  <rect x="495" y="84" width="265" height="80" fill="#FFB38A" stroke="#33335C" stroke-width="3"/>
+  <text x="135" y="122" class="t b mid">Ethernet</text>
+  <text x="135" y="152" class="t s mid">14</text>
+  <text x="362" y="122" class="t b mid">IPv4</text>
+  <text x="362" y="152" class="t s mid">20</text>
+  <text x="627" y="122" class="t b mid">TCP</text>
+  <text x="627" y="152" class="t s mid">20</text>
+
+  <g class="t s">
+    <text x="52" y="210">their MAC</text>
+    <text x="52" y="244">our MAC</text>
+    <text x="52" y="278">0x0800</text>
+
+    <text x="244" y="210">Don’t Fragment</text>
+    <text x="244" y="244">TTL 64</text>
+    <text x="244" y="278">header checksum</text>
+
+    <text x="508" y="210">our port → port</text>
+    <text x="508" y="244">seq = a cookie</text>
+    <text x="508" y="278">flag: SYN</text>
+    <text x="508" y="312">checksum</text>
+    <text x="508" y="342" opacity="0.8">+ pseudo-header</text>
+  </g>
+
+  <rect x="40" y="378" width="720" height="92" rx="18" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <use href="#pip" x="54" y="386" width="76" height="76"/>
+  <text x="146" y="416" class="t s">Every number written big-endian, by index.</text>
+  <text x="146" y="450" class="t s">Reading back: the IP length is read, never 20.</text>
+</svg>

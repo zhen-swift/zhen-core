@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <rect x="4" y="4" width="792" height="592" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+  <text x="400" y="54" class="t b mid">The weakness Zhen accepts</text>
+
+  <!-- FreeBSD -->
+  <rect x="40" y="80" width="340" height="250" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="210" y="118" class="t b mid">FreeBSD</text>
+  <use href="#periscope" x="100" y="136" width="70" height="120"/>
+  <use href="#lock" x="158" y="170" width="54" height="66"/>
+  <text x="290" y="200" class="m mid">BIOCLOCK</text>
+  <text x="290" y="232" class="t s mid">frozen</text>
+  <text x="210" y="300" class="t s mid">sees only what it was given</text>
+
+  <!-- Darwin -->
+  <rect x="420" y="80" width="340" height="250" rx="20" fill="#fff" stroke="#F26B6B" stroke-width="4"/>
+  <text x="590" y="118" class="t b mid">Darwin</text>
+  <g transform="rotate(-18 520 250)"><use href="#periscope" x="480" y="136" width="70" height="120"/></g>
+  <path d="M600 160 C 640 150, 660 180, 650 210" fill="none" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="680" y="248" class="t s mid">re-aim</text>
+  <text x="680" y="276" class="t s mid">at will</text>
+  <text x="590" y="312" class="t s mid">no lock: whole segment</text>
+
+  <!-- so -->
+  <rect x="40" y="350" width="720" height="70" rx="18" fill="#FFD45E" stroke="#33335C" stroke-width="3"/>
+  <text x="400" y="394" class="t s mid">So: only our signed app may ever get the ticket.</text>
+
+  <!-- rejected alternative -->
+  <text x="40" y="468" class="t b">Rejected: run the sweeps inside the helper</text>
+  <rect x="40" y="488" width="96" height="80" fill="#D9D3EC" stroke="#33335C" stroke-width="3"/>
+  <text x="88" y="522" class="t s mid">today</text>
+  <text x="88" y="552" class="t s mid">1×</text>
+  <rect x="152" y="488" width="180" height="80" fill="#D9D3EC" stroke="#33335C" stroke-width="3" stroke-dasharray="8 6"/>
+  <text x="242" y="536" class="t s mid">~3× root</text>
+  <use href="#cross" x="308" y="470" width="40" height="40"/>
+  <text x="360" y="524" class="t s">stronger wall, far more</text>
+  <text x="360" y="556" class="t s">code running as root</text>
+</svg>

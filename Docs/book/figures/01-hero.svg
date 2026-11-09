@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <rect x="4" y="4" width="792" height="592" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- tower and flag -->
+  <path d="M400 30 V74" stroke="#33335C" stroke-width="3"/>
+  <path d="M400 30 L432 40 L400 50 Z" fill="#F26B6B" stroke="#33335C" stroke-width="2.5" stroke-linejoin="round"/>
+  <rect x="330" y="72" width="140" height="90" fill="#D9D3EC" stroke="#33335C" stroke-width="4"/>
+
+  <!-- the wall -->
+  <path d="M40 470 V150 H80 V122 H120 V150 H160 V122 H200 V150 H240 V122 H280 V150 H520 V122 H560 V150 H600 V122 H640 V150 H680 V122 H720 V150 H760 V470 Z"
+        fill="#D9D3EC" stroke="#33335C" stroke-width="4" stroke-linejoin="round"/>
+  <g stroke="#A79FD0" stroke-width="3" stroke-linecap="round">
+    <path d="M70 190 h30 M150 210 h26 M640 190 h30 M700 214 h26 M230 196 h24 M560 200 h24"/>
+  </g>
+  <text x="400" y="232" class="t h mid">the kernel</text>
+
+  <!-- five doors, five plaques -->
+  <g>
+    <rect x="58" y="282" width="114" height="40" rx="10" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <text x="115" y="310" class="m mid">socket</text>
+    <use href="#door" x="75" y="336" width="80" height="134"/>
+
+    <rect x="198" y="282" width="114" height="40" rx="10" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <text x="255" y="310" class="m mid">read</text>
+    <use href="#door" x="215" y="336" width="80" height="134"/>
+
+    <rect x="338" y="282" width="114" height="40" rx="10" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <text x="395" y="310" class="m mid">close</text>
+    <use href="#door" x="355" y="336" width="80" height="134"/>
+
+    <rect x="478" y="282" width="114" height="40" rx="10" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <text x="535" y="310" class="m mid">sysctl</text>
+    <use href="#door" x="495" y="336" width="80" height="134"/>
+
+    <rect x="618" y="282" width="114" height="40" rx="10" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <text x="675" y="310" class="m mid">ioctl</text>
+    <use href="#door" x="635" y="336" width="80" height="134"/>
+  </g>
+
+  <path d="M30 472 H770" stroke="#EADFCC" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- Pip outside -->
+  <use href="#pip" x="48" y="480" width="100" height="100"/>
+  <rect x="166" y="500" width="440" height="60" rx="18" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <path d="M168 530 L150 538 L168 546" fill="#fff" stroke="#33335C" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M170 532 V544" stroke="#fff" stroke-width="5"/>
+  <text x="386" y="538" class="t s mid">one door for each kind of request</text>
+</svg>

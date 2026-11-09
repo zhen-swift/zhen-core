@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" width="800" height="560">
+  <rect x="4" y="4" width="792" height="552" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <text x="400" y="56" class="t b mid">Every host × every port, in one list</text>
+
+  <!-- the grid -->
+  <text x="60" y="117" class="m mid">.2</text>
+  <text x="60" y="167" class="m mid">.5</text>
+  <text x="60" y="217" class="m mid">.9</text>
+  <g class="m">
+    <rect x="96" y="88" width="70" height="42" rx="10" fill="#FFD45E" stroke="#33335C" stroke-width="2.5"/><text x="131" y="117" class="m mid">22</text>
+    <rect x="174" y="88" width="70" height="42" rx="10" fill="#FFD45E" stroke="#33335C" stroke-width="2.5"/><text x="209" y="117" class="m mid">80</text>
+    <rect x="252" y="88" width="70" height="42" rx="10" fill="#FFD45E" stroke="#33335C" stroke-width="2.5"/><text x="287" y="117" class="m mid">443</text>
+    <rect x="330" y="88" width="70" height="42" rx="10" fill="#FFD45E" stroke="#33335C" stroke-width="2.5"/><text x="365" y="117" class="m mid">8080</text>
+
+    <rect x="96" y="138" width="70" height="42" rx="10" fill="#FFD45E" stroke="#33335C" stroke-width="2.5"/><text x="131" y="167" class="m mid">22</text>
+    <rect x="174" y="138" width="70" height="42" rx="10" fill="#FFD45E" stroke="#33335C" stroke-width="2.5"/><text x="209" y="167" class="m mid">80</text>
+    <rect x="252" y="138" width="70" height="42" rx="10" fill="#FFD45E" stroke="#33335C" stroke-width="2.5"/><text x="287" y="167" class="m mid">443</text>
+    <rect x="330" y="138" width="70" height="42" rx="10" fill="#FFD45E" stroke="#33335C" stroke-width="2.5"/><text x="365" y="167" class="m mid">8080</text>
+
+    <rect x="96" y="188" width="70" height="42" rx="10" fill="#FFD45E" stroke="#33335C" stroke-width="2.5"/><text x="131" y="217" class="m mid">22</text>
+    <rect x="174" y="188" width="70" height="42" rx="10" fill="#FFD45E" stroke="#33335C" stroke-width="2.5"/><text x="209" y="217" class="m mid">80</text>
+    <rect x="252" y="188" width="70" height="42" rx="10" fill="#FFD45E" stroke="#33335C" stroke-width="2.5"/><text x="287" y="217" class="m mid">443</text>
+    <rect x="330" y="188" width="70" height="42" rx="10" fill="#FFD45E" stroke="#33335C" stroke-width="2.5"/><text x="365" y="217" class="m mid">8080</text>
+  </g>
+
+  <!-- into one pool -->
+  <path d="M414 160 H462" stroke="#33335C" stroke-width="3.5" marker-end="url(#arrow)"/>
+  <path d="M474 96 h170 l-50 56 v40 h-70 v-40 Z" fill="#B9A3F5" stroke="#33335C" stroke-width="3.5" stroke-linejoin="round"/>
+  <text x="559" y="130" class="t s mid">one pool</text>
+  <text x="559" y="232" class="m mid">min(512, tickets÷4)</text>
+  <text x="700" y="158" class="t s mid">at once</text>
+
+  <!-- the payoff -->
+  <path d="M40 262 H760" stroke="#EADFCC" stroke-width="4" stroke-linecap="round"/>
+  <text x="400" y="304" class="t b mid">A host where every port is filtered costs…</text>
+
+  <text x="40" y="358" class="t s">one by one</text>
+  <rect x="200" y="332" width="116" height="38" rx="10" fill="#D9D3EC" stroke="#33335C" stroke-width="2.5"/>
+  <rect x="322" y="332" width="116" height="38" rx="10" fill="#D9D3EC" stroke="#33335C" stroke-width="2.5"/>
+  <rect x="444" y="332" width="116" height="38" rx="10" fill="#D9D3EC" stroke="#33335C" stroke-width="2.5"/>
+  <rect x="566" y="332" width="116" height="38" rx="10" fill="#D9D3EC" stroke="#33335C" stroke-width="2.5"/>
+  <text x="258" y="358" class="t s mid">wait</text><text x="380" y="358" class="t s mid">wait</text>
+  <text x="502" y="358" class="t s mid">wait</text><text x="624" y="358" class="t s mid">wait</text>
+  <use href="#pip-worried" x="696" y="314" width="64" height="64"/>
+
+  <text x="40" y="440" class="t s">one pool</text>
+  <rect x="200" y="400" width="130" height="26" rx="8" fill="#BDEBD6" stroke="#33335C" stroke-width="2.5"/>
+  <rect x="200" y="430" width="130" height="26" rx="8" fill="#BDEBD6" stroke="#33335C" stroke-width="2.5"/>
+  <rect x="200" y="460" width="130" height="26" rx="8" fill="#BDEBD6" stroke="#33335C" stroke-width="2.5"/>
+  <rect x="200" y="490" width="130" height="26" rx="8" fill="#BDEBD6" stroke="#33335C" stroke-width="2.5"/>
+  <text x="350" y="452" class="t s">one wait, side by side</text>
+  <use href="#pip-yay" x="640" y="420" width="76" height="76"/>
+</svg>

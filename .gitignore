@@ -22,3 +22,8 @@ Package.resolved
 # Captured route-socket and NBSTAT fixtures are committed deliberately — see
 # Tests/ZhenDarwinTests/Fixtures, and the header there explaining which are real
 # captures and which are constructed. Nothing else binary belongs in the tree.
+
+# ── The book ────────────────────────────────────────────────────────────────
+# Docs/book is built into an EPUB by Scripts/build-book.sh. The EPUB and the figures
+# with the drawing kit injected are build products.
+Docs/book/build/

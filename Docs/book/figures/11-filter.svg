@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" width="800" height="560">
+  <rect x="4" y="4" width="792" height="552" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+  <text x="400" y="56" class="t h mid">The ARP filter: 4 instructions</text>
+
+  <!-- frames arriving -->
+  <text x="150" y="110" class="t s mid">every frame</text>
+  <g>
+    <rect x="60" y="130" width="180" height="56" rx="14" fill="#FFB38A" stroke="#33335C" stroke-width="3"/>
+    <text x="150" y="166" class="t s mid">ARP reply</text>
+    <rect x="60" y="206" width="180" height="56" rx="14" fill="#D9D3EC" stroke="#33335C" stroke-width="3"/>
+    <text x="150" y="242" class="t s mid">video</text>
+    <rect x="60" y="282" width="180" height="56" rx="14" fill="#D9D3EC" stroke="#33335C" stroke-width="3"/>
+    <text x="150" y="318" class="t s mid">someone’s DNS</text>
+  </g>
+  <path d="M250 234 C 290 234, 280 140, 314 136" fill="none" stroke="#33335C" stroke-width="3.5" marker-end="url(#arrow)"/>
+
+  <!-- program -->
+  <rect x="320" y="92" width="300" height="84" rx="16" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="470" y="128" class="m mid">ldh [12]</text>
+  <text x="470" y="160" class="t s mid">read the type</text>
+  <path d="M470 176 V204" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <path d="M470 210 L610 262 L470 314 L330 262 Z" fill="#FFD45E" stroke="#33335C" stroke-width="3" stroke-linejoin="round"/>
+  <text x="470" y="256" class="m mid">jeq #0x806</text>
+  <text x="470" y="286" class="t s mid">ARP?</text>
+
+  <path d="M380 296 L330 360" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M560 296 L610 360" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="330" y="322" class="t s" text-anchor="end">yes</text>
+  <text x="612" y="322" class="t s">no</text>
+
+  <rect x="232" y="366" width="210" height="84" rx="16" fill="#5DBE85" stroke="#33335C" stroke-width="3"/>
+  <text x="337" y="402" class="m mid">ret #262144</text>
+  <text x="337" y="434" class="t s mid">keep it</text>
+  <rect x="520" y="366" width="210" height="84" rx="16" fill="#F26B6B" stroke="#33335C" stroke-width="3"/>
+  <text x="625" y="402" class="m mid">ret #0</text>
+  <text x="625" y="434" class="t s mid">drop it</text>
+
+  <use href="#castle" x="660" y="80" width="110" height="94"/>
+  <text x="400" y="502" class="t b mid">Runs inside the kernel, on every frame.</text>
+  <text x="400" y="536" class="t s mid">Only what passes is copied to us.</text>
+</svg>

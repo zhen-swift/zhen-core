@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <rect x="4" y="4" width="792" height="492" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- the rule -->
+  <text x="40" y="62" class="t b">The rule says</text>
+  <text x="40" y="96" class="m">RLIMIT_NOFILE</text>
+  <rect x="40" y="114" width="700" height="44" rx="12" fill="#B9A3F5" stroke="#33335C" stroke-width="3"/>
+  <path d="M740 114 l24 22 l-24 22" fill="#B9A3F5" stroke="#33335C" stroke-width="3" stroke-linejoin="round"/>
+  <text x="390" y="145" class="t s mid">9,223,372,036,854,775,807 … basically ∞</text>
+
+  <!-- the kernel -->
+  <text x="40" y="214" class="t b">The kernel really gives</text>
+  <text x="40" y="248" class="m">kern.maxfilesperproc</text>
+  <rect x="40" y="266" width="230" height="44" rx="12" fill="#5DBE85" stroke="#33335C" stroke-width="3"/>
+  <text x="155" y="297" class="t s mid">92,160</text>
+  <text x="300" y="297" class="t s" opacity="0.7">(on the Mac the code was written on)</text>
+
+  <!-- funnel -->
+  <path d="M110 330 h300 l-90 60 v40 h-120 v-40 Z" fill="#FFD45E" stroke="#33335C" stroke-width="3.5" stroke-linejoin="round"/>
+  <text x="260" y="372" class="t s mid">take the smaller</text>
+
+  <path d="M330 428 C 400 470, 450 470, 500 440" fill="none" stroke="#33335C" stroke-width="3.5" marker-end="url(#arrow)"/>
+
+  <rect x="504" y="352" width="260" height="120" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="634" y="394" class="m mid">min(512, limit÷4)</text>
+  <text x="634" y="444" class="t h mid">512 at once</text>
+  <use href="#pip-yay" x="680" y="176" width="96" height="96"/>
+</svg>

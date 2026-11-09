@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 640" width="800" height="640">
+  <rect x="4" y="4" width="792" height="632" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- wrong -->
+  <use href="#cross" x="34" y="30" width="44" height="44"/>
+  <text x="90" y="62" class="t b">close right after cancel</text>
+  <path d="M60 128 H750" stroke="#33335C" stroke-width="3.5" marker-end="url(#arrow)"/>
+  <g fill="#fff" stroke="#33335C" stroke-width="3">
+    <circle cx="110" cy="128" r="11"/><circle cx="290" cy="128" r="11"/>
+    <circle cx="470" cy="128" r="11"/><circle cx="650" cy="128" r="11"/>
+  </g>
+  <text x="110" y="176" class="m mid">cancel()</text>
+  <text x="110" y="206" class="t s mid">returns</text>
+  <text x="290" y="176" class="m mid">close(7)</text>
+  <text x="290" y="206" class="t s mid">too soon</text>
+  <text x="470" y="176" class="m mid">socket()</text>
+  <text x="470" y="206" class="t s mid">gets 7 again</text>
+  <g transform="translate(616 150)"><path d="M8 50 Q13 45 13 32 Q13 10 34 8 Q55 10 55 32 Q55 45 60 50 Z" fill="#FFD45E" stroke="#33335C" stroke-width="3.5" stroke-linejoin="round"/><circle cx="34" cy="56" r="6" fill="#33335C"/><circle cx="34" cy="6" r="4" fill="#33335C"/></g>
+  <text x="650" y="240" class="t s mid">old bell rings</text>
+  <rect x="34" y="258" width="732" height="56" rx="14" fill="#F26B6B" fill-opacity="0.25" stroke="#F26B6B" stroke-width="3"/>
+  <text x="400" y="294" class="t s mid">a filtered port is reported open, in under 1 ms</text>
+
+  <!-- right -->
+  <use href="#check" x="34" y="350" width="44" height="44"/>
+  <text x="90" y="382" class="t b">close inside the cancel handler</text>
+  <path d="M60 448 H750" stroke="#33335C" stroke-width="3.5" marker-end="url(#arrow)"/>
+  <g fill="#fff" stroke="#33335C" stroke-width="3">
+    <circle cx="110" cy="448" r="11"/><circle cx="290" cy="448" r="11"/>
+    <circle cx="470" cy="448" r="11"/><circle cx="650" cy="448" r="11"/>
+  </g>
+  <text x="110" y="496" class="m mid">cancel()</text>
+  <text x="110" y="526" class="t s mid">returns</text>
+  <text x="290" y="496" class="t s mid">kernel lets</text>
+  <text x="290" y="526" class="t s mid">go of 7</text>
+  <text x="470" y="496" class="t s mid">cancel handler:</text>
+  <text x="470" y="526" class="m mid">close(7)</text>
+  <text x="650" y="496" class="t s mid">now 7 is</text>
+  <text x="650" y="526" class="t s mid">safe to reuse</text>
+  <use href="#pip-yay" x="660" y="540" width="84" height="84"/>
+  <text x="40" y="596" class="t s" opacity="0.7">The handler also resumes the waiting task.</text>
+</svg>

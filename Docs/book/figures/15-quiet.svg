@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" width="800" height="560">
+  <rect x="4" y="4" width="792" height="552" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- left: the nagging way -->
+  <rect x="24" y="24" width="370" height="440" rx="22" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="209" y="66" class="t b mid">Nag on every scan</text>
+  <g>
+    <rect x="44" y="90" width="330" height="44" rx="10" fill="#FFD45E" stroke="#33335C" stroke-width="2.5"/>
+    <text x="60" y="120" class="t s">⚠ no ARP table</text>
+    <rect x="44" y="142" width="330" height="44" rx="10" fill="#FFD45E" stroke="#33335C" stroke-width="2.5"/>
+    <text x="60" y="172" class="t s">⚠ no SSDP</text>
+    <rect x="44" y="194" width="330" height="44" rx="10" fill="#FFD45E" stroke="#33335C" stroke-width="2.5"/>
+    <text x="60" y="224" class="t s">⚠ no MAC addresses</text>
+    <rect x="44" y="246" width="330" height="44" rx="10" fill="#FFD45E" stroke="#33335C" stroke-width="2.5" opacity="0.6"/>
+    <text x="60" y="276" class="t s" opacity="0.6">⚠ no …</text>
+  </g>
+  <use href="#pip-worried" x="62" y="300" width="130" height="130"/>
+  <text x="290" y="356" class="t s mid">reader</text>
+  <text x="290" y="384" class="t s mid">stops</text>
+  <text x="290" y="412" class="t s mid">reading</text>
+  <!-- big X over the panel -->
+  <path d="M56 92 L362 286 M362 92 L56 286" stroke="#F26B6B" stroke-width="8" stroke-linecap="round" opacity="0.55"/>
+
+  <!-- right: the Zhen way -->
+  <rect x="406" y="24" width="370" height="440" rx="22" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="591" y="66" class="t b mid">Claim only what runs</text>
+  <!-- an ID badge -->
+  <rect x="440" y="90" width="302" height="236" rx="18" fill="#BDEBD6" stroke="#33335C" stroke-width="3"/>
+  <rect x="566" y="78" width="50" height="22" rx="6" fill="#A79FD0" stroke="#33335C" stroke-width="2.5"/>
+  <text x="591" y="136" class="t s mid">engine can do</text>
+  <rect x="470" y="154" width="242" height="40" rx="20" fill="#fff" stroke="#33335C" stroke-width="2.5"/>
+  <text x="591" y="182" class="m mid">icmp_sweep</text>
+  <rect x="470" y="206" width="242" height="40" rx="20" fill="#fff" stroke="#33335C" stroke-width="2.5"/>
+  <text x="591" y="234" class="m mid">connect_scan</text>
+  <rect x="470" y="258" width="242" height="40" rx="20" fill="#fff" stroke="#33335C" stroke-width="2.5"/>
+  <text x="591" y="286" class="m mid">banner_probe</text>
+  <use href="#pip-yay" x="456" y="334" width="116" height="116"/>
+  <text x="680" y="382" class="t s mid">nothing</text>
+  <text x="680" y="410" class="t s mid">to skip</text>
+
+  <text x="400" y="510" class="t b mid">An absence that is normal is not a warning.</text>
+</svg>

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 540" width="800" height="540">
+  <rect x="4" y="4" width="792" height="532" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- the network -->
+  <g stroke="#33335C" stroke-width="3" stroke-dasharray="8 7" fill="none">
+    <path d="M400 230 L170 130"/><path d="M400 230 V130"/><path d="M400 230 L630 130"/>
+    <path d="M370 280 L230 370"/><path d="M430 280 L590 360"/>
+  </g>
+  <use href="#device" x="120" y="44" width="100" height="88"/>
+  <use href="#device" x="350" y="40" width="100" height="88"/>
+  <use href="#device" x="580" y="44" width="100" height="88"/>
+  <use href="#router" x="330" y="200" width="140" height="90"/>
+
+  <!-- the two homes of the engine -->
+  <use href="#laptop" x="70" y="330" width="190" height="125"/>
+  <text x="165" y="490" class="t b mid">Mac</text>
+  <use href="#phone" x="590" y="320" width="80" height="138"/>
+  <use href="#phone" x="676" y="356" width="64" height="102"/>
+  <text x="664" y="494" class="t b mid">iPhone, iPad</text>
+
+  <use href="#pip-yay" x="340" y="350" width="120" height="120"/>
+  <text x="400" y="502" class="t s mid">same engine</text>
+  <use href="#sparkle" x="300" y="360" width="22" height="22"/>
+  <use href="#sparkle" x="474" y="380" width="26" height="26"/>
+</svg>

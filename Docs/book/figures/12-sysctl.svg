@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <rect x="4" y="4" width="792" height="592" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+  <text x="400" y="54" class="t b mid">The address you give sysctl (a MIB)</text>
+
+  <!-- MIB chips -->
+  <g>
+    <rect x="30"  y="78" width="124" height="48" rx="12" fill="#D9D3EC" stroke="#33335C" stroke-width="3"/>
+    <rect x="166" y="78" width="136" height="48" rx="12" fill="#D9D3EC" stroke="#33335C" stroke-width="3"/>
+    <rect x="314" y="78" width="40"  height="48" rx="12" fill="#D9D3EC" stroke="#33335C" stroke-width="3"/>
+    <rect x="366" y="78" width="112" height="48" rx="12" fill="#6FA8FF" stroke="#33335C" stroke-width="3"/>
+    <rect x="490" y="78" width="280" height="48" rx="12" fill="#FFD45E" stroke="#33335C" stroke-width="3"/>
+  </g>
+  <g class="m mid">
+    <text x="92"  y="110">CTL_NET</text>
+    <text x="234" y="110">PF_ROUTE</text>
+    <text x="334" y="110">0</text>
+    <text x="422" y="110">AF_INET</text>
+    <text x="630" y="110">FLAGS, LLINFO</text>
+  </g>
+  <text x="422" y="156" class="t s mid">IPv4</text>
+  <text x="630" y="156" class="t s mid">= the ARP table</text>
+
+  <!-- call 1 -->
+  <rect x="30" y="186" width="360" height="230" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="56" y="230" class="t h">1</text>
+  <text x="220" y="230" class="t b mid">“How big?”</text>
+  <text x="210" y="272" class="m mid">sysctl(mib, nil)</text>
+  <use href="#castle" x="70" y="290" width="120" height="102"/>
+  <rect x="210" y="318" width="150" height="56" rx="14" fill="#BDEBD6" stroke="#33335C" stroke-width="3"/>
+  <text x="285" y="355" class="t b mid">≈37 KB</text>
+
+  <!-- call 2 -->
+  <rect x="410" y="186" width="360" height="230" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="436" y="230" class="t h">2</text>
+  <text x="600" y="230" class="t b mid">“Fill this.”</text>
+  <path d="M470 280 h120 l-10 112 h-100 Z" fill="#D9D3EC" stroke="#33335C" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M478 330 h104" stroke="#A79FD0" stroke-width="3" stroke-dasharray="6 6"/>
+  <text x="530" y="372" class="t s mid">37 KB</text>
+  <text x="680" y="314" class="t s mid">+ 4096</text>
+  <text x="680" y="342" class="t s mid">spare</text>
+  <use href="#check" x="656" y="352" width="48" height="48"/>
+
+  <path d="M392 300 H408" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- retry -->
+  <path d="M590 418 C 590 480, 220 480, 210 422" fill="none" stroke="#F26B6B" stroke-width="3.5" stroke-dasharray="10 8" marker-end="url(#arrow)"/>
+  <rect x="250" y="440" width="300" height="48" rx="14" fill="#fff" stroke="#F26B6B" stroke-width="3"/>
+  <text x="400" y="472" class="m mid">ENOMEM: it grew!</text>
+  <text x="400" y="530" class="t s mid">Try again, up to 4 times.</text>
+  <text x="400" y="564" class="t s mid" opacity="0.75">A phone joining Wi-Fi is enough to grow it.</text>
+</svg>

@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <rect x="4" y="4" width="792" height="492" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- kernel side -->
+  <rect x="424" y="24" width="352" height="452" rx="22" fill="#D9D3EC" fill-opacity="0.5"/>
+  <text x="190" y="66" class="t b mid">user space</text>
+  <text x="610" y="66" class="t b mid">kernel space</text>
+
+  <!-- the wall and its door -->
+  <rect x="360" y="90" width="64" height="340" fill="#D9D3EC" stroke="#33335C" stroke-width="3.5"/>
+  <path d="M360 150 h64 M360 210 h64 M360 390 h64" stroke="#A79FD0" stroke-width="3"/>
+  <use href="#door" x="362" y="262" width="60" height="84"/>
+  <text x="392" y="466" class="m mid">syscall</text>
+
+  <!-- Pip, the app -->
+  <use href="#pip" x="80" y="250" width="150" height="150"/>
+  <text x="155" y="436" class="t s mid">your app</text>
+
+  <!-- the hardware -->
+  <g>
+    <path d="M660 252 V206" stroke="#33335C" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="660" cy="200" r="7" fill="#5DBE85" stroke="#33335C" stroke-width="3"/>
+    <rect x="560" y="252" width="140" height="96" rx="12" fill="#A79FD0" stroke="#33335C" stroke-width="3.5"/>
+    <path d="M584 348 v14 M610 348 v14 M636 348 v14 M662 348 v14 M584 238 v14 M610 238 v14" stroke="#33335C" stroke-width="3" stroke-linecap="round"/>
+    <rect x="590" y="276" width="80" height="48" rx="6" fill="#D9D3EC" stroke="#33335C" stroke-width="2.5"/>
+    <text x="630" y="400" class="t s mid">Wi-Fi chip</text>
+  </g>
+
+  <!-- the allowed way -->
+  <g fill="none" stroke="#33335C" stroke-width="3.5" marker-end="url(#arrow)">
+    <path d="M236 330 H354"/>
+    <path d="M430 304 C 480 304, 500 300, 552 300"/>
+  </g>
+  <use href="#check" x="460" y="250" width="40" height="40"/>
+
+  <!-- the shortcut that does not exist -->
+  <path d="M160 240 C 220 110, 520 100, 610 190" fill="none" stroke="#33335C" stroke-width="3" stroke-dasharray="9 8"/>
+  <use href="#cross" x="368" y="104" width="48" height="48"/>
+  <text x="50" y="146" class="t s">no shortcut</text>
+</svg>

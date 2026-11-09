@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 460" width="800" height="460">
+  <rect x="4" y="4" width="792" height="452" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+  <path d="M30 380 H770" stroke="#EADFCC" stroke-width="6" stroke-linecap="round"/>
+
+  <use href="#pip" x="40" y="220" width="150" height="150"/>
+
+  <!-- the letter -->
+  <g transform="rotate(-6 350 240)">
+    <rect x="210" y="160" width="270" height="160" rx="12" fill="#fff" stroke="#33335C" stroke-width="3.5"/>
+    <path d="M212 164 L345 248 L478 164" fill="none" stroke="#33335C" stroke-width="3" opacity="0.35"/>
+    <rect x="236" y="236" width="220" height="68" rx="8" fill="#FFD45E" stroke="#33335C" stroke-width="2.5"/>
+    <text x="346" y="266" class="m mid">192.168.1.20</text>
+    <text x="346" y="294" class="m mid">port 80</text>
+  </g>
+
+  <use href="#mailbox" x="560" y="130" width="160" height="200"/>
+  <path d="M500 220 C 520 200, 540 200, 562 206" fill="none" stroke="#33335C" stroke-width="3" stroke-dasharray="8 7" marker-end="url(#arrow)"/>
+
+  <text x="640" y="110" class="t b mid">the socket</text>
+  <text x="346" y="110" class="t b mid">the address</text>
+  <text x="346" y="140" class="m mid">sockaddr</text>
+  <text x="400" y="428" class="t s mid">A mailbox sends nothing until you write an address.</text>
+</svg>

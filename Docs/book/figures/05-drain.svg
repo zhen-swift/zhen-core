@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 660" width="800" height="660">
+  <rect x="4" y="4" width="792" height="652" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <g transform="translate(36 26) scale(0.8)"><path d="M8 50 Q13 45 13 32 Q13 10 34 8 Q55 10 55 32 Q55 45 60 50 Z" fill="#FFD45E" stroke="#33335C" stroke-width="3.5" stroke-linejoin="round"/><circle cx="34" cy="56" r="6" fill="#33335C"/><circle cx="34" cy="6" r="4" fill="#33335C"/></g>
+  <text x="98" y="62" class="t b">One ding: read until empty</text>
+  <g transform="translate(560 30) scale(0.7)"><circle cx="30" cy="30" r="26" fill="#fff" stroke="#33335C" stroke-width="3.5"/><path d="M30 14 V30 L42 38" fill="none" stroke="#33335C" stroke-width="3.5" stroke-linecap="round"/></g>
+  <text x="606" y="62" class="t s">stamp time now</text>
+
+  <!-- the queue -->
+  <g>
+    <rect x="40" y="100" width="110" height="68" rx="6" fill="#BDEBD6" stroke="#33335C" stroke-width="3"/>
+    <path d="M42 104 L95 140 L148 104" fill="none" stroke="#33335C" stroke-width="2.5" opacity="0.5"/>
+    <g transform="rotate(10 150 100)"><rect x="124" y="84" width="74" height="30" rx="5" fill="#FFD45E" stroke="#33335C" stroke-width="2.5"/><text x="161" y="107" class="m mid" style="font-size:22px">TTL</text></g>
+    <text x="214" y="144" class="t s">echo reply</text>
+    <use href="#check" x="470" y="114" width="40" height="40"/>
+    <text x="522" y="144" class="t s">keep it</text>
+
+    <rect x="40" y="196" width="110" height="68" rx="6" fill="#F26B6B" stroke="#33335C" stroke-width="3"/>
+    <path d="M42 200 L95 236 L148 200" fill="none" stroke="#33335C" stroke-width="2.5" opacity="0.5"/>
+    <text x="214" y="240" class="t s">unreachable</text>
+    <use href="#cross" x="470" y="210" width="40" height="40"/>
+    <text x="522" y="240" class="t s">skip, read on</text>
+
+    <rect x="40" y="292" width="110" height="68" rx="6" fill="#B9A3F5" stroke="#33335C" stroke-width="3"/>
+    <path d="M42 296 L95 332 L148 296" fill="none" stroke="#33335C" stroke-width="2.5" opacity="0.5"/>
+    <text x="214" y="322" class="t s">no NSTY,</text>
+    <text x="214" y="348" class="t s">bad checksum</text>
+    <use href="#cross" x="470" y="306" width="40" height="40"/>
+    <text x="522" y="336" class="t s">skip, read on</text>
+
+    <rect x="40" y="388" width="110" height="68" rx="6" fill="#BDEBD6" stroke="#33335C" stroke-width="3"/>
+    <path d="M42 392 L95 428 L148 392" fill="none" stroke="#33335C" stroke-width="2.5" opacity="0.5"/>
+    <text x="214" y="432" class="t s">echo reply</text>
+    <use href="#check" x="470" y="402" width="40" height="40"/>
+    <text x="522" y="432" class="t s">keep it</text>
+
+    <rect x="40" y="484" width="110" height="68" rx="6" fill="none" stroke="#33335C" stroke-width="3" stroke-dasharray="8 6"/>
+    <text x="214" y="528" class="t s">nothing left</text>
+    <use href="#off" x="470" y="498" width="40" height="40"/>
+    <text x="522" y="528" class="t s">stop: drained</text>
+  </g>
+  <path d="M440 120 V540" stroke="#EADFCC" stroke-width="4" stroke-linecap="round"/>
+
+  <use href="#pip" x="690" y="440" width="90" height="90"/>
+  <text x="40" y="610" class="t s">TTL rides beside the data, as a control message</text>
+</svg>

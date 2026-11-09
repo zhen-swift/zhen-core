@@ -1,0 +1,50 @@
+/* Zhen & Darwin, Illustrated — EPUB stylesheet.
+   Kept small and conservative: e-readers override fonts and colours freely, so nothing
+   here depends on a font being present or on a background colour surviving night mode.
+   The callout boxes carry a coloured left rule, which survives every theme. */
+
+body { line-height: 1.5; }
+
+h1 { font-size: 1.7em; margin: 0.4em 0 0.6em; line-height: 1.2; }
+h2 { font-size: 1.25em; margin: 1.6em 0 0.5em; }
+h3 { font-size: 1.05em; margin: 1.2em 0 0.4em; }
+
+h1.part, .part-title h1 { text-align: center; }
+
+p { margin: 0.5em 0; }
+ul, ol { margin: 0.4em 0 0.8em; padding-left: 1.4em; }
+li { margin: 0.25em 0; }
+
+/* Figures: full width, never cropped. */
+figure { margin: 1.2em 0; text-align: center; page-break-inside: avoid; }
+figure img, img { max-width: 100%; height: auto; }
+figcaption { font-size: 0.85em; font-style: italic; margin-top: 0.4em; }
+
+/* Code */
+code { font-family: Menlo, "SF Mono", Courier, monospace; font-size: 0.88em; }
+pre { font-size: 0.8em; line-height: 1.35; padding: 0.7em 0.8em; border-radius: 6px;
+      border: 1px solid #d9d3ec; white-space: pre-wrap; word-wrap: break-word;
+      page-break-inside: avoid; }
+.src { font-size: 0.78em; text-align: right; margin-top: -0.4em; opacity: 0.75; }
+
+/* Callouts */
+div.short, div.iphone, div.gotcha, div.remember, div.honest, div.word {
+  margin: 1.1em 0; padding: 0.5em 0.9em; border-left: 6px solid; border-radius: 4px;
+  page-break-inside: avoid;
+}
+div.short    { border-color: #6FA8FF; }
+div.iphone   { border-color: #5DBE85; }
+div.gotcha   { border-color: #F26B6B; }
+div.remember { border-color: #B9A3F5; }
+div.honest   { border-color: #FFB38A; }
+div.word     { border-color: #FFD45E; }
+div.short > p:first-child, div.iphone > p:first-child, div.gotcha > p:first-child,
+div.remember > p:first-child, div.honest > p:first-child, div.word > p:first-child {
+  font-weight: bold; margin-top: 0.2em;
+}
+
+table { border-collapse: collapse; margin: 0.8em 0; font-size: 0.9em; width: 100%; }
+th, td { border: 1px solid #d9d3ec; padding: 0.3em 0.5em; text-align: left; vertical-align: top; }
+th { font-weight: bold; }
+
+nav#toc ol { list-style-type: none; }

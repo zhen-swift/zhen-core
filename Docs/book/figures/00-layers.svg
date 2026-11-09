@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 700" width="800" height="700">
+  <rect x="4" y="4" width="792" height="692" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- the apps -->
+  <use href="#phone" x="72" y="34" width="56" height="96"/>
+  <text x="100" y="164" class="t s mid">zhen-ios</text>
+  <use href="#laptop" x="206" y="44" width="130" height="85"/>
+  <text x="271" y="164" class="t s mid">zhen-app</text>
+  <rect x="410" y="48" width="120" height="80" rx="12" fill="#33335C"/>
+  <text x="428" y="98" class="m" style="fill:#BDEBD6;font-size:30px">&gt;_</text>
+  <text x="470" y="164" class="t s mid">zhen CLI</text>
+  <text x="690" y="96" class="t b mid">the apps</text>
+
+  <!-- arrows into ZhenScan -->
+  <g fill="none" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)">
+    <path d="M100 176 V222"/>
+    <path d="M271 176 V222"/>
+    <path d="M470 176 V340"/>
+  </g>
+  <text x="482" y="268" class="t s">own</text>
+  <text x="482" y="294" class="t s">pipeline</text>
+
+  <!-- ZhenScan -->
+  <rect x="40" y="226" width="380" height="84" rx="16" fill="#B9A3F5" stroke="#33335C" stroke-width="3"/>
+  <text x="60" y="262" class="t b">ZhenScan</text>
+  <text x="60" y="294" class="t s">the adapter for the apps</text>
+
+  <path d="M200 312 V340" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- ZhenDarwin -->
+  <rect x="40" y="344" width="540" height="118" rx="16" fill="#6FA8FF" stroke="#33335C" stroke-width="3"/>
+  <text x="60" y="382" class="t b">ZhenDarwin</text>
+  <text x="60" y="416" class="t s">the only code that</text>
+  <text x="60" y="444" class="t s">knocks on the doors</text>
+  <use href="#door" x="380" y="364" width="50" height="70"/>
+  <use href="#door" x="440" y="364" width="50" height="70"/>
+  <use href="#door" x="500" y="364" width="50" height="70"/>
+
+  <!-- ZhenCore, beside -->
+  <rect x="610" y="226" width="160" height="236" rx="16" fill="#BDEBD6" stroke="#33335C" stroke-width="3"/>
+  <text x="690" y="266" class="t b mid">ZhenCore</text>
+  <text x="690" y="304" class="t s mid">pure Swift</text>
+  <text x="690" y="336" class="t s mid">no doors</text>
+  <text x="690" y="368" class="t s mid">runs on</text>
+  <text x="690" y="396" class="t s mid">Linux too</text>
+  <path d="M582 430 H606" stroke="#33335C" stroke-width="3" stroke-dasharray="6 5"/>
+  <text x="690" y="440" class="t s mid" opacity="0.7">used by all</text>
+
+  <!-- the kernel -->
+  <path d="M310 464 V500" stroke="#33335C" stroke-width="3.5" marker-end="url(#arrow)"/>
+  <use href="#castle" x="210" y="502" width="200" height="170"/>
+  <text x="440" y="600" class="t b">the kernel</text>
+</svg>
