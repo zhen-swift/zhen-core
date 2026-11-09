@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 700" width="800" height="700">
+  <rect x="4" y="4" width="792" height="692" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+  <text x="400" y="56" class="t h mid">The two-byte bug</text>
+  <text x="400" y="92" class="t s mid">one struct bpf_hdr, byte by byte (macOS 26.5)</text>
+
+  <!-- 20 bytes at 34 px each, from x=60 -->
+  <text x="638" y="132" class="t s mid">hdrlen</text>
+  <text x="706" y="132" class="t s mid" opacity="0.8">pad</text>
+  <rect x="60"  y="142" width="272" height="72" fill="#6FA8FF" stroke="#33335C" stroke-width="3"/>
+  <rect x="332" y="142" width="136" height="72" fill="#5DBE85" stroke="#33335C" stroke-width="3"/>
+  <rect x="468" y="142" width="136" height="72" fill="#BDEBD6" stroke="#33335C" stroke-width="3"/>
+  <rect x="604" y="142" width="68"  height="72" fill="#FFD45E" stroke="#33335C" stroke-width="3"/>
+  <rect x="672" y="142" width="68"  height="72" fill="#D9D3EC" stroke="#33335C" stroke-width="3" stroke-dasharray="8 6"/>
+  <path d="M684 154 l20 48 M704 154 l20 48 M724 154 l12 28" stroke="#A79FD0" stroke-width="3"/>
+  <g class="t s mid">
+    <text x="196" y="186">tstamp</text>
+    <text x="400" y="186">caplen</text>
+    <text x="536" y="186">datalen</text>
+  </g>
+  <g class="m mid">
+    <text x="60" y="244">0</text><text x="332" y="244">8</text><text x="468" y="244">12</text>
+    <text x="604" y="244">16</text><text x="672" y="244">18</text><text x="740" y="244">20</text>
+  </g>
+
+  <!-- markers at 18 and 20 -->
+  <path d="M672 256 V312" stroke="#5DBE85" stroke-width="5"/>
+  <path d="M740 256 V360" stroke="#F26B6B" stroke-width="5"/>
+  <text x="660" y="302" class="t s" text-anchor="end">fields end at <tspan font-weight="700">18</tspan>; the kernel writes 18</text>
+  <text x="728" y="352" class="t s" text-anchor="end">sizeof(struct bpf_hdr) = <tspan font-weight="700">20</tspan> (padding)</text>
+
+  <!-- old check -->
+  <rect x="40" y="386" width="350" height="150" rx="20" fill="#fff" stroke="#F26B6B" stroke-width="4"/>
+  <text x="215" y="424" class="t b mid">before</text>
+  <text x="215" y="462" class="m mid">hdrlen &gt;= sizeof</text>
+  <text x="200" y="506" class="m mid">18 &gt;= 20</text>
+  <use href="#cross" x="290" y="476" width="44" height="44"/>
+
+  <!-- fix -->
+  <rect x="410" y="386" width="350" height="150" rx="20" fill="#fff" stroke="#5DBE85" stroke-width="4"/>
+  <text x="585" y="424" class="t b mid">after</text>
+  <text x="585" y="462" class="m mid">offsetof(hdrlen)+2</text>
+  <text x="570" y="506" class="m mid">18 &gt;= 18</text>
+  <use href="#check" x="660" y="476" width="44" height="44"/>
+
+  <!-- the result -->
+  <use href="#pip-worried" x="40" y="560" width="110" height="110"/>
+  <text x="170" y="600" class="t b">759 asked · 9 answered · 0 reported</text>
+  <text x="170" y="638" class="t s">“an empty segment”, and nothing threw.</text>
+  <text x="170" y="668" class="t s" opacity="0.75">Found only by capturing beside a live run.</text>
+</svg>

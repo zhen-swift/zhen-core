@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <rect x="4" y="4" width="792" height="492" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- Mac panel -->
+  <rect x="24" y="24" width="370" height="400" rx="22" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="209" y="68" class="t h mid">Mac</text>
+  <use href="#laptop" x="40" y="250" width="200" height="132"/>
+  <use href="#crown" x="96" y="190" width="88" height="64"/>
+  <use href="#periscope" x="262" y="150" width="70" height="120"/>
+  <use href="#mailbox" x="246" y="280" width="80" height="100"/>
+  <text x="140" y="146" class="t s mid">helper</text>
+  <path d="M140 156 v28" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="300" y="132" class="t s mid">BPF</text>
+  <text x="290" y="406" class="t s mid">sockets</text>
+
+  <!-- iPhone panel -->
+  <rect x="406" y="24" width="370" height="400" rx="22" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="591" y="68" class="t h mid">iPhone</text>
+  <use href="#phone" x="440" y="170" width="110" height="190"/>
+  <use href="#pip-yay" x="456" y="226" width="78" height="78"/>
+  <use href="#mailbox" x="600" y="280" width="80" height="100"/>
+  <text x="640" y="406" class="t s mid">sockets</text>
+  <!-- what the phone does not get -->
+  <g opacity="0.35">
+    <use href="#crown" x="590" y="110" width="70" height="50"/>
+    <use href="#periscope" x="676" y="100" width="50" height="86"/>
+  </g>
+  <use href="#lock" x="652" y="150" width="56" height="68"/>
+
+  <text x="400" y="466" class="t b mid">Same engine. The phone gets the half with no crown.</text>
+</svg>

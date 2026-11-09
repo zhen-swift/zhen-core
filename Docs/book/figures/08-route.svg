@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 540" width="800" height="540">
+  <rect x="4" y="4" width="792" height="532" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <use href="#laptop" x="40" y="30" width="120" height="79"/>
+  <text x="180" y="66" class="t b">On the Mac: ask the castle</text>
+  <text x="180" y="100" class="m">sysctl(… NET_RT_DUMP …)</text>
+
+  <!-- the table -->
+  <rect x="40" y="130" width="720" height="210" rx="16" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="60" y="168" class="t s" font-weight="700">to</text>
+  <text x="300" y="168" class="t s" font-weight="700">via</text>
+  <text x="520" y="168" class="t s" font-weight="700">flags</text>
+  <text x="640" y="168" class="t s" font-weight="700">if</text>
+  <path d="M40 182 H760" stroke="#EADFCC" stroke-width="3"/>
+
+  <rect x="48" y="190" width="704" height="44" rx="10" fill="#BDEBD6" stroke="#5DBE85" stroke-width="3"/>
+  <text x="60" y="220" class="m">0.0.0.0</text>
+  <text x="300" y="220" class="m">192.168.1.1</text>
+  <text x="520" y="220" class="m">UP GW</text>
+  <text x="640" y="220" class="m">4</text>
+
+  <text x="60" y="270" class="m">192.168.1.0/24</text>
+  <text x="300" y="270" class="m">(link)</text>
+  <text x="520" y="270" class="m">UP</text>
+  <text x="640" y="270" class="m">4</text>
+
+  <text x="60" y="316" class="m">10.8.0.0/16</text>
+  <text x="300" y="316" class="m">10.8.0.1</text>
+  <text x="520" y="316" class="m">UP GW</text>
+  <text x="640" y="316" class="m">9</text>
+
+  <!-- the answer -->
+  <path d="M660 340 C 660 380, 520 390, 470 400" fill="none" stroke="#33335C" stroke-width="3.5" marker-end="url(#arrow)"/>
+  <text x="60" y="412" class="m">if_indextoname(4)</text>
+  <text x="300" y="412" class="t s">→</text>
+  <rect x="336" y="384" width="120" height="44" rx="22" fill="#5DBE85" stroke="#33335C" stroke-width="3"/>
+  <text x="396" y="414" class="m mid" style="fill:#fff">en0</text>
+
+  <use href="#pip-yay" x="660" y="410" width="90" height="90"/>
+  <text x="40" y="478" class="t s">No default route at all? An air-gapped LAN</text>
+  <text x="40" y="508" class="t s">is fine: use the first interface.</text>
+</svg>

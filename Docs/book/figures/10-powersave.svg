@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 540" width="800" height="540">
+  <rect x="4" y="4" width="792" height="532" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <text x="400" y="52" class="t b mid">A sleepy phone on Wi-Fi</text>
+
+  <!-- awake columns -->
+  <g fill="#BDEBD6" stroke="#5DBE85" stroke-width="2">
+    <rect x="120" y="80" width="44" height="300" rx="8"/>
+    <rect x="460" y="80" width="44" height="300" rx="8"/>
+    <rect x="700" y="80" width="44" height="300" rx="8"/>
+  </g>
+  <text x="142" y="104" class="t s mid" font-weight="700">☀</text>
+  <text x="482" y="104" class="t s mid" font-weight="700">☀</text>
+  <text x="722" y="104" class="t s mid" font-weight="700">☀</text>
+  <text x="312" y="110" class="t s mid" opacity="0.7">z z z</text>
+  <text x="600" y="110" class="t s mid" opacity="0.7">z z z</text>
+  <path d="M170 136 H454" stroke="#33335C" stroke-width="2.5" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <text x="312" y="164" class="t s mid">asleep 100 ms+</text>
+  <use href="#phone" x="40" y="86" width="44" height="76"/>
+
+  <!-- row 1 -->
+  <text x="40" y="232" class="t s" font-weight="700">tight</text>
+  <path d="M150 226 H760" stroke="#A79FD0" stroke-width="3"/>
+  <use href="#pip" x="230" y="200" width="44" height="44"/>
+  <use href="#pip" x="270" y="200" width="44" height="44"/>
+  <use href="#pip" x="310" y="200" width="44" height="44"/>
+  <use href="#cross" x="250" y="250" width="34" height="34"/>
+  <text x="292" y="276" class="t s">all asleep</text>
+
+  <!-- row 2 -->
+  <text x="40" y="342" class="t s" font-weight="700">spread</text>
+  <path d="M150 336 H760" stroke="#A79FD0" stroke-width="3"/>
+  <use href="#pip" x="230" y="310" width="44" height="44"/>
+  <use href="#pip" x="270" y="310" width="44" height="44"/>
+  <use href="#pip-yay" x="460" y="310" width="44" height="44"/>
+  <use href="#check" x="514" y="316" width="34" height="34"/>
+
+  <!-- notes -->
+  <use href="#pip-yay" x="40" y="400" width="84" height="84"/>
+  <text x="140" y="424" class="t s">The last try waits for the tail, where</text>
+  <text x="140" y="454" class="t s">the sweep was going to wait anyway.</text>
+  <text x="140" y="494" class="t s">Gaps vary ±25% per host, picked from its address.</text>
+</svg>

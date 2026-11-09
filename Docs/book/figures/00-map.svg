@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 640" width="800" height="640">
+  <rect x="4" y="4" width="792" height="632" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- Part I -->
+  <rect x="24" y="24" width="366" height="196" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <use href="#castle" x="40" y="64" width="130" height="111"/>
+  <text x="186" y="74" class="t b">Part I</text>
+  <text x="186" y="112" class="t s">Kernel basics</text>
+  <text x="186" y="146" class="t s" opacity="0.7">chapters 1–4</text>
+
+  <!-- Part II -->
+  <rect x="410" y="24" width="366" height="196" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <use href="#laptop" x="422" y="80" width="100" height="66"/>
+  <use href="#phone" x="526" y="72" width="40" height="70"/>
+  <text x="584" y="74" class="t b">Part II</text>
+  <text x="584" y="112" class="t s">Runs everywhere</text>
+  <text x="584" y="146" class="t s" opacity="0.7">chapters 5–10</text>
+
+  <!-- Part III -->
+  <rect x="24" y="238" width="366" height="196" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <use href="#periscope" x="48" y="270" width="56" height="96"/>
+  <use href="#crown" x="102" y="320" width="66" height="47"/>
+  <text x="186" y="288" class="t b">Part III</text>
+  <text x="186" y="326" class="t s">Mac only</text>
+  <text x="186" y="360" class="t s" opacity="0.7">chapters 11–14</text>
+
+  <!-- Part IV -->
+  <rect x="410" y="238" width="366" height="196" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <use href="#phone" x="440" y="270" width="64" height="110"/>
+  <use href="#sparkle" x="510" y="270" width="24" height="24"/>
+  <text x="584" y="288" class="t b">Part IV</text>
+  <text x="584" y="326" class="t s">The iOS lens</text>
+  <text x="584" y="360" class="t s" opacity="0.7">chapters 15–17</text>
+
+  <!-- Appendices -->
+  <rect x="24" y="452" width="752" height="160" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <g transform="translate(48 482)">
+    <rect x="0" y="0" width="96" height="104" rx="8" fill="#B9A3F5" stroke="#33335C" stroke-width="3.5"/>
+    <rect x="12" y="0" width="10" height="104" fill="#33335C" opacity="0.3"/>
+    <path d="M36 30 h44 M36 52 h44 M36 74 h30" stroke="#33335C" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <text x="172" y="502" class="t b">Appendices A–E</text>
+  <text x="172" y="540" class="t s">glossary · syscalls · errno</text>
+  <text x="172" y="574" class="t s">honest notes · reading</text>
+  <use href="#pip-yay" x="650" y="488" width="104" height="104"/>
+</svg>

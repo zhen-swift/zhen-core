@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" width="800" height="560">
+  <rect x="4" y="4" width="792" height="552" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <path d="M30 520 H770" stroke="#EADFCC" stroke-width="6" stroke-linecap="round"/>
+
+  <use href="#castle" x="270" y="24" width="300" height="255"/>
+  <use href="#pip-yay" x="70" y="140" width="140" height="140"/>
+  <use href="#sparkle" x="610" y="70" width="30" height="30"/>
+  <use href="#sparkle" x="224" y="96" width="22" height="22"/>
+  <use href="#sparkle" x="660" y="190" width="22" height="22"/>
+
+  <!-- four signposts -->
+  <g>
+    <rect x="42" y="338" width="12" height="182" fill="#C98A5E" stroke="#33335C" stroke-width="3"/>
+    <rect x="24" y="300" width="170" height="130" rx="16" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <use href="#castle" x="68" y="310" width="82" height="70"/>
+    <text x="109" y="414" class="t s mid">1 · kernel</text>
+
+    <rect x="234" y="338" width="12" height="182" fill="#C98A5E" stroke="#33335C" stroke-width="3"/>
+    <rect x="216" y="300" width="170" height="130" rx="16" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <use href="#ticket" x="256" y="318" width="90" height="52"/>
+    <text x="311" y="353" class="t b mid">3</text>
+    <text x="301" y="414" class="t s mid">2 · tickets</text>
+
+    <rect x="426" y="338" width="12" height="182" fill="#C98A5E" stroke="#33335C" stroke-width="3"/>
+    <rect x="408" y="300" width="170" height="130" rx="16" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <use href="#mailbox" x="465" y="308" width="56" height="70"/>
+    <text x="493" y="414" class="t s mid">3 · addresses</text>
+
+    <rect x="618" y="338" width="12" height="182" fill="#C98A5E" stroke="#33335C" stroke-width="3"/>
+    <rect x="600" y="300" width="170" height="130" rx="16" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <g transform="translate(652 312)">
+      <path d="M8 50 Q13 45 13 32 Q13 10 34 8 Q55 10 55 32 Q55 45 60 50 Z" fill="#FFD45E" stroke="#33335C" stroke-width="3.5" stroke-linejoin="round"/>
+      <circle cx="34" cy="56" r="6" fill="#33335C"/>
+      <circle cx="34" cy="6" r="4" fill="#33335C"/>
+    </g>
+    <text x="685" y="414" class="t s mid">4 · never block</text>
+  </g>
+</svg>

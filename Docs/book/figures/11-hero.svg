@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <rect x="4" y="4" width="792" height="492" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- the castle with a periscope poking up -->
+  <use href="#periscope" x="196" y="40" width="84" height="144"/>
+  <use href="#castle" x="40" y="120" width="300" height="255"/>
+  <text x="190" y="410" class="t b mid">the kernel</text>
+  <text x="300" y="66" class="m">/dev/bpf</text>
+
+  <!-- the wire -->
+  <path d="M260 448 H770" stroke="#33335C" stroke-width="5" stroke-linecap="round"/>
+  <text x="760" y="482" class="t s" text-anchor="end">the wire (Ethernet)</text>
+
+  <!-- shout -->
+  <rect x="380" y="82" width="390" height="92" rx="22" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="575" y="122" class="t b mid">“Who has 10.10.20.7?”</text>
+  <text x="575" y="156" class="t s mid">an ARP request, on the wire</text>
+  <path d="M288 94 C 330 100, 350 118, 376 126" fill="none" stroke="#33335C" stroke-width="3" stroke-dasharray="8 7" marker-end="url(#arrow)"/>
+
+  <!-- hosts on the wire, answering -->
+  <use href="#device" x="420" y="300" width="100" height="88"/>
+  <use href="#device" x="540" y="300" width="100" height="88"/>
+  <use href="#device" x="660" y="300" width="100" height="88"/>
+  <path d="M470 388 V448 M590 388 V448 M710 388 V448" stroke="#33335C" stroke-width="3"/>
+  <rect x="520" y="212" width="154" height="56" rx="16" fill="#BDEBD6" stroke="#33335C" stroke-width="3"/>
+  <text x="597" y="249" class="t b mid">“Me!”</text>
+  <path d="M600 268 L606 298" stroke="#33335C" stroke-width="3"/>
+  <use href="#sparkle" x="680" y="214" width="22" height="22"/>
+</svg>

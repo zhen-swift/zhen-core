@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="800" height="450">
+  <rect x="4" y="4" width="792" height="442" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <text x="400" y="54" class="t b mid">One UDP probe, start to finish</text>
+
+  <!-- the track -->
+  <rect x="80" y="170" width="640" height="26" rx="13" fill="#D9D3EC" stroke="#33335C" stroke-width="3"/>
+  <text x="80" y="234" class="m mid">0%</text>
+  <text x="336" y="234" class="m mid">40%</text>
+  <text x="720" y="234" class="m mid">100%</text>
+
+  <!-- send 1 -->
+  <use href="#pip" x="44" y="80" width="72" height="72"/>
+  <path d="M80 152 V166" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="130" y="122" class="t s">send</text>
+
+  <!-- send 2 -->
+  <use href="#pip" x="300" y="80" width="72" height="72"/>
+  <path d="M336 152 V166" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="386" y="110" class="t s">send again</text>
+  <text x="386" y="138" class="t s" opacity="0.7">(once only)</text>
+
+  <!-- give up -->
+  <circle cx="720" cy="120" r="24" fill="#B9A3F5" stroke="#33335C" stroke-width="3"/>
+  <text x="720" y="129" class="t b mid">?</text>
+  <path d="M720 146 V166" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="760" y="276" class="t s" style="text-anchor:end">silence:</text>
+  <text x="760" y="304" class="m" style="text-anchor:end">open|filtered</text>
+
+  <!-- early endings -->
+  <text x="60" y="290" class="t b">Anything back ends it early:</text>
+  <rect x="60" y="320" width="200" height="88" rx="16" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <use href="#check" x="76" y="336" width="30" height="30"/>
+  <text x="114" y="358" class="t s">datagram</text>
+  <text x="160" y="394" class="m mid">open</text>
+
+  <rect x="276" y="320" width="226" height="88" rx="16" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <use href="#cross" x="292" y="336" width="30" height="30"/>
+  <text x="330" y="358" class="m">ECONNREFUSED</text>
+  <text x="389" y="394" class="m mid">closed</text>
+
+  <rect x="518" y="320" width="222" height="88" rx="16" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <use href="#off" x="534" y="336" width="30" height="30"/>
+  <text x="572" y="358" class="t s">other ICMP</text>
+  <text x="629" y="394" class="m mid">filtered</text>
+</svg>

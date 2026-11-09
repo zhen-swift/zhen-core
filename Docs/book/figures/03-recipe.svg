@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" width="800" height="560">
+  <rect x="4" y="4" width="792" height="552" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <text x="400" y="56" class="m mid" style="font-size:26px">socket(family, type, protocol)</text>
+
+  <!-- highlights for Zhen's ping -->
+  <rect x="40" y="128" width="200" height="72" rx="12" fill="#BDEBD6"/>
+  <rect x="300" y="218" width="200" height="72" rx="12" fill="#BDEBD6"/>
+  <rect x="560" y="308" width="200" height="72" rx="12" fill="#BDEBD6"/>
+
+  <g fill="none" stroke="#33335C" stroke-width="3">
+    <rect x="24" y="76" width="232" height="324" rx="18"/>
+    <rect x="284" y="76" width="232" height="324" rx="18"/>
+    <rect x="544" y="76" width="232" height="324" rx="18"/>
+  </g>
+  <text x="140" y="112" class="t b mid">family</text>
+  <text x="400" y="112" class="t b mid">type</text>
+  <text x="660" y="112" class="t b mid">protocol</text>
+
+  <!-- family -->
+  <text x="140" y="160" class="m mid">AF_INET</text>
+  <text x="140" y="188" class="t s mid">IPv4</text>
+  <text x="140" y="250" class="m mid">AF_INET6</text>
+  <text x="140" y="278" class="t s mid">IPv6</text>
+  <text x="140" y="340" class="m mid">AF_LINK</text>
+  <text x="140" y="368" class="t s mid">hardware</text>
+
+  <!-- type -->
+  <text x="400" y="160" class="m mid">SOCK_STREAM</text>
+  <text x="400" y="188" class="t s mid">a phone call</text>
+  <text x="400" y="250" class="m mid">SOCK_DGRAM</text>
+  <text x="400" y="278" class="t s mid">postcards</text>
+  <text x="390" y="340" class="m mid">SOCK_RAW</text>
+  <text x="390" y="368" class="t s mid">anything</text>
+  <use href="#crown" x="458" y="336" width="44" height="32"/>
+
+  <!-- protocol -->
+  <text x="660" y="160" class="m mid">IPPROTO_TCP</text>
+  <text x="660" y="188" class="t s mid">TCP</text>
+  <text x="660" y="250" class="m mid">IPPROTO_UDP</text>
+  <text x="660" y="278" class="t s mid">UDP</text>
+  <text x="660" y="340" class="m mid">IPPROTO_ICMP</text>
+  <text x="660" y="368" class="t s mid">ping</text>
+
+  <!-- the recipe -->
+  <rect x="24" y="420" width="752" height="112" rx="18" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <use href="#pip-yay" x="38" y="430" width="90" height="90"/>
+  <text x="140" y="464" class="t b">Zhen’s ping, no crown needed</text>
+  <text x="140" y="504" class="m">socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP)</text>
+</svg>

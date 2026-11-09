@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 660" width="800" height="660">
+  <rect x="4" y="4" width="792" height="652" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- lanes -->
+  <use href="#laptop" x="70" y="24" width="120" height="79"/>
+  <text x="130" y="128" class="t b mid">the app</text>
+  <use href="#crown" x="602" y="26" width="56" height="40"/>
+  <rect x="590" y="66" width="80" height="40" rx="8" fill="#D9D3EC" stroke="#33335C" stroke-width="3"/>
+  <text x="630" y="128" class="t b mid">helper</text>
+  <path d="M130 140 V620" stroke="#A79FD0" stroke-width="4" stroke-dasharray="10 10"/>
+  <path d="M630 140 V620" stroke="#A79FD0" stroke-width="4" stroke-dasharray="10 10"/>
+
+  <!-- 1 -->
+  <circle cx="58" cy="176" r="18" fill="#6FA8FF" stroke="#33335C" stroke-width="3"/><text x="58" y="184" class="t s mid" font-weight="700">1</text>
+  <path d="M136 186 H620" stroke="#33335C" stroke-width="3.5" marker-end="url(#arrow)"/>
+  <text x="380" y="174" class="m mid">openCaptureDevice(en0, filter)</text>
+
+  <!-- 2 -->
+  <circle cx="742" cy="236" r="18" fill="#6FA8FF" stroke="#33335C" stroke-width="3"/><text x="742" y="244" class="t s mid" font-weight="700">2</text>
+  <rect x="420" y="210" width="290" height="54" rx="14" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="565" y="245" class="t s mid">check name + filter</text>
+
+  <!-- 3 -->
+  <circle cx="742" cy="312" r="18" fill="#6FA8FF" stroke="#33335C" stroke-width="3"/><text x="742" y="320" class="t s mid" font-weight="700">3</text>
+  <rect x="420" y="286" width="290" height="54" rx="14" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="565" y="321" class="t s mid">open bpf + 10 knobs</text>
+
+  <!-- 4 -->
+  <circle cx="58" cy="396" r="18" fill="#6FA8FF" stroke="#33335C" stroke-width="3"/><text x="58" y="404" class="t s mid" font-weight="700">4</text>
+  <path d="M620 410 H140" stroke="#33335C" stroke-width="3.5" marker-end="url(#arrow)"/>
+  <use href="#ticket" x="320" y="366" width="100" height="58"/>
+  <text x="386" y="406" class="t b mid">7</text>
+  <text x="380" y="452" class="t s mid">FileHandle: the ticket itself, not bytes</text>
+
+  <!-- 5 -->
+  <circle cx="58" cy="512" r="18" fill="#6FA8FF" stroke="#33335C" stroke-width="3"/><text x="58" y="520" class="t s mid" font-weight="700">5</text>
+  <rect x="90" y="486" width="300" height="54" rx="14" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="240" y="521" class="m mid">dup(7) → 9</text>
+  <text x="410" y="521" class="t s">(the handle closes 7)</text>
+
+  <!-- 6 -->
+  <circle cx="58" cy="590" r="18" fill="#6FA8FF" stroke="#33335C" stroke-width="3"/><text x="58" y="598" class="t s mid" font-weight="700">6</text>
+  <rect x="90" y="562" width="420" height="54" rx="14" fill="#5DBE85" stroke="#33335C" stroke-width="3"/>
+  <text x="300" y="597" class="m mid">BPFDevice.adopting</text>
+  <use href="#pip-yay" x="530" y="550" width="80" height="80"/>
+</svg>

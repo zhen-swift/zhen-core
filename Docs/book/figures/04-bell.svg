@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 540" width="800" height="540">
+  <rect x="4" y="4" width="792" height="532" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <use href="#castle" x="24" y="150" width="220" height="187"/>
+  <text x="134" y="130" class="t b mid">kqueue</text>
+  <text x="134" y="370" class="t s mid">rings the bells</text>
+
+  <!-- the three sources -->
+  <g transform="translate(290 70)"><path d="M8 50 Q13 45 13 32 Q13 10 34 8 Q55 10 55 32 Q55 45 60 50 Z" fill="#FFD45E" stroke="#33335C" stroke-width="3.5" stroke-linejoin="round"/><circle cx="34" cy="56" r="6" fill="#33335C"/><circle cx="34" cy="6" r="4" fill="#33335C"/></g>
+  <text x="370" y="110" class="t b">read</text>
+  <text x="290" y="160" class="m">makeReadSource</text>
+
+  <g transform="translate(290 210)"><path d="M8 50 Q13 45 13 32 Q13 10 34 8 Q55 10 55 32 Q55 45 60 50 Z" fill="#FFD45E" stroke="#33335C" stroke-width="3.5" stroke-linejoin="round"/><circle cx="34" cy="56" r="6" fill="#33335C"/><circle cx="34" cy="6" r="4" fill="#33335C"/></g>
+  <text x="370" y="250" class="t b">write</text>
+  <text x="290" y="300" class="m">makeWriteSource</text>
+
+  <g transform="translate(294 350)"><circle cx="30" cy="30" r="26" fill="#fff" stroke="#33335C" stroke-width="3.5"/><path d="M30 14 V30 L42 38" fill="none" stroke="#33335C" stroke-width="3.5" stroke-linecap="round"/></g>
+  <text x="370" y="390" class="t b">timer</text>
+  <text x="290" y="440" class="m">makeTimerSource</text>
+
+  <g fill="none" stroke="#33335C" stroke-width="3" stroke-dasharray="8 7">
+    <path d="M232 220 C 260 200, 262 120, 284 104"/>
+    <path d="M244 250 H282"/>
+    <path d="M232 300 C 262 320, 262 370, 288 380"/>
+  </g>
+
+  <!-- the one queue -->
+  <rect x="540" y="70" width="236" height="380" rx="20" fill="#BDEBD6" stroke="#33335C" stroke-width="3"/>
+  <text x="658" y="114" class="t b mid">one queue</text>
+  <text x="658" y="148" class="t s mid">serial</text>
+  <text x="658" y="178" class="t s mid">high priority</text>
+  <use href="#pip-yay" x="598" y="236" width="120" height="120"/>
+  <text x="658" y="404" class="t s mid">handlers run</text>
+  <text x="658" y="432" class="t s mid">here, one by one</text>
+  <g fill="none" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)">
+    <path d="M440 100 C 490 100, 500 200, 534 220"/>
+    <path d="M466 240 H534"/>
+    <path d="M450 380 C 490 380, 500 300, 534 280"/>
+  </g>
+
+  <text x="400" y="500" class="t s mid">Dispatch sources are kqueue underneath</text>
+</svg>

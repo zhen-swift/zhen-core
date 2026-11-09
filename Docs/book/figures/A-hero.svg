@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 380" width="800" height="380">
+  <rect x="4" y="4" width="792" height="372" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- an open book -->
+  <path d="M120 90 Q260 60 396 100 V320 Q260 284 120 310 Z" fill="#fff" stroke="#33335C" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M676 90 Q540 60 404 100 V320 Q540 284 676 310 Z" fill="#fff" stroke="#33335C" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M110 300 Q260 274 400 314 Q540 274 690 300 V330 Q540 304 400 344 Q260 304 110 330 Z" fill="#C98A5E" stroke="#33335C" stroke-width="4" stroke-linejoin="round"/>
+
+  <!-- left page entries -->
+  <text x="150" y="134" class="m" style="font-weight:700">errno</text>
+  <path d="M150 150 h200 M150 166 h170" stroke="#A79FD0" stroke-width="5" stroke-linecap="round"/>
+  <text x="150" y="208" class="m" style="font-weight:700">kqueue</text>
+  <path d="M150 224 h210 M150 240 h150" stroke="#A79FD0" stroke-width="5" stroke-linecap="round"/>
+  <!-- right page entries -->
+  <text x="434" y="134" class="m" style="font-weight:700">socket</text>
+  <path d="M434 150 h200 M434 166 h160" stroke="#A79FD0" stroke-width="5" stroke-linecap="round"/>
+  <text x="434" y="208" class="m" style="font-weight:700">TTL</text>
+  <path d="M434 224 h210 M434 240 h130" stroke="#A79FD0" stroke-width="5" stroke-linecap="round"/>
+
+  <use href="#pip-yay" x="640" y="200" width="130" height="130"/>
+  <use href="#sparkle" x="40" y="36" width="26" height="26"/>
+  <text x="74" y="60" class="t b">A to Z</text>
+</svg>

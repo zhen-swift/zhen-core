@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <rect x="4" y="4" width="792" height="592" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- Mac -->
+  <use href="#laptop" x="80" y="30" width="110" height="72"/>
+  <text x="206" y="80" class="t b">Mac</text>
+  <use href="#castle" x="90" y="130" width="200" height="170"/>
+
+  <!-- iPhone, with its sandbox fence -->
+  <use href="#phone" x="490" y="24" width="46" height="80"/>
+  <text x="550" y="80" class="t b">iPhone, iPad</text>
+  <rect x="470" y="118" width="260" height="196" rx="26" fill="none" stroke="#A79FD0" stroke-width="5" stroke-dasharray="12 9"/>
+  <use href="#castle" x="500" y="130" width="200" height="170"/>
+  <text x="600" y="346" class="t s mid">+ sandbox fence</text>
+
+  <!-- same kernel -->
+  <text x="385" y="210" class="t b mid">same</text>
+  <text x="385" y="244" class="t b mid">XNU</text>
+  <path d="M326 266 H444" stroke="#33335C" stroke-width="3" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+
+  <!-- what each one gets -->
+  <path d="M400 372 V570" stroke="#EADFCC" stroke-width="4" stroke-linecap="round"/>
+  <g>
+    <use href="#check" x="40" y="384" width="40" height="40"/>
+    <text x="92" y="412" class="m">&lt;net/bpf.h&gt;</text>
+    <use href="#check" x="40" y="446" width="40" height="40"/>
+    <text x="92" y="474" class="m">&lt;net/route.h&gt;</text>
+    <use href="#check" x="40" y="508" width="40" height="40"/>
+    <text x="92" y="536" class="t s">launch daemons</text>
+
+    <use href="#cross" x="430" y="384" width="40" height="40"/>
+    <text x="482" y="412" class="m">&lt;net/bpf.h&gt;</text>
+    <use href="#cross" x="430" y="446" width="40" height="40"/>
+    <text x="482" y="474" class="m">&lt;net/route.h&gt;</text>
+    <use href="#cross" x="430" y="508" width="40" height="40"/>
+    <text x="482" y="536" class="t s">launch daemons</text>
+  </g>
+</svg>

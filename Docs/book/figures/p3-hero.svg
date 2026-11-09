@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" width="800" height="520">
+  <rect x="4" y="4" width="792" height="512" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- ground -->
+  <path d="M30 420 H770" stroke="#EADFCC" stroke-width="6" stroke-linecap="round"/>
+  <!-- divider -->
+  <path d="M452 40 V440" stroke="#A79FD0" stroke-width="3" stroke-dasharray="10 10"/>
+
+  <!-- the Mac: crowned, with a periscope -->
+  <use href="#periscope" x="56" y="168" width="96" height="164"/>
+  <use href="#laptop" x="130" y="214" width="260" height="171"/>
+  <use href="#crown" x="214" y="134" width="92" height="66"/>
+  <use href="#sparkle" x="186" y="126" width="22" height="22"/>
+  <use href="#sparkle" x="318" y="146" width="18" height="18"/>
+  <use href="#pip-yay" x="214" y="248" width="92" height="92"/>
+  <text x="240" y="70" class="t h mid">the Mac</text>
+  <text x="240" y="106" class="t s mid">root · BPF · ARP table</text>
+
+  <!-- the iPhone: padlocked -->
+  <use href="#phone" x="566" y="196" width="112" height="192"/>
+  <use href="#lock" x="650" y="146" width="76" height="92"/>
+  <use href="#pip-worried" x="578" y="268" width="88" height="88"/>
+  <text x="624" y="70" class="t h mid">iPhone, iPad</text>
+  <text x="624" y="106" class="t s mid">no key to these doors</text>
+
+  <text x="400" y="476" class="t b mid">Four powers only a Mac has</text>
+</svg>

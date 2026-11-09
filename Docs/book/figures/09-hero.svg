@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" width="800" height="480">
+  <rect x="4" y="4" width="792" height="472" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- name tags -->
+  <g>
+    <rect x="30" y="40" width="220" height="88" rx="12" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <path d="M30 52 a12 12 0 0 1 12 -12 h196 a12 12 0 0 1 12 12 v20 h-220 Z" fill="#F26B6B" stroke="#33335C" stroke-width="3"/>
+    <text x="140" y="66" class="t s mid" style="fill:#fff">my name is</text>
+    <text x="140" y="112" class="t s mid" font-weight="700">Living Room</text>
+
+    <rect x="290" y="40" width="220" height="88" rx="12" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <path d="M290 52 a12 12 0 0 1 12 -12 h196 a12 12 0 0 1 12 12 v20 h-220 Z" fill="#F26B6B" stroke="#33335C" stroke-width="3"/>
+    <text x="400" y="66" class="t s mid" style="fill:#fff">my name is</text>
+    <text x="400" y="112" class="t s mid" font-weight="700">Bedroom TV</text>
+
+    <rect x="550" y="40" width="220" height="88" rx="12" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <path d="M550 52 a12 12 0 0 1 12 -12 h196 a12 12 0 0 1 12 12 v20 h-220 Z" fill="#F26B6B" stroke="#33335C" stroke-width="3"/>
+    <text x="660" y="66" class="t s mid" style="fill:#fff">my name is</text>
+    <text x="660" y="112" class="m mid" font-weight="700">DESKTOP-7Q3M8X2</text>
+  </g>
+
+  <use href="#device" x="92" y="146" width="96" height="84"/>
+  <use href="#device" x="352" y="146" width="96" height="84"/>
+  <use href="#device" x="612" y="146" width="96" height="84"/>
+
+  <text x="140" y="270" class="t b mid">Bonjour</text>
+  <text x="140" y="300" class="t s mid" opacity="0.8">shout to all</text>
+  <text x="400" y="270" class="t b mid">SSDP</text>
+  <text x="400" y="300" class="t s mid" opacity="0.8">shout to all</text>
+  <text x="660" y="270" class="t b mid">NetBIOS</text>
+  <text x="660" y="300" class="t s mid" opacity="0.8">ask one by one</text>
+
+  <use href="#pip" x="150" y="338" width="110" height="110"/>
+  <rect x="276" y="344" width="300" height="60" rx="22" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <path d="M278 368 l-18 8 l18 10" fill="#fff" stroke="#33335C" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M279 369 v16" stroke="#fff" stroke-width="5"/>
+  <text x="426" y="383" class="t b mid">“What’s your name?”</text>
+  <use href="#sparkle" x="596" y="350" width="24" height="24"/>
+</svg>

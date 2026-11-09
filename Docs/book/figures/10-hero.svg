@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 516" width="800" height="516">
+  <rect x="4" y="4" width="792" height="508" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- thought cloud -->
+  <path d="M330 92 C 330 52, 410 40, 440 70 C 470 30, 570 34, 590 72 C 640 44, 740 64, 730 120 C 780 150, 760 230, 700 236 C 690 280, 590 286, 560 256 C 520 290, 420 284, 400 248 C 340 266, 290 220, 310 180 C 270 160, 280 100, 330 92 Z" fill="#fff" stroke="#33335C" stroke-width="3" stroke-linejoin="round"/>
+  <circle cx="276" cy="242" r="12" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <circle cx="246" cy="268" r="7" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="530" y="128" class="t s mid">When do I ask again?</text>
+  <text x="530" y="170" class="t s mid">How long do I wait?</text>
+  <text x="530" y="212" class="t s mid">What does silence mean?</text>
+
+  <!-- Pip in a graduation cap -->
+  <use href="#pip" x="100" y="200" width="140" height="140"/>
+  <path d="M110 230 L170 206 L230 230 L170 254 Z" fill="#33335C"/>
+  <rect x="146" y="238" width="48" height="16" fill="#33335C"/>
+  <path d="M220 234 V266" stroke="#FFD45E" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="220" cy="270" r="6" fill="#FFD45E"/>
+
+  <!-- the wall of syscalls -->
+  <rect x="30" y="344" width="740" height="122" rx="12" fill="#D9D3EC" stroke="#33335C" stroke-width="3"/>
+  <text x="122" y="376" class="m mid">sendto</text>
+  <use href="#door" x="95" y="384" width="54" height="76"/>
+  <text x="307" y="376" class="m mid">recvfrom</text>
+  <use href="#door" x="280" y="384" width="54" height="76"/>
+  <text x="492" y="376" class="m mid">connect</text>
+  <use href="#door" x="465" y="384" width="54" height="76"/>
+  <text x="677" y="376" class="m mid">sysctl</text>
+  <use href="#door" x="650" y="384" width="54" height="76"/>
+
+  <text x="400" y="496" class="t s mid">No new doors. Just better decisions.</text>
+</svg>

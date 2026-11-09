@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <rect x="4" y="4" width="792" height="592" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- the question -->
+  <text x="40" y="56" class="t b">The question: 50 bytes to UDP 137</text>
+  <text x="40" y="92" class="t s">The name asked for is <tspan class="m">*</tspan>, “everyone”, spelled oddly:</text>
+
+  <rect x="40" y="110" width="110" height="54" rx="12" fill="#FFD45E" stroke="#33335C" stroke-width="3"/>
+  <text x="95" y="145" class="m mid">* = 2A</text>
+  <path d="M156 137 H196" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="206" y="130" class="m">A+2 = C</text>
+  <text x="206" y="158" class="m">A+A = K</text>
+  <path d="M320 137 H360" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <rect x="370" y="110" width="390" height="54" rx="12" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="565" y="145" class="m mid">CK + 30 × A</text>
+  <text x="40" y="204" class="t s" opacity="0.8">Each byte becomes two letters: its halves, each added to “A”.</text>
+
+  <path d="M40 232 H760" stroke="#EADFCC" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- the answer -->
+  <text x="40" y="276" class="t b">The answer: a list of names</text>
+  <rect x="40" y="296" width="720" height="58" rx="12" fill="#fff" stroke="#5DBE85" stroke-width="4"/>
+  <text x="60" y="334" class="m">DESKTOP-7Q3M8X2</text>
+  <text x="300" y="334" class="m">&lt;00&gt;</text>
+  <text x="390" y="334" class="t s">unique</text>
+  <text x="520" y="334" class="t s" font-weight="700">→ the name</text>
+
+  <rect x="40" y="366" width="720" height="58" rx="12" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="60" y="404" class="m">WORKGROUP</text>
+  <text x="300" y="404" class="m">&lt;00&gt;</text>
+  <text x="390" y="404" class="t s">group</text>
+  <text x="520" y="404" class="t s">→ the workgroup</text>
+
+  <rect x="40" y="436" width="720" height="58" rx="12" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="60" y="474" class="m">MAC 00:00:00:00:00:00</text>
+  <text x="390" y="474" class="t s">Samba</text>
+  <text x="520" y="474" class="t s">→ treat as absent</text>
+
+  <use href="#pip" x="40" y="508" width="76" height="76"/>
+  <text x="130" y="538" class="t s">Must carry <tspan font-weight="700">our</tspan> random ID, and come</text>
+  <text x="130" y="568" class="t s">from the host we asked. No forged names.</text>
+</svg>

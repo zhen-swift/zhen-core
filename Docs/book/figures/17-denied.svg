@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <rect x="4" y="4" width="792" height="592" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- Mac: silence + a full table = a clue -->
+  <rect x="24" y="24" width="370" height="480" rx="22" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="209" y="66" class="t b mid">Mac</text>
+  <text x="44" y="112" class="t s">pings answered</text>
+  <rect x="250" y="88" width="120" height="36" rx="10" fill="#D9D3EC" stroke="#33335C" stroke-width="2.5"/>
+  <text x="310" y="114" class="t b mid">0</text>
+  <text x="44" y="164" class="t s">ARP table</text>
+  <rect x="250" y="140" width="120" height="36" rx="10" fill="#5DBE85" stroke="#33335C" stroke-width="2.5"/>
+  <text x="310" y="166" class="t b mid" style="fill:#fff">12</text>
+  <!-- a magnifier -->
+  <circle cx="130" cy="290" r="54" fill="#BDEBD6" stroke="#33335C" stroke-width="6"/>
+  <path d="M170 330 L214 374" stroke="#33335C" stroke-width="12" stroke-linecap="round"/>
+  <text x="130" y="304" class="t h mid">!</text>
+  <use href="#pip" x="240" y="220" width="120" height="120"/>
+  <text x="209" y="430" class="t b mid">warns: likely blocked</text>
+  <text x="209" y="470" class="t s mid" opacity="0.75">the table is the control</text>
+
+  <!-- iPhone: silence + no table = no clue -->
+  <rect x="406" y="24" width="370" height="480" rx="22" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="591" y="66" class="t b mid">iPhone</text>
+  <text x="426" y="112" class="t s">pings answered</text>
+  <rect x="632" y="88" width="120" height="36" rx="10" fill="#D9D3EC" stroke="#33335C" stroke-width="2.5"/>
+  <text x="692" y="114" class="t b mid">0</text>
+  <text x="426" y="164" class="t s">ARP table</text>
+  <use href="#lock" x="672" y="130" width="40" height="48"/>
+  <!-- the empty-state screen -->
+  <use href="#phone" x="426" y="200" width="150" height="258"/>
+  <text x="501" y="300" class="t s mid" style="font-weight:700">Nothing</text>
+  <text x="501" y="326" class="t s mid" style="font-weight:700">answered</text>
+  <rect x="446" y="356" width="110" height="40" rx="20" fill="#6FA8FF"/>
+  <text x="501" y="383" class="t s mid" style="fill:#fff;font-size:22px">Settings</text>
+  <use href="#pip-worried" x="610" y="250" width="130" height="130"/>
+  <text x="675" y="430" class="t b mid">denied?</text>
+  <text x="675" y="466" class="t b mid">or empty?</text>
+
+  <text x="400" y="556" class="t b mid">No table, no control: the empty screen is all you get.</text>
+</svg>

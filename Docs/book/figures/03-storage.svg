@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <rect x="4" y="4" width="792" height="492" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <text x="40" y="58" class="m" style="font-size:26px">sockaddr_storage</text>
+  <text x="310" y="58" class="t s">128 bytes: fits any address</text>
+
+  <!-- the crate -->
+  <rect x="40" y="80" width="720" height="80" rx="12" fill="#fff" stroke="#C98A5E" stroke-width="5"/>
+  <rect x="44" y="84" width="170" height="72" rx="9" fill="#FFD45E"/>
+  <path d="M214 84 V156" stroke="#C98A5E" stroke-width="3"/>
+  <text x="129" y="128" class="t s mid">len · family</text>
+  <text x="486" y="128" class="t s mid" opacity="0.6">… room for any address …</text>
+
+  <!-- the sockaddr* view -->
+  <g transform="translate(92 176)">
+    <circle cx="16" cy="22" r="16" fill="#fff" stroke="#33335C" stroke-width="3.5"/>
+    <circle cx="58" cy="22" r="16" fill="#fff" stroke="#33335C" stroke-width="3.5"/>
+    <path d="M32 22 H42" stroke="#33335C" stroke-width="3.5"/>
+  </g>
+  <text x="190" y="206" class="m">sockaddr*</text>
+  <text x="330" y="206" class="t s">look at family first</text>
+
+  <!-- what family says -->
+  <g>
+    <rect x="40" y="250" width="80" height="56" rx="10" fill="#FFD45E" stroke="#33335C" stroke-width="3"/>
+    <text x="80" y="287" class="m mid" style="font-size:26px">2</text>
+    <path d="M126 278 H176" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+    <rect x="184" y="250" width="170" height="56" rx="10" fill="#BDEBD6" stroke="#33335C" stroke-width="3"/>
+    <text x="269" y="287" class="m mid">sockaddr_in</text>
+    <text x="370" y="287" class="t s">IPv4, 16 bytes</text>
+
+    <rect x="40" y="330" width="80" height="56" rx="10" fill="#FFD45E" stroke="#33335C" stroke-width="3"/>
+    <text x="80" y="367" class="m mid" style="font-size:26px">30</text>
+    <path d="M126 358 H176" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+    <rect x="184" y="330" width="296" height="56" rx="10" fill="#6FA8FF" stroke="#33335C" stroke-width="3"/>
+    <text x="332" y="367" class="m mid">sockaddr_in6</text>
+    <text x="496" y="367" class="t s">IPv6, 28 bytes</text>
+
+    <rect x="40" y="410" width="80" height="56" rx="10" fill="#D9D3EC" stroke="#33335C" stroke-width="3"/>
+    <text x="80" y="447" class="m mid" style="font-size:26px">?</text>
+    <path d="M126 438 H176" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+    <text x="190" y="446" class="m">nil</text>
+    <text x="250" y="446" class="t s">not ours: skip it</text>
+  </g>
+  <use href="#pip" x="640" y="390" width="100" height="100"/>
+</svg>

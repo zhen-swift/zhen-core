@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 340" width="800" height="340">
+  <rect x="4" y="4" width="792" height="332" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <use href="#door" x="40" y="70" width="150" height="210"/>
+  <text x="40" y="56" class="m">open("/dev/bpf0")</text>
+
+  <!-- what comes back -->
+  <path d="M196 200 H262" stroke="#33335C" stroke-width="3.5" marker-end="url(#arrow)"/>
+  <rect x="270" y="150" width="120" height="96" rx="16" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="330" y="214" class="t mid" style="font-size:52px;font-weight:800">-1</text>
+  <text x="330" y="280" class="t s mid">“it failed”</text>
+
+  <!-- sticky note: errno -->
+  <g transform="rotate(4 560 180)">
+    <rect x="440" y="70" width="250" height="190" fill="#FFD45E" stroke="#33335C" stroke-width="3"/>
+    <rect x="530" y="58" width="70" height="24" fill="#B9A3F5" opacity="0.8"/>
+    <text x="565" y="128" class="m mid">errno = 13</text>
+    <text x="565" y="170" class="t b mid">EACCES</text>
+    <text x="565" y="210" class="t s mid">“not allowed”</text>
+  </g>
+  <text x="530" y="312" class="t s mid">the <tspan font-weight="700">why</tspan> is on a sticky note</text>
+
+  <use href="#pip-worried" x="706" y="236" width="84" height="84"/>
+</svg>

@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <rect x="4" y="4" width="792" height="492" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <text x="400" y="58" class="t b mid">Three things make the iPhone build exist</text>
+
+  <!-- card 1: the manifest -->
+  <rect x="24" y="86" width="240" height="320" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <circle cx="60" cy="122" r="22" fill="#FFB38A" stroke="#33335C" stroke-width="3"/>
+  <text x="60" y="131" class="t b mid">1</text>
+  <text x="96" y="131" class="t b">manifest</text>
+  <!-- a paper -->
+  <path d="M74 160 h104 l26 26 v120 h-130 Z" fill="#FFF8EE" stroke="#33335C" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M178 160 v26 h26" fill="none" stroke="#33335C" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M92 206 h70 M92 230 h90 M92 254 h56 M92 278 h80" stroke="#A79FD0" stroke-width="5" stroke-linecap="round"/>
+  <text x="144" y="346" class="m mid">.macOS("15.6")</text>
+  <text x="144" y="380" class="m mid">.iOS(.v26)</text>
+
+  <!-- card 2: the empty shim -->
+  <rect x="280" y="86" width="240" height="320" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <circle cx="316" cy="122" r="22" fill="#FFB38A" stroke="#33335C" stroke-width="3"/>
+  <text x="316" y="131" class="t b mid">2</text>
+  <text x="352" y="131" class="t b">BPF shim</text>
+  <!-- an open, empty box -->
+  <path d="M340 220 h120 v90 h-120 Z" fill="#C98A5E" stroke="#33335C" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M340 220 l-22 -34 h120 l22 34" fill="#C98A5E" fill-opacity="0.6" stroke="#33335C" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M460 220 l26 -30" stroke="#33335C" stroke-width="3" stroke-linecap="round"/>
+  <use href="#sparkle" x="394" y="166" width="16" height="16" opacity="0.6"/>
+  <text x="400" y="346" class="m mid">TARGET_OS_OSX</text>
+  <text x="400" y="380" class="t s mid">iOS: empty</text>
+
+  <!-- card 3: CI -->
+  <rect x="536" y="86" width="240" height="320" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <circle cx="572" cy="122" r="22" fill="#FFB38A" stroke="#33335C" stroke-width="3"/>
+  <text x="572" y="131" class="t b mid">3</text>
+  <text x="608" y="131" class="t b">CI job</text>
+  <use href="#phone" x="580" y="160" width="74" height="128"/>
+  <use href="#check" x="650" y="200" width="56" height="56"/>
+  <text x="656" y="346" class="m mid">tool-ipados</text>
+  <text x="656" y="380" class="t s mid">iPad simulator</text>
+
+  <text x="400" y="454" class="t s mid" opacity="0.8">A simulator proves the build, not the sandbox.</text>
+</svg>

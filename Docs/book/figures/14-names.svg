@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 440" width="800" height="440">
+  <rect x="4" y="4" width="792" height="432" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+  <text x="400" y="54" class="t b mid">Three names, one spelling</text>
+
+  <g>
+    <rect x="40"  y="84" width="220" height="62" rx="14" fill="#B9A3F5" stroke="#33335C" stroke-width="3"/>
+    <rect x="290" y="84" width="220" height="62" rx="14" fill="#B9A3F5" stroke="#33335C" stroke-width="3"/>
+    <rect x="540" y="84" width="220" height="62" rx="14" fill="#B9A3F5" stroke="#33335C" stroke-width="3"/>
+  </g>
+  <text x="150" y="124" class="t b mid">Label</text>
+  <text x="400" y="124" class="t b mid">Mach service</text>
+  <text x="650" y="124" class="t b mid">plist name</text>
+  <path d="M150 148 L380 196 M400 148 V190 M650 148 L420 196" stroke="#33335C" stroke-width="3"/>
+
+  <rect x="150" y="200" width="500" height="64" rx="16" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="400" y="242" class="m mid">com.jctec.zhen.helper</text>
+  <text x="400" y="296" class="t s mid">declared once, in HelperIdentity</text>
+
+  <rect x="40" y="320" width="720" height="92" rx="18" fill="#fff" stroke="#F26B6B" stroke-width="3"/>
+  <use href="#pip-worried" x="52" y="326" width="80" height="80"/>
+  <text x="146" y="358" class="t s">One typo → SMAppService error 108,</text>
+  <text x="146" y="392" class="t s">“unable to read plist”: it blames the wrong thing.</text>
+</svg>

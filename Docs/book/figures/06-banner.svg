@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <rect x="4" y="4" width="792" height="592" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <text x="400" y="56" class="t b mid">“Who’s there?” Cheapest question first</text>
+
+  <!-- 1 listen -->
+  <circle cx="54" cy="120" r="22" fill="#FFD45E" stroke="#33335C" stroke-width="3"/>
+  <text x="54" y="129" class="t b mid">1</text>
+  <text x="88" y="116" class="t b">listen</text>
+  <text x="88" y="146" class="t s" opacity="0.75">send nothing</text>
+  <use href="#device" x="236" y="88" width="76" height="66"/>
+  <rect x="326" y="92" width="290" height="50" rx="16" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <path d="M328 112 l-16 6 l16 8" fill="#fff" stroke="#33335C" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M329 113 v12" stroke="#fff" stroke-width="5"/>
+  <text x="471" y="125" class="m mid">SSH-2.0-OpenSSH_9.6</text>
+  <rect x="646" y="96" width="112" height="44" rx="22" fill="#5DBE85" stroke="#33335C" stroke-width="3"/>
+  <text x="702" y="126" class="t b mid" fill="#fff" style="fill:#fff">ssh</text>
+
+  <!-- 2 ask -->
+  <circle cx="54" cy="270" r="22" fill="#FFD45E" stroke="#33335C" stroke-width="3"/>
+  <text x="54" y="279" class="t b mid">2</text>
+  <text x="88" y="266" class="t b">ask</text>
+  <text x="88" y="296" class="m" opacity="0.85">HEAD /</text>
+  <use href="#device" x="236" y="238" width="76" height="66"/>
+  <rect x="326" y="242" width="290" height="50" rx="16" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <path d="M328 262 l-16 6 l16 8" fill="#fff" stroke="#33335C" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M329 263 v12" stroke="#fff" stroke-width="5"/>
+  <text x="471" y="275" class="m mid">Server: nginx/1.24</text>
+  <rect x="646" y="246" width="112" height="44" rx="22" fill="#5DBE85" stroke="#33335C" stroke-width="3"/>
+  <text x="702" y="276" class="t b mid" style="fill:#fff">http</text>
+
+  <!-- 3 TLS -->
+  <circle cx="54" cy="420" r="22" fill="#FFD45E" stroke="#33335C" stroke-width="3"/>
+  <text x="54" y="429" class="t b mid">3</text>
+  <text x="88" y="416" class="t b">TLS</text>
+  <text x="88" y="446" class="t s" opacity="0.75">read the</text>
+  <text x="88" y="472" class="t s" opacity="0.75">certificate</text>
+  <use href="#device" x="236" y="388" width="76" height="66"/>
+  <rect x="326" y="382" width="290" height="96" rx="12" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <path d="M326 404 h290" stroke="#B9A3F5" stroke-width="10"/>
+  <text x="346" y="440" class="t s" opacity="0.7">subject</text>
+  <text x="346" y="466" class="m">HP LaserJet M404</text>
+  <circle cx="584" cy="446" r="20" fill="#FFD45E" stroke="#33335C" stroke-width="2.5"/>
+  <path d="M574 462 l-4 18 l14 -6 l14 6 l-4 -18" fill="#F26B6B" stroke="#33335C" stroke-width="2.5" stroke-linejoin="round"/>
+  <rect x="646" y="406" width="112" height="44" rx="22" fill="#5DBE85" stroke="#33335C" stroke-width="3"/>
+  <text x="702" y="436" class="t b mid" style="fill:#fff">tls</text>
+
+  <path d="M40 512 H760" stroke="#EADFCC" stroke-width="4" stroke-linecap="round"/>
+  <text x="400" y="552" class="t s mid">Name only what the service <tspan font-weight="700">said</tspan>.</text>
+  <text x="400" y="580" class="t s mid">Never guess from the port number.</text>
+</svg>

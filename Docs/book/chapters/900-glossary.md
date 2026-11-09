@@ -1,0 +1,76 @@
+# A · Glossary
+
+![Every new word in the book, A to Z, one line each.](figures/A-hero.svg)
+
+Plain words first, the chapter that explains it last.
+
+- **actor**: a Swift object that handles one request at a time, so its data needs no locks. → ch. 4, 16
+- **AF_INET / AF_INET6 / AF_LINK**: address families: IPv4, IPv6, and hardware (link-layer) addresses. → ch. 3
+- **alignment**: whether a value sits at an address its CPU likes; kernel buffers don't promise it, so Zhen reads them with `loadUnaligned`. → ch. 3
+- **ARP**: "who has 10.0.0.7?", how IPv4 finds a neighbour's MAC address on the local network. → ch. 12
+- **BIOCLOCK**: a FreeBSD `ioctl` that freezes a BPF device before handing it on. Darwin doesn't have one. → ch. 14
+- **BPF, `/dev/bpf*`**: Berkeley Packet Filter, the kernel's raw-frame periscope, opened as `/dev/bpf0`, `/dev/bpf1`… one program per device. Mac only. → ch. 11
+- **BPF filter**: a tiny program the kernel runs on every packet, keeping only the ones you asked for. → ch. 11
+- **`bpf_hdr`, `BPF_WORDALIGN`**: the header in front of each captured packet, and the rule for where the next one starts. → ch. 11
+- **BSD layer**: the Unix part of XNU: files, sockets, processes, `errno`. → ch. 1
+- **byte order**: which end of a number comes first. The network sends the big end first; Apple's CPUs store the little end first. → ch. 3
+- **C shim**: a small C header that makes things Swift can't see visible to it. Zhen's is `CBPFShim`. → ch. 11
+- **checksum**: a 16-bit sum over a packet that catches damage. Zhen computes ICMP's on the way out and checks it on the way in. → ch. 5
+- **ClangImporter**: the part of Swift that reads C headers. It can't evaluate function-like macros such as `BIOCSETIF`. → ch. 11
+- **cmsg**: a control message, extra facts riding along with a received packet, such as its TTL. → ch. 5
+- **code signing requirement**: a rule like "signed by this team, with this identifier" that the app and the helper check on each other. → ch. 14
+- **cooperative pool**: the few threads (one per core) Swift tasks run on. Block one and the whole scan slows or stalls. → ch. 4
+- **default route**: where packets go when nothing more specific matches. The Mac reads it to pick an interface; the iPhone can't. → ch. 8, 15
+- **DispatchSource**: a GCD object that calls you back when a ticket is readable or writable. kqueue is underneath. → ch. 4
+- **dns_sd, mDNSResponder**: Apple's C API for Bonjour, and the system daemon that does the work for every app. → ch. 9
+- **EAGAIN**: "not now, try again", the answer a non-blocking call gives instead of waiting. → ch. 4
+- **EINPROGRESS**: "connecting, check back later", the normal answer from a non-blocking `connect`. → ch. 6
+- **entitlement**: a signed permission baked into an app. Some, like multicast networking, need Apple's approval. → ch. 15
+- **errno**: the number that says why the last call failed. Read it straight away. → ch. 2
+- **file descriptor**: a small number standing for something the kernel keeps for you. This book's **ticket**. → ch. 2
+- **fingerprinting**: guessing a host's operating system from how its TCP stack answers a SYN. Mac only. → ch. 13
+- **getifaddrs**: the call that lists every network interface and its addresses. → ch. 8
+- **ICMP, echo**: the Internet's control messages. An echo request and its echo reply are a ping. → ch. 5
+- **ICMP unreachable**: "nobody's home there", which is how UDP learns that a port is closed. → ch. 7
+- **ioctl**: a catch-all "do this special thing to this device" call. BPF is set up entirely with them. → ch. 11
+- **kqueue**: the kernel's "tell me when any of these tickets is ready" service. → ch. 4
+- **launchd, launch daemon**: the Mac's first process, which starts everything else, and a background program it runs as root. Zhen's helper is one. → ch. 14
+- **Local Network permission**: the prompt that lets an app talk to devices on your network. A denial looks like silence, not an error. → ch. 10, 17
+- **Mach**: the message-passing core of XNU, underneath the BSD layer. → ch. 1
+- **Mach service**: a named Mach mailbox other processes can connect to. It's how the app finds the helper. → ch. 14
+- **main actor**: the one lane where UI work runs. Nothing slow belongs on it. → ch. 16
+- **mDNS / Bonjour**: devices announcing their names and services by multicast on the local network. → ch. 9
+- **multicast**: one packet sent to a group address that many devices listen on. → ch. 9
+- **NDP**: Neighbour Discovery, IPv6's version of ARP. → ch. 12
+- **neighbour table**: the kernel's list of recent neighbours and their MAC addresses (the ARP cache). Zhen reads it on the Mac only. → ch. 12
+- **NetBIOS / NBSTAT**: an old Windows naming protocol. An NBSTAT query asks one host for its names over UDP port 137. → ch. 9
+- **Network.framework**: Apple's modern networking API. Zhen uses it for the TLS handshake in banners. → ch. 6
+- **NSBonjourServices**: the Info.plist list of Bonjour types an iOS app may browse. A type left off browses to silence. → ch. 9, 17
+- **O_NONBLOCK**: the flag that makes a ticket answer at once instead of waiting. Zhen sets it on every socket. → ch. 4
+- **open|filtered**: UDP's fourth state: no answer could mean "open" or "blocked". → ch. 7
+- **PF_ROUTE**: the routing socket family, used (through `sysctl`) to read routes and the ARP table. Mac only. → ch. 12
+- **promiscuous mode**: capturing every frame on the wire, not just your own. Zhen never asks for it. → ch. 11
+- **root**: the all-powerful user. The crown in this book's drawings. → ch. 11
+- **RST**: a TCP reset: "nothing is listening here". → ch. 6
+- **RTA_\***: bits in a routing message saying which addresses (destination, gateway, netmask…) follow. → ch. 12
+- **sandbox**: the fence around an app that decides what it may touch. → ch. 15, 17
+- **sequence cookie**: a hash Zhen hides in a SYN's sequence number, so it can recognise the reply as its own. → ch. 13
+- **SMAppService**: the API a Mac app uses to install a launch daemon, with your approval in Settings. → ch. 14
+- **SO_LINGER**: a socket option. Set to zero, `close` resets the connection at once and skips TIME_WAIT. → ch. 6
+- **sockaddr, `sin_len`**: the C struct holding an address and port for a socket call; on BSD it starts with a length byte. → ch. 3
+- **sockaddr_dl**: the link-layer flavour of `sockaddr`, where a MAC address lives. → ch. 8
+- **socket**: a mailbox in the kernel for sending and receiving. You hold its ticket. → ch. 2
+- **SOCK_STREAM / SOCK_DGRAM / SOCK_RAW**: a byte stream (TCP), single messages (UDP, and ping without root), or raw packets (root only). → ch. 5
+- **SSDP / UPnP**: another multicast naming protocol (an M-SEARCH to port 1900). Switched off on iOS. → ch. 9, 15
+- **strict memory safety, `unsafe`**: a Swift mode that makes every pointer handed to C carry an `unsafe` mark. → ch. 2
+- **SYN scan**: sending only the first packet of the TCP handshake and reading the answer. Mac only. → ch. 13
+- **syscall**: a door into the kernel. → ch. 1
+- **sysctl**: a call that reads (and sometimes sets) kernel values by name or number. → ch. 12
+- **TCP handshake**: SYN, SYN-ACK, ACK, the three packets that open a connection. → ch. 6
+- **Team ID**: the ten-character ID Apple gives a developer. Signing requirements name it. → ch. 14
+- **TIME_WAIT**: the pause after a TCP close, when the port number is held back for a while. → ch. 6
+- **TLS**: the encryption layer under HTTPS. Zhen reads the server's certificate. → ch. 6
+- **TTL**: time to live, a hop counter in every IP packet. → ch. 5
+- **UDP**: fire-and-forget datagrams. No handshake, no promise of delivery. → ch. 7
+- **XNU**: the Darwin kernel: Mach, plus BSD, plus drivers. → ch. 1
+- **XPC**: Apple's way for two processes to talk. The app and the helper use it. → ch. 14

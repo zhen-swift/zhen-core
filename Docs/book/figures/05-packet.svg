@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <rect x="4" y="4" width="792" height="592" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <text x="40" y="56" class="t b">Zhen’s echo request: 24 bytes</text>
+
+  <!-- labels above row 1 -->
+  <g>
+    <text x="81" y="118" class="t s mid">type</text>
+    <text x="139" y="118" class="t s mid">code</text>
+    <text x="226" y="118" class="t s mid">checksum</text>
+    <text x="342" y="118" class="t s mid">id</text>
+    <text x="458" y="118" class="t s mid">seq</text>
+    <text x="632" y="118" class="t s mid">magic</text>
+  </g>
+
+  <!-- row 1: header + magic -->
+  <g stroke="#33335C" stroke-width="3">
+    <rect x="52" y="130" width="58" height="64" fill="#FFD45E"/>
+    <rect x="110" y="130" width="58" height="64" fill="#FFD45E"/>
+    <rect x="168" y="130" width="116" height="64" fill="#BDEBD6"/>
+    <rect x="284" y="130" width="116" height="64" fill="#D9D3EC"/>
+    <rect x="400" y="130" width="116" height="64" fill="#fff"/>
+    <rect x="516" y="130" width="232" height="64" fill="#FFB38A"/>
+  </g>
+  <path d="M574 130 v64 M632 130 v64 M690 130 v64" stroke="#33335C" stroke-width="1.5" opacity="0.5"/>
+  <text x="81" y="171" class="m mid">08</text>
+  <text x="139" y="171" class="m mid">00</text>
+  <text x="226" y="171" class="t s mid">Zhen</text>
+  <text x="342" y="171" class="t s mid">kernel</text>
+  <text x="458" y="171" class="m mid">0001</text>
+  <text x="545" y="171" class="m mid">N</text><text x="603" y="171" class="m mid">S</text>
+  <text x="661" y="171" class="m mid">T</text><text x="719" y="171" class="m mid">Y</text>
+
+  <path d="M52 206 V218 H516 V206" fill="none" stroke="#33335C" stroke-width="2.5"/>
+  <text x="284" y="246" class="t s mid">header: 8 bytes</text>
+  <text x="632" y="246" class="t s mid">payload starts</text>
+
+  <!-- row 2: token + filler -->
+  <g stroke="#33335C" stroke-width="3">
+    <rect x="52" y="276" width="232" height="64" fill="#6FA8FF"/>
+    <rect x="284" y="276" width="464" height="64" fill="#fff"/>
+  </g>
+  <text x="168" y="317" class="t b mid">token</text>
+  <text x="516" y="317" class="m mid">00 00 00 00 00 00 00 00</text>
+  <path d="M516 206 V218 H748 V206" fill="none" stroke="#33335C" stroke-width="2.5"/>
+  <path d="M52 352 V364 H748 V352" fill="none" stroke="#33335C" stroke-width="2.5"/>
+  <text x="400" y="392" class="t s mid">payload: 16 bytes, echoed back unchanged</text>
+
+  <!-- notes -->
+  <rect x="24" y="420" width="752" height="152" rx="16" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <rect x="44" y="440" width="22" height="22" rx="4" fill="#6FA8FF" stroke="#33335C" stroke-width="2"/>
+  <text x="80" y="459" class="t s">token: 32 bits, the probe’s real name</text>
+  <rect x="44" y="480" width="22" height="22" rx="4" fill="#BDEBD6" stroke="#33335C" stroke-width="2"/>
+  <text x="80" y="499" class="t s">checksum: Zhen sums it (the kernel won’t)</text>
+  <rect x="44" y="520" width="22" height="22" rx="4" fill="#D9D3EC" stroke="#33335C" stroke-width="2"/>
+  <text x="80" y="539" class="t s">id: the kernel rewrites it on the way out</text>
+</svg>

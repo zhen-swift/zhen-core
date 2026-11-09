@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 580" width="800" height="580">
+  <rect x="4" y="4" width="792" height="572" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- ground -->
+  <path d="M30 470 H770" stroke="#EADFCC" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- the castle, far away -->
+  <use href="#castle" x="590" y="300" width="180" height="160" opacity="0.55"/>
+  <text x="680" y="290" class="t s mid" opacity="0.8">same kernel</text>
+
+  <!-- Pip, holding up a phone -->
+  <use href="#pip-yay" x="110" y="200" width="270" height="270"/>
+  <!-- arms -->
+  <path d="M352 360 C 380 350, 395 330, 400 304" fill="none" stroke="#33335C" stroke-width="7" stroke-linecap="round"/>
+  <path d="M352 400 C 375 400, 388 385, 392 366" fill="none" stroke="#33335C" stroke-width="7" stroke-linecap="round"/>
+
+  <g transform="rotate(10 470 270)">
+    <use href="#phone" x="400" y="150" width="140" height="240"/>
+    <!-- a tiny device list on the screen -->
+    <circle cx="440" cy="210" r="8" fill="#5DBE85"/><rect x="456" y="203" width="56" height="12" rx="6" fill="#33335C" opacity="0.5"/>
+    <circle cx="440" cy="246" r="8" fill="#5DBE85"/><rect x="456" y="239" width="44" height="12" rx="6" fill="#33335C" opacity="0.5"/>
+    <circle cx="440" cy="282" r="8" fill="#5DBE85"/><rect x="456" y="275" width="60" height="12" rx="6" fill="#33335C" opacity="0.5"/>
+    <circle cx="440" cy="318" r="8" fill="#FFD45E"/><rect x="456" y="311" width="36" height="12" rx="6" fill="#33335C" opacity="0.5"/>
+  </g>
+  <!-- mitten hands -->
+  <circle cx="402" cy="302" r="13" fill="#FFB38A" stroke="#33335C" stroke-width="3.5"/>
+  <circle cx="394" cy="364" r="13" fill="#FFB38A" stroke="#33335C" stroke-width="3.5"/>
+
+  <use href="#sparkle" x="560" y="130" width="34" height="34"/>
+  <use href="#sparkle" x="380" y="120" width="22" height="22"/>
+  <use href="#sparkle" x="600" y="230" width="20" height="20"/>
+
+  <!-- speech bubble -->
+  <rect x="40" y="36" width="440" height="104" rx="24" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <path d="M200 140 L214 176 L240 140" fill="#fff" stroke="#33335C" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M202 138 L238 138" stroke="#fff" stroke-width="5"/>
+  <text x="260" y="82" class="t b mid">“What does my phone</text>
+  <text x="260" y="118" class="t b mid">get to do?”</text>
+
+  <text x="400" y="530" class="t b mid">The same engine, in your pocket.</text>
+</svg>

@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 580" width="800" height="580">
+  <rect x="4" y="4" width="792" height="572" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <text x="400" y="52" class="t b mid">Ask a real question, get a real answer</text>
+
+  <g>
+    <rect x="24" y="76" width="368" height="92" rx="16" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <rect x="24" y="76" width="96" height="92" rx="16" fill="#FFD45E" stroke="#33335C" stroke-width="3"/>
+    <text x="72" y="130" class="m mid">53</text>
+    <text x="136" y="114" class="t b">DNS</text>
+    <text x="136" y="148" class="t s" opacity="0.8">“root’s servers?”</text>
+
+    <rect x="408" y="76" width="368" height="92" rx="16" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <rect x="408" y="76" width="96" height="92" rx="16" fill="#FFD45E" stroke="#33335C" stroke-width="3"/>
+    <text x="456" y="130" class="m mid">123</text>
+    <text x="520" y="114" class="t b">NTP</text>
+    <text x="520" y="148" class="t s" opacity="0.8">“what time is it?”</text>
+
+    <rect x="24" y="180" width="368" height="92" rx="16" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <rect x="24" y="180" width="96" height="92" rx="16" fill="#FFD45E" stroke="#33335C" stroke-width="3"/>
+    <text x="72" y="234" class="m mid">137</text>
+    <text x="136" y="218" class="t b">NetBIOS</text>
+    <text x="136" y="252" class="t s" opacity="0.8">“your names?”</text>
+
+    <rect x="408" y="180" width="368" height="92" rx="16" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <rect x="408" y="180" width="96" height="92" rx="16" fill="#FFD45E" stroke="#33335C" stroke-width="3"/>
+    <text x="456" y="234" class="m mid">161</text>
+    <text x="520" y="218" class="t b">SNMP v3</text>
+    <text x="520" y="252" class="t s" opacity="0.8">“who are you?”</text>
+
+    <rect x="24" y="284" width="368" height="92" rx="16" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <rect x="24" y="284" width="96" height="92" rx="16" fill="#FFD45E" stroke="#33335C" stroke-width="3"/>
+    <text x="72" y="338" class="m mid">1900</text>
+    <text x="136" y="322" class="t b">SSDP</text>
+    <text x="136" y="356" class="t s" opacity="0.8">M-SEARCH</text>
+
+    <rect x="408" y="284" width="368" height="92" rx="16" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <rect x="408" y="284" width="96" height="92" rx="16" fill="#FFD45E" stroke="#33335C" stroke-width="3"/>
+    <text x="456" y="338" class="m mid">5353</text>
+    <text x="520" y="322" class="t b">mDNS</text>
+    <text x="520" y="356" class="t s" opacity="0.8">“list your services”</text>
+  </g>
+
+  <!-- never -->
+  <rect x="24" y="396" width="368" height="104" rx="16" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <use href="#lock" x="40" y="414" width="56" height="68"/>
+  <text x="108" y="440" class="m">community "public"</text>
+  <use href="#cross" x="358" y="420" width="26" height="26"/>
+  <text x="112" y="478" class="t s">= a login attempt. Never.</text>
+
+  <rect x="408" y="396" width="368" height="104" rx="16" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="428" y="440" class="t s">any other port:</text>
+  <text x="428" y="478" class="t s">an <tspan font-weight="700">empty</tspan> datagram</text>
+  <use href="#pip" x="676" y="404" width="80" height="80"/>
+
+  <text x="400" y="548" class="t s mid">The <tspan font-weight="700">answer</tspan> names the service. The port number never does.</text>
+</svg>

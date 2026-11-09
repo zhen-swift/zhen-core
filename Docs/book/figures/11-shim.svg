@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 470" width="800" height="470">
+  <rect x="4" y="4" width="792" height="462" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- the macro -->
+  <rect x="40" y="36" width="720" height="70" rx="16" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="400" y="80" class="m mid">BIOCSETIF = _IOW('B', 108, struct ifreq)</text>
+  <text x="400" y="142" class="t s mid">a recipe that needs sizeof(struct ifreq)</text>
+
+  <!-- left: Swift can't -->
+  <rect x="40" y="168" width="330" height="200" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="205" y="208" class="t b mid">Swift alone</text>
+  <use href="#pip-worried" x="70" y="226" width="110" height="110"/>
+  <use href="#cross" x="200" y="246" width="60" height="60"/>
+  <text x="300" y="286" class="t s mid">can’t</text>
+  <text x="300" y="314" class="t s mid">see it</text>
+
+  <!-- right: C computes -->
+  <rect x="430" y="168" width="330" height="200" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="595" y="208" class="t b mid">a tiny C file</text>
+  <text x="595" y="252" class="m mid">ns_bpf_setif()</text>
+  <path d="M595 264 V292" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <rect x="490" y="298" width="210" height="50" rx="14" fill="#FFD45E" stroke="#33335C" stroke-width="3"/>
+  <text x="595" y="332" class="m mid">0x8020426c</text>
+
+  <text x="400" y="420" class="t b mid">It hands Swift a number.</text>
+  <text x="400" y="450" class="t s mid">No syscall inside. Swift calls ioctl itself.</text>
+</svg>

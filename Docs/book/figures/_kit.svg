@@ -1,0 +1,164 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+<!--
+  The book's drawing kit. Every figure in this folder uses these symbols with
+  <use href="#name" x y width height/>, and Scripts/build-book.sh copies this <defs>
+  block into each figure at build time, so a figure on its own is self-contained in the
+  EPUB (e-readers do not follow <use> across files).
+
+  Palette (keep figures to these):
+    ink #33335C   paper #FFF8EE   card-edge #EADFCC
+    stone #D9D3EC   stone-dark #A79FD0   wood #C98A5E
+    pip #FFB38A   blush #FF8FA3
+    blue #6FA8FF   green #5DBE85   red #F26B6B   yellow #FFD45E   purple #B9A3F5   mint #BDEBD6
+-->
+<defs>
+  <style>
+    .t   { font-family: "Avenir Next", "Helvetica Neue", Arial, sans-serif; fill: #33335C; }
+    .h   { font-size: 34px; font-weight: 700; }
+    .b   { font-size: 26px; font-weight: 600; }
+    .s   { font-size: 22px; }
+    .m   { font-family: Menlo, "SF Mono", Courier, monospace; fill: #33335C; font-size: 22px; }
+    .mid { text-anchor: middle; }
+    .ink { stroke: #33335C; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  </style>
+
+  <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M1 1 L9 5 L1 9 Z" fill="#33335C"/>
+  </marker>
+
+  <!-- Pip, the packet. Happy. -->
+  <symbol id="pip" viewBox="0 0 100 100">
+    <ellipse cx="34" cy="90" rx="9" ry="5" fill="#33335C"/>
+    <ellipse cx="66" cy="90" rx="9" ry="5" fill="#33335C"/>
+    <rect x="10" y="16" width="80" height="70" rx="20" fill="#FFB38A" stroke="#33335C" stroke-width="4"/>
+    <path d="M16 26 L50 46 L84 26" fill="none" stroke="#33335C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
+    <circle cx="37" cy="60" r="6.5" fill="#33335C"/><circle cx="39" cy="58" r="2.2" fill="#fff"/>
+    <circle cx="63" cy="60" r="6.5" fill="#33335C"/><circle cx="65" cy="58" r="2.2" fill="#fff"/>
+    <ellipse cx="25" cy="70" rx="6" ry="4" fill="#FF8FA3" opacity="0.8"/>
+    <ellipse cx="75" cy="70" rx="6" ry="4" fill="#FF8FA3" opacity="0.8"/>
+    <path d="M43 71 Q50 78 57 71" fill="none" stroke="#33335C" stroke-width="3" stroke-linecap="round"/>
+  </symbol>
+
+  <!-- Pip, worried. -->
+  <symbol id="pip-worried" viewBox="0 0 100 100">
+    <ellipse cx="34" cy="90" rx="9" ry="5" fill="#33335C"/>
+    <ellipse cx="66" cy="90" rx="9" ry="5" fill="#33335C"/>
+    <rect x="10" y="16" width="80" height="70" rx="20" fill="#FFB38A" stroke="#33335C" stroke-width="4"/>
+    <path d="M16 26 L50 46 L84 26" fill="none" stroke="#33335C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
+    <path d="M29 50 L42 54 M71 50 L58 54" stroke="#33335C" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="37" cy="62" r="6" fill="#33335C"/><circle cx="63" cy="62" r="6" fill="#33335C"/>
+    <ellipse cx="50" cy="75" rx="5" ry="4" fill="#33335C"/>
+    <path d="M86 30 Q92 40 86 44 Q80 40 86 30 Z" fill="#6FA8FF" stroke="#33335C" stroke-width="2"/>
+  </symbol>
+
+  <!-- Pip, delighted (eyes closed, big smile). -->
+  <symbol id="pip-yay" viewBox="0 0 100 100">
+    <ellipse cx="34" cy="90" rx="9" ry="5" fill="#33335C"/>
+    <ellipse cx="66" cy="90" rx="9" ry="5" fill="#33335C"/>
+    <rect x="10" y="16" width="80" height="70" rx="20" fill="#FFB38A" stroke="#33335C" stroke-width="4"/>
+    <path d="M16 26 L50 46 L84 26" fill="none" stroke="#33335C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.35"/>
+    <path d="M30 61 Q37 53 44 61 M56 61 Q63 53 70 61" fill="none" stroke="#33335C" stroke-width="3.5" stroke-linecap="round"/>
+    <ellipse cx="25" cy="70" rx="6" ry="4" fill="#FF8FA3" opacity="0.8"/>
+    <ellipse cx="75" cy="70" rx="6" ry="4" fill="#FF8FA3" opacity="0.8"/>
+    <path d="M40 68 Q50 82 60 68 Z" fill="#33335C"/>
+  </symbol>
+
+  <!-- The kernel: a castle. -->
+  <symbol id="castle" viewBox="0 0 200 170">
+    <path d="M100 6 L100 26" stroke="#33335C" stroke-width="3"/>
+    <path d="M100 6 L124 13 L100 20 Z" fill="#F26B6B" stroke="#33335C" stroke-width="2.5" stroke-linejoin="round"/>
+    <rect x="20" y="50" width="160" height="114" fill="#D9D3EC" stroke="#33335C" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M20 50 v-14 h18 v14 h14 v-14 h18 v14 h14 v-14 h18 v14 h14 v-14 h18 v14 h14 v-14 h18 v14" fill="#D9D3EC" stroke="#33335C" stroke-width="4" stroke-linejoin="round"/>
+    <rect x="72" y="26" width="56" height="30" fill="#D9D3EC" stroke="#33335C" stroke-width="4"/>
+    <path d="M40 80 h20 M140 80 h20 M46 120 h18 M136 120 h18 M60 98 h16 M124 98 h16" stroke="#A79FD0" stroke-width="3" stroke-linecap="round"/>
+    <path d="M78 164 v-34 a22 22 0 0 1 44 0 v34 Z" fill="#C98A5E" stroke="#33335C" stroke-width="4"/>
+    <circle cx="112" cy="146" r="3" fill="#33335C"/>
+  </symbol>
+
+  <!-- A door in the castle wall: a system call. -->
+  <symbol id="door" viewBox="0 0 60 84">
+    <path d="M6 80 v-46 a24 24 0 0 1 48 0 v46 Z" fill="#C98A5E" stroke="#33335C" stroke-width="4"/>
+    <path d="M30 14 v66 M6 50 h48" stroke="#33335C" stroke-width="2" opacity="0.35"/>
+    <circle cx="44" cy="56" r="3.5" fill="#33335C"/>
+  </symbol>
+
+  <!-- A numbered ticket: a file descriptor. Put the number on top as text. -->
+  <symbol id="ticket" viewBox="0 0 90 52">
+    <path d="M4 4 h82 v14 a8 8 0 0 0 0 16 v14 h-82 v-14 a8 8 0 0 0 0 -16 Z" fill="#FFD45E" stroke="#33335C" stroke-width="3.5" stroke-linejoin="round"/>
+    <path d="M24 8 v36" stroke="#33335C" stroke-width="2" stroke-dasharray="4 4" opacity="0.5"/>
+  </symbol>
+
+  <!-- A mailbox: a socket. -->
+  <symbol id="mailbox" viewBox="0 0 80 100">
+    <rect x="34" y="50" width="12" height="46" fill="#C98A5E" stroke="#33335C" stroke-width="3.5"/>
+    <path d="M8 56 v-26 a22 22 0 0 1 22 -22 h20 a22 22 0 0 1 22 22 v26 Z" fill="#6FA8FF" stroke="#33335C" stroke-width="4" stroke-linejoin="round"/>
+    <path d="M30 8 a22 22 0 0 1 22 22 v26" fill="none" stroke="#33335C" stroke-width="3" opacity="0.4"/>
+    <path d="M62 34 v-22 h12 v8 h-12" fill="#F26B6B" stroke="#33335C" stroke-width="3" stroke-linejoin="round"/>
+  </symbol>
+
+  <!-- A phone (iPhone / iPad). -->
+  <symbol id="phone" viewBox="0 0 64 110">
+    <rect x="4" y="4" width="56" height="102" rx="12" fill="#33335C"/>
+    <rect x="9" y="12" width="46" height="86" rx="6" fill="#BDEBD6"/>
+    <rect x="24" y="7" width="16" height="4" rx="2" fill="#5a5a85"/>
+  </symbol>
+
+  <!-- A laptop (the Mac). -->
+  <symbol id="laptop" viewBox="0 0 140 92">
+    <rect x="18" y="6" width="104" height="68" rx="8" fill="#33335C"/>
+    <rect x="25" y="12" width="90" height="56" rx="3" fill="#BDEBD6"/>
+    <path d="M4 76 h132 l-8 12 h-116 Z" fill="#A79FD0" stroke="#33335C" stroke-width="3" stroke-linejoin="round"/>
+  </symbol>
+
+  <!-- A padlock: privileged / not allowed. -->
+  <symbol id="lock" viewBox="0 0 56 68">
+    <path d="M14 30 v-8 a14 14 0 0 1 28 0 v8" fill="none" stroke="#33335C" stroke-width="6"/>
+    <rect x="6" y="28" width="44" height="36" rx="8" fill="#FFD45E" stroke="#33335C" stroke-width="4"/>
+    <circle cx="28" cy="44" r="5" fill="#33335C"/><rect x="26" y="46" width="4" height="10" fill="#33335C"/>
+  </symbol>
+
+  <!-- A crown: root. -->
+  <symbol id="crown" viewBox="0 0 70 50">
+    <path d="M6 44 L10 12 L24 28 L35 6 L46 28 L60 12 L64 44 Z" fill="#FFD45E" stroke="#33335C" stroke-width="4" stroke-linejoin="round"/>
+    <circle cx="35" cy="34" r="4" fill="#F26B6B"/>
+  </symbol>
+
+  <!-- A router / the network. -->
+  <symbol id="router" viewBox="0 0 110 70">
+    <path d="M28 30 L20 6 M82 30 L90 6" stroke="#33335C" stroke-width="4" stroke-linecap="round"/>
+    <rect x="6" y="28" width="98" height="36" rx="10" fill="#B9A3F5" stroke="#33335C" stroke-width="4"/>
+    <circle cx="28" cy="46" r="4" fill="#5DBE85"/><circle cx="44" cy="46" r="4" fill="#5DBE85"/><circle cx="60" cy="46" r="4" fill="#FFD45E"/>
+  </symbol>
+
+  <!-- A generic device on the network (a little screen-with-legs). -->
+  <symbol id="device" viewBox="0 0 80 70">
+    <rect x="6" y="6" width="68" height="46" rx="8" fill="#BDEBD6" stroke="#33335C" stroke-width="4"/>
+    <circle cx="30" cy="27" r="3.5" fill="#33335C"/><circle cx="50" cy="27" r="3.5" fill="#33335C"/>
+    <path d="M33 37 Q40 42 47 37" fill="none" stroke="#33335C" stroke-width="3" stroke-linecap="round"/>
+    <path d="M26 52 v12 M54 52 v12" stroke="#33335C" stroke-width="4" stroke-linecap="round"/>
+  </symbol>
+
+  <!-- A periscope: BPF. -->
+  <symbol id="periscope" viewBox="0 0 70 120">
+    <path d="M24 116 V30 H8 V6 H46 V30 H40 V116 Z" fill="#6FA8FF" stroke="#33335C" stroke-width="4" stroke-linejoin="round"/>
+    <circle cx="27" cy="18" r="8" fill="#BDEBD6" stroke="#33335C" stroke-width="3"/>
+  </symbol>
+
+  <!-- Decoration. -->
+  <symbol id="sparkle" viewBox="0 0 20 20">
+    <path d="M10 0 Q11 9 20 10 Q11 11 10 20 Q9 11 0 10 Q9 9 10 0 Z" fill="#FFD45E"/>
+  </symbol>
+  <symbol id="check" viewBox="0 0 40 40">
+    <circle cx="20" cy="20" r="17" fill="#5DBE85" stroke="#33335C" stroke-width="3"/>
+    <path d="M11 21 L18 28 L30 13" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="cross" viewBox="0 0 40 40">
+    <circle cx="20" cy="20" r="17" fill="#F26B6B" stroke="#33335C" stroke-width="3"/>
+    <path d="M13 13 L27 27 M27 13 L13 27" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="off" viewBox="0 0 40 40">
+    <circle cx="20" cy="20" r="17" fill="#D9D3EC" stroke="#33335C" stroke-width="3"/>
+    <path d="M12 20 H28" stroke="#33335C" stroke-width="4.5" stroke-linecap="round"/>
+  </symbol>
+</defs>
+</svg>

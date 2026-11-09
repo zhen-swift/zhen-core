@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 640" width="800" height="640">
+  <rect x="4" y="4" width="792" height="632" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- the engine -->
+  <rect x="250" y="28" width="300" height="70" rx="18" fill="#B9A3F5" stroke="#33335C" stroke-width="3"/>
+  <text x="400" y="72" class="m mid">ScanRunner.run</text>
+  <path d="M320 98 C 300 130, 230 130, 210 150" fill="none" stroke="#33335C" stroke-width="3.5" marker-end="url(#arrow)"/>
+  <path d="M480 98 C 500 130, 570 130, 590 150" fill="none" stroke="#33335C" stroke-width="3.5" marker-end="url(#arrow)"/>
+
+  <!-- left: the bucket that may spill -->
+  <rect x="24" y="160" width="370" height="400" rx="22" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="209" y="202" class="t b mid">progress</text>
+  <!-- bucket -->
+  <path d="M110 250 h190 l-22 150 h-146 Z" fill="#6FA8FF" stroke="#33335C" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M104 250 h202" stroke="#33335C" stroke-width="5" stroke-linecap="round"/>
+  <path d="M120 250 q85 -70 170 0" fill="none" stroke="#33335C" stroke-width="3"/>
+  <!-- water over the brim -->
+  <path d="M112 252 q20 -14 40 0 q20 -14 40 0 q20 -14 40 0 q20 -14 40 0 q20 -14 36 0" fill="#BDEBD6" stroke="#33335C" stroke-width="2.5"/>
+  <!-- spilled drops -->
+  <path d="M316 262 q8 14 0 22 q-8 -8 0 -22 Z" fill="#6FA8FF" stroke="#33335C" stroke-width="2"/>
+  <path d="M332 300 q8 14 0 22 q-8 -8 0 -22 Z" fill="#6FA8FF" stroke="#33335C" stroke-width="2"/>
+  <path d="M318 340 q8 14 0 22 q-8 -8 0 -22 Z" fill="#6FA8FF" stroke="#33335C" stroke-width="2"/>
+  <text x="205" y="340" class="t s mid" style="fill:#fff">newest</text>
+  <text x="205" y="368" class="t s mid" style="fill:#fff">4,096</text>
+  <text x="209" y="448" class="t s mid">may drop events</text>
+  <text x="209" y="488" class="t s mid">→ the live counter</text>
+  <text x="209" y="528" class="m mid" opacity="0.75">ProgressSink</text>
+
+  <!-- right: the sealed parcel -->
+  <rect x="406" y="160" width="370" height="400" rx="22" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="591" y="202" class="t b mid">result</text>
+  <path d="M496 270 h190 v130 h-190 Z" fill="#C98A5E" stroke="#33335C" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M496 270 l20 -26 h150 l20 26" fill="#C98A5E" fill-opacity="0.6" stroke="#33335C" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M591 244 v156 M496 330 h190" stroke="#FFD45E" stroke-width="10"/>
+  <circle cx="591" cy="330" r="22" fill="#F26B6B" stroke="#33335C" stroke-width="3"/>
+  <use href="#check" x="571" y="310" width="40" height="40"/>
+  <text x="591" y="448" class="t s mid">never dropped</text>
+  <text x="591" y="488" class="t s mid">→ history → the list</text>
+  <text x="591" y="528" class="m mid" opacity="0.75">CompletedScan</text>
+
+  <text x="400" y="602" class="t b mid">The list comes from history, not from progress.</text>
+</svg>

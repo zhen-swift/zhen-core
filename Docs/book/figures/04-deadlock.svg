@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" width="800" height="560">
+  <rect x="4" y="4" width="792" height="552" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <text x="40" y="56" class="t b">Swift’s pool: one worker per core</text>
+
+  <!-- waiting tasks -->
+  <g stroke="#33335C" stroke-width="3">
+    <rect x="34" y="110" width="120" height="56" rx="12" fill="#fff"/>
+    <rect x="34" y="180" width="120" height="56" rx="12" fill="#fff"/>
+    <rect x="34" y="250" width="120" height="56" rx="12" fill="#fff"/>
+    <rect x="34" y="320" width="120" height="56" rx="12" fill="#fff"/>
+    <rect x="34" y="390" width="120" height="56" rx="12" fill="#fff"/>
+  </g>
+  <g class="t s">
+    <text x="94" y="146" class="t s mid">task</text><text x="94" y="216" class="t s mid">task</text>
+    <text x="94" y="286" class="t s mid">task</text><text x="94" y="356" class="t s mid">task</text>
+    <text x="94" y="426" class="t s mid">task</text>
+  </g>
+  <text x="94" y="484" class="t s mid">waiting…</text>
+
+  <!-- four stuck workers -->
+  <g>
+    <rect x="190" y="84" width="300" height="94" rx="16" fill="#D9D3EC" fill-opacity="0.5"/>
+    <use href="#pip-worried" x="200" y="92" width="80" height="80"/>
+    <use href="#door" x="300" y="92" width="56" height="80"/>
+    <text x="370" y="128" class="m">read</text><text x="370" y="160" class="t s" opacity="0.7">zzz</text>
+
+    <rect x="190" y="190" width="300" height="94" rx="16" fill="#D9D3EC" fill-opacity="0.5"/>
+    <use href="#pip-worried" x="200" y="198" width="80" height="80"/>
+    <use href="#door" x="300" y="198" width="56" height="80"/>
+    <text x="370" y="234" class="m">connect</text><text x="370" y="266" class="t s" opacity="0.7">zzz</text>
+
+    <rect x="190" y="296" width="300" height="94" rx="16" fill="#D9D3EC" fill-opacity="0.5"/>
+    <use href="#pip-worried" x="200" y="304" width="80" height="80"/>
+    <use href="#door" x="300" y="304" width="56" height="80"/>
+    <text x="370" y="340" class="m">read</text><text x="370" y="372" class="t s" opacity="0.7">zzz</text>
+
+    <rect x="190" y="402" width="300" height="94" rx="16" fill="#D9D3EC" fill-opacity="0.5"/>
+    <use href="#pip-worried" x="200" y="410" width="80" height="80"/>
+    <use href="#door" x="300" y="410" width="56" height="80"/>
+    <text x="370" y="446" class="m">recv</text><text x="370" y="478" class="t s" opacity="0.7">zzz</text>
+  </g>
+
+  <!-- the polite note -->
+  <g transform="rotate(4 640 220)">
+    <rect x="524" y="120" width="236" height="170" fill="#FFD45E" stroke="#33335C" stroke-width="3"/>
+    <rect x="606" y="108" width="70" height="24" fill="#B9A3F5" opacity="0.8"/>
+    <text x="642" y="176" class="m mid">Task.cancel()</text>
+    <text x="642" y="218" class="t s mid">only a note.</text>
+    <text x="642" y="248" class="t s mid">A task asleep</text>
+    <text x="642" y="278" class="t s mid">can’t read it.</text>
+  </g>
+  <use href="#cross" x="604" y="350" width="70" height="70"/>
+  <text x="640" y="456" class="t b mid">all stuck</text>
+  <text x="640" y="490" class="t b mid">= scan stops</text>
+</svg>

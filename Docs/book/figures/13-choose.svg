@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 620" width="800" height="620">
+  <rect x="4" y="4" width="792" height="612" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <path d="M400 28 L560 92 L400 156 L240 92 Z" fill="#FFD45E" stroke="#33335C" stroke-width="3" stroke-linejoin="round"/>
+  <text x="400" y="86" class="t b mid">BPF device</text>
+  <text x="400" y="116" class="t b mid">opened?</text>
+  <use href="#periscope" x="568" y="40" width="40" height="70"/>
+
+  <path d="M260 118 L210 190" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M540 118 L590 190" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="208" y="150" class="t b" text-anchor="end">yes</text>
+  <text x="594" y="150" class="t b">no</text>
+
+  <!-- yes: nested -->
+  <rect x="40" y="200" width="350" height="250" rx="22" fill="#B9A3F5" stroke="#33335C" stroke-width="3"/>
+  <text x="215" y="236" class="t s mid">+ OS fingerprint</text>
+  <rect x="64" y="252" width="302" height="178" rx="18" fill="#BDEBD6" stroke="#33335C" stroke-width="3"/>
+  <text x="215" y="286" class="t s mid">+ banners</text>
+  <rect x="90" y="302" width="250" height="108" rx="16" fill="#5DBE85" stroke="#33335C" stroke-width="3"/>
+  <text x="215" y="346" class="t b mid">SYN scan</text>
+  <text x="215" y="382" class="t s mid">decides each port</text>
+
+  <!-- no: nested -->
+  <rect x="410" y="252" width="350" height="178" rx="18" fill="#BDEBD6" stroke="#33335C" stroke-width="3"/>
+  <text x="585" y="286" class="t s mid">+ banners</text>
+  <rect x="436" y="302" width="298" height="108" rx="16" fill="#6FA8FF" stroke="#33335C" stroke-width="3"/>
+  <text x="585" y="346" class="t b mid">connect scan</text>
+  <text x="585" y="382" class="t s mid">(chapter 6)</text>
+
+  <!-- rules -->
+  <rect x="40" y="474" width="720" height="118" rx="18" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="66" y="514" class="t s">IPv6 target → connect (SYN here is IPv4 only)</text>
+  <text x="66" y="566" class="m">--scan-type syn</text>
+  <text x="290" y="566" class="t s">+ no device → refused</text>
+  <use href="#cross" x="690" y="538" width="44" height="44"/>
+</svg>

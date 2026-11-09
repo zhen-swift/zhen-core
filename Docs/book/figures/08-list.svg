@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <rect x="4" y="4" width="792" height="592" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <text x="40" y="54" class="m">getifaddrs(&amp;head)</text>
+  <text x="300" y="54" class="t s" opacity="0.8">→ a chain of cards</text>
+
+  <!-- chain arrows -->
+  <g stroke="#33335C" stroke-width="3" marker-end="url(#arrow)">
+    <path d="M92 142 V156"/><path d="M92 486 V500"/><path d="M92 228 V242"/><path d="M92 314 V328"/><path d="M92 400 V414"/>
+  </g>
+
+  <!-- 1 lo0 -->
+  <rect x="40" y="76" width="720" height="64" rx="14" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="60" y="117" class="m">lo0</text>
+  <rect x="150" y="90" width="84" height="36" rx="18" fill="#BDEBD6" stroke="#33335C" stroke-width="2"/>
+  <text x="192" y="115" class="t s mid">INET</text>
+  <text x="254" y="117" class="m">127.0.0.1</text>
+  <use href="#cross" x="560" y="91" width="34" height="34"/>
+  <text x="602" y="116" class="t s">loopback</text>
+
+  <!-- 2 en0 link -->
+  <rect x="40" y="162" width="720" height="64" rx="14" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="60" y="203" class="m">en0</text>
+  <rect x="150" y="176" width="84" height="36" rx="18" fill="#FFD45E" stroke="#33335C" stroke-width="2"/>
+  <text x="192" y="201" class="t s mid">LINK</text>
+  <text x="254" y="203" class="m">a4:83:e7:…</text>
+  <text x="560" y="202" class="t s">→ MAC, kept</text>
+
+  <!-- 3 en0 inet -->
+  <rect x="40" y="248" width="720" height="64" rx="14" fill="#fff" stroke="#5DBE85" stroke-width="5"/>
+  <text x="60" y="289" class="m">en0</text>
+  <rect x="150" y="262" width="84" height="36" rx="18" fill="#BDEBD6" stroke="#33335C" stroke-width="2"/>
+  <text x="192" y="287" class="t s mid">INET</text>
+  <text x="254" y="289" class="m">192.168.1.20/24</text>
+  <use href="#check" x="560" y="263" width="34" height="34"/>
+  <text x="602" y="288" class="t s">up, running</text>
+
+  <!-- 4 utun3 -->
+  <rect x="40" y="334" width="720" height="64" rx="14" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="60" y="375" class="m">utun3</text>
+  <rect x="150" y="348" width="84" height="36" rx="18" fill="#BDEBD6" stroke="#33335C" stroke-width="2"/>
+  <text x="192" y="373" class="t s mid">INET</text>
+  <text x="254" y="375" class="m">10.8.0.2/32</text>
+  <use href="#check" x="560" y="349" width="34" height="34"/>
+  <text x="602" y="374" class="t s">up, running</text>
+
+  <!-- 5 en1 -->
+  <rect x="40" y="420" width="720" height="64" rx="14" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="60" y="461" class="m">en1</text>
+  <rect x="150" y="434" width="84" height="36" rx="18" fill="#BDEBD6" stroke="#33335C" stroke-width="2"/>
+  <text x="192" y="459" class="t s mid">INET</text>
+  <text x="254" y="461" class="m">169.254.3.9</text>
+  <use href="#cross" x="560" y="435" width="34" height="34"/>
+  <text x="602" y="460" class="t s">not running</text>
+
+  <text x="92" y="526" class="m mid">nil</text>
+  <text x="40" y="566" class="m">defer { freeifaddrs(head) }</text>
+  <use href="#pip" x="660" y="500" width="80" height="80"/>
+</svg>

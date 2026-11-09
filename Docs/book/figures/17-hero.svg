@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" width="800" height="520">
+  <rect x="4" y="4" width="792" height="512" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- simulator -->
+  <rect x="24" y="24" width="370" height="420" rx="22" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="209" y="66" class="t b mid">Simulator</text>
+  <use href="#laptop" x="90" y="90" width="240" height="158"/>
+  <!-- a phone drawn on the laptop screen -->
+  <use href="#phone" x="186" y="106" width="48" height="84"/>
+  <use href="#castle" x="124" y="256" width="170" height="144"/>
+  <text x="209" y="434" class="t s mid">the Mac’s kernel</text>
+
+  <!-- real device -->
+  <rect x="406" y="24" width="370" height="420" rx="22" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="591" y="66" class="t b mid">Real iPhone</text>
+  <use href="#phone" x="550" y="96" width="84" height="146"/>
+  <use href="#pip" x="562" y="140" width="60" height="60"/>
+  <use href="#castle" x="506" y="256" width="170" height="144"/>
+  <!-- the sandbox fence around the castle -->
+  <g stroke="#C98A5E" stroke-width="8" stroke-linecap="round">
+    <path d="M472 300 V398 M500 300 V398 M528 300 V398 M656 300 V398 M684 300 V398 M712 300 V398"/>
+  </g>
+  <path d="M462 326 H722 M462 376 H722" stroke="#C98A5E" stroke-width="6"/>
+  <text x="591" y="434" class="t s mid">its own sandbox</text>
+
+  <text x="400" y="486" class="t b mid">Only a device knows its own sandbox.</text>
+</svg>

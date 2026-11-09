@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <rect x="4" y="4" width="792" height="492" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- the switch -->
+  <use href="#ticket" x="40" y="40" width="140" height="81"/>
+  <text x="126" y="94" class="t h mid">5</text>
+  <rect x="210" y="58" width="96" height="46" rx="23" fill="#5DBE85" stroke="#33335C" stroke-width="3"/>
+  <circle cx="282" cy="81" r="17" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="330" y="78" class="m">O_NONBLOCK</text>
+  <text x="330" y="110" class="t s">“never make me wait”</text>
+
+  <!-- read: EAGAIN -->
+  <rect x="24" y="160" width="368" height="310" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="208" y="200" class="m mid">read(5)</text>
+  <use href="#door" x="56" y="250" width="90" height="126"/>
+  <g transform="rotate(-6 100 250)">
+    <rect x="44" y="232" width="116" height="40" rx="6" fill="#FFD45E" stroke="#33335C" stroke-width="2.5"/>
+    <text x="102" y="260" class="m mid" style="font-size:22px">EAGAIN</text>
+  </g>
+  <text x="176" y="296" class="t s">nothing yet,</text>
+  <text x="176" y="326" class="t s">try later</text>
+  <text x="208" y="440" class="t s mid">returns at once</text>
+
+  <!-- connect: EINPROGRESS -->
+  <rect x="408" y="160" width="368" height="310" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="592" y="200" class="m mid">connect(5, …)</text>
+  <use href="#door" x="440" y="250" width="90" height="126"/>
+  <g transform="rotate(-6 500 250)">
+    <rect x="420" y="232" width="176" height="40" rx="6" fill="#FFD45E" stroke="#33335C" stroke-width="2.5"/>
+    <text x="508" y="260" class="m mid">EINPROGRESS</text>
+  </g>
+  <text x="560" y="314" class="t s">knock sent,</text>
+  <text x="560" y="344" class="t s">wait for</text>
+  <text x="560" y="374" class="t s">the bell</text>
+  <text x="592" y="440" class="t s mid">returns at once</text>
+</svg>

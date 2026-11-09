@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" width="800" height="560">
+  <rect x="4" y="4" width="792" height="552" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+  <text x="400" y="54" class="t b mid">Each side checks the other’s badge</text>
+
+  <!-- app badge -->
+  <rect x="40" y="86" width="300" height="190" rx="22" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <use href="#laptop" x="66" y="104" width="90" height="59"/>
+  <text x="250" y="140" class="t b mid">the app</text>
+  <text x="190" y="200" class="m mid">com.jctec.zhen</text>
+  <text x="190" y="248" class="t s mid">team S8662L649U</text>
+
+  <!-- helper badge -->
+  <rect x="460" y="86" width="300" height="190" rx="22" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <use href="#crown" x="486" y="110" width="66" height="47"/>
+  <text x="660" y="140" class="t b mid">the helper</text>
+  <text x="610" y="200" class="m mid">….zhen.helper</text>
+  <text x="610" y="248" class="t s mid">team S8662L649U</text>
+
+  <!-- checks -->
+  <path d="M346 150 C 380 120, 420 120, 454 150" fill="none" stroke="#33335C" stroke-width="3.5" marker-end="url(#arrow)"/>
+  <path d="M454 214 C 420 244, 380 244, 346 214" fill="none" stroke="#33335C" stroke-width="3.5" marker-end="url(#arrow)"/>
+  <use href="#check" x="380" y="160" width="40" height="40"/>
+
+  <!-- stranger -->
+  <rect x="40" y="306" width="720" height="110" rx="20" fill="#fff" stroke="#F26B6B" stroke-width="3"/>
+  <use href="#pip-worried" x="56" y="318" width="86" height="86"/>
+  <text x="160" y="352" class="t b">Any other app, any other team</text>
+  <text x="160" y="390" class="t s">turned away before a name is read</text>
+  <use href="#cross" x="696" y="336" width="48" height="48"/>
+
+  <rect x="40" y="440" width="720" height="90" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="66" y="478" class="m">setCodeSigningRequirement</text>
+  <text x="66" y="512" class="t s">needs macOS 13. Older: the helper says no.</text>
+</svg>

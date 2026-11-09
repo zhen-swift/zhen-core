@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 460" width="800" height="460">
+  <rect x="4" y="4" width="792" height="452" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <path d="M30 380 H770" stroke="#EADFCC" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- the castle -->
+  <use href="#castle" x="480" y="120" width="290" height="247"/>
+  <text x="625" y="96" class="t b mid">the kernel</text>
+
+  <!-- Pip says hi -->
+  <rect x="34" y="34" width="330" height="104" rx="22" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <path d="M110 138 L126 170 L150 138" fill="#fff" stroke="#33335C" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M112 136 L148 136" stroke="#fff" stroke-width="5"/>
+  <text x="199" y="80" class="t b mid">“Hi! I’m Pip.”</text>
+  <text x="199" y="116" class="t s mid">I’ll show you around.</text>
+  <use href="#pip-yay" x="50" y="200" width="170" height="170"/>
+
+  <!-- what Pip carries -->
+  <g transform="rotate(-10 300 300)">
+    <use href="#ticket" x="236" y="262" width="120" height="69"/>
+    <text x="316" y="311" class="t h mid">3</text>
+  </g>
+  <use href="#mailbox" x="378" y="250" width="96" height="120"/>
+  <use href="#sparkle" x="250" y="210" width="24" height="24"/>
+  <use href="#sparkle" x="452" y="214" width="20" height="20"/>
+
+  <text x="400" y="428" class="t s mid">Pip, the castle, its doors, tickets and mailboxes</text>
+</svg>

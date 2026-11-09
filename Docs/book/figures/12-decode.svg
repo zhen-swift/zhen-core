@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" width="800" height="520">
+  <rect x="4" y="4" width="792" height="512" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+  <text x="400" y="54" class="t b mid">Not every line is a device</text>
+  <use href="#pip" x="350" y="70" width="100" height="100"/>
+  <path d="M370 170 L160 212" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M400 172 V210" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <path d="M430 170 L640 212" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- bin 1 -->
+  <rect x="30" y="220" width="236" height="270" rx="20" fill="#fff" stroke="#5DBE85" stroke-width="4"/>
+  <text x="148" y="260" class="t b mid">a device</text>
+  <text x="148" y="300" class="m mid">10.10.20.7</text>
+  <text x="148" y="330" class="m mid">3c:22:fb:…</text>
+  <use href="#check" x="122" y="352" width="52" height="52"/>
+  <text x="148" y="440" class="t s mid">kept</text>
+
+  <!-- bin 2 -->
+  <rect x="282" y="220" width="236" height="270" rx="20" fill="#fff" stroke="#FFD45E" stroke-width="4"/>
+  <text x="400" y="260" class="t b mid">nobody home</text>
+  <text x="400" y="300" class="m mid">10.10.20.9</text>
+  <text x="400" y="330" class="t s mid">(no MAC)</text>
+  <use href="#off" x="374" y="352" width="52" height="52"/>
+  <text x="400" y="440" class="t s mid">kept, marked</text>
+  <text x="400" y="470" class="t s mid">“incomplete”</text>
+
+  <!-- bin 3 -->
+  <rect x="534" y="220" width="236" height="270" rx="20" fill="#fff" stroke="#F26B6B" stroke-width="4"/>
+  <text x="652" y="260" class="t b mid">plumbing</text>
+  <text x="652" y="300" class="m mid">10.10.20.255</text>
+  <text x="652" y="330" class="m mid">224.0.0.251</text>
+  <use href="#cross" x="626" y="352" width="52" height="52"/>
+  <text x="652" y="440" class="t s mid">dropped</text>
+  <text x="652" y="470" class="t s mid">(broadcast, mDNS)</text>
+</svg>

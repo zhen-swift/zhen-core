@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" width="800" height="480">
+  <rect x="4" y="4" width="792" height="472" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <use href="#castle" x="24" y="40" width="200" height="170"/>
+  <text x="124" y="240" class="t s mid">the kernel’s</text>
+  <text x="124" y="268" class="t s mid">address book</text>
+
+  <!-- the open book -->
+  <path d="M236 70 Q 380 50, 500 84 Q 620 50, 770 70 V 400 Q 620 380, 500 414 Q 380 380, 236 400 Z" fill="#fff" stroke="#33335C" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M500 84 V414" stroke="#33335C" stroke-width="3"/>
+  <text x="368" y="122" class="t b mid">IP</text>
+  <text x="635" y="122" class="t b mid">MAC</text>
+  <path d="M262 138 H480 M520 138 H744" stroke="#A79FD0" stroke-width="3"/>
+  <g class="m">
+    <text x="262" y="184">10.10.20.1</text>
+    <text x="262" y="236">10.10.20.7</text>
+    <text x="262" y="288">10.10.20.9</text>
+    <text x="262" y="340">10.10.20.42</text>
+    <text x="524" y="184">a4:91:b1:…</text>
+    <text x="524" y="236">3c:22:fb:…</text>
+    <text x="524" y="340">f0:9f:c2:…</text>
+  </g>
+  <text x="524" y="288" class="t s" opacity="0.7">(no answer)</text>
+
+  <use href="#pip" x="60" y="300" width="130" height="130"/>
+  <path d="M184 352 C 210 340, 222 320, 252 312" fill="none" stroke="#33335C" stroke-width="3" stroke-dasharray="8 7" marker-end="url(#arrow)"/>
+  <text x="400" y="456" class="t s mid">Readable without root, on a Mac.</text>
+</svg>

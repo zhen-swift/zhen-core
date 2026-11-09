@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1010" width="800" height="1010">
+  <rect x="4" y="4" width="792" height="1002" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <text x="400" y="62" class="t h mid">Six checks</text>
+  <text x="400" y="98" class="t s mid">none of them sends a packet</text>
+
+  <!-- card 1 -->
+  <g>
+    <rect x="24" y="124" width="368" height="272" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <circle cx="62" cy="164" r="22" fill="#FFB38A" stroke="#33335C" stroke-width="3"/>
+    <text x="62" y="173" class="t b mid">1</text>
+    <text x="96" y="173" class="t b">ICMP socket</text>
+    <use href="#mailbox" x="286" y="190" width="72" height="90"/>
+    <text x="44" y="250" class="m">socket(…ICMP)</text>
+    <text x="44" y="320" class="t s" opacity="0.7">expect</text>
+    <text x="44" y="358" class="t b">opens</text>
+  </g>
+  <!-- card 2 -->
+  <g>
+    <rect x="408" y="124" width="368" height="272" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <circle cx="446" cy="164" r="22" fill="#FFB38A" stroke="#33335C" stroke-width="3"/>
+    <text x="446" y="173" class="t b mid">2</text>
+    <text x="480" y="173" class="t b">Open-file limit</text>
+    <g transform="rotate(-10 700 260)">
+      <use href="#ticket" x="640" y="226" width="110" height="64"/>
+      <text x="708" y="270" class="t b mid">256</text>
+    </g>
+    <text x="428" y="250" class="m">getrlimit</text>
+    <text x="428" y="320" class="t s" opacity="0.7">expect</text>
+    <text x="428" y="358" class="t b">at least 256</text>
+  </g>
+  <!-- card 3 -->
+  <g>
+    <rect x="24" y="412" width="368" height="272" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <circle cx="62" cy="452" r="22" fill="#FFB38A" stroke="#33335C" stroke-width="3"/>
+    <text x="62" y="461" class="t b mid">3</text>
+    <text x="96" y="461" class="t b">Routing table</text>
+    <use href="#router" x="262" y="490" width="110" height="70"/>
+    <text x="44" y="538" class="m">NET_RT_DUMP</text>
+    <text x="44" y="608" class="t s" opacity="0.7">expect</text>
+    <text x="44" y="646" class="t b">either; just tell us</text>
+  </g>
+  <!-- card 4 -->
+  <g>
+    <rect x="408" y="412" width="368" height="272" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <circle cx="446" cy="452" r="22" fill="#FFB38A" stroke="#33335C" stroke-width="3"/>
+    <text x="446" y="461" class="t b mid">4</text>
+    <text x="480" y="461" class="t b">ARP table</text>
+    <!-- an empty drawer -->
+    <rect x="668" y="494" width="88" height="62" rx="8" fill="#D9D3EC" stroke="#33335C" stroke-width="3"/>
+    <rect x="694" y="518" width="36" height="10" rx="5" fill="#33335C"/>
+    <text x="428" y="538" class="m">RTF_LLINFO 0x400</text>
+    <text x="428" y="608" class="t s" opacity="0.7">expect</text>
+    <text x="428" y="646" class="t b">0 bytes</text>
+  </g>
+  <!-- card 5 -->
+  <g>
+    <rect x="24" y="700" width="368" height="272" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <circle cx="62" cy="740" r="22" fill="#FFB38A" stroke="#33335C" stroke-width="3"/>
+    <text x="62" y="749" class="t b mid">5</text>
+    <text x="96" y="749" class="t b">en0’s MAC</text>
+    <use href="#phone" x="310" y="716" width="50" height="86"/>
+    <text x="44" y="826" class="m">getifaddrs</text>
+    <text x="44" y="896" class="t s" opacity="0.7">expect</text>
+    <text x="44" y="934" class="m" style="font-weight:700">02:00:00:00:00:00</text>
+  </g>
+  <!-- card 6 -->
+  <g>
+    <rect x="408" y="700" width="368" height="272" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+    <circle cx="446" cy="740" r="22" fill="#FFB38A" stroke="#33335C" stroke-width="3"/>
+    <text x="446" y="749" class="t b mid">6</text>
+    <text x="480" y="749" class="t b">Bonjour types</text>
+    <use href="#device" x="672" y="770" width="84" height="74"/>
+    <text x="428" y="826" class="m">NSBonjourServices</text>
+    <text x="428" y="896" class="t s" opacity="0.7">expect</text>
+    <text x="428" y="934" class="t b">all 17 declared</text>
+  </g>
+</svg>

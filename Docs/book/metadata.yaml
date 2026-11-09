@@ -1,0 +1,14 @@
+---
+title: "Zhen & Darwin, Illustrated"
+subtitle: "How a network scanner talks to the Apple kernel, explained with pictures"
+author: "zhen-swift"
+lang: en-GB
+date: "2026-11"
+rights: "Apache-2.0, as zhen-core"
+description: >-
+  A picture-first guide to every place zhen-core touches the Darwin kernel: file
+  descriptors, sockets, kqueue, ICMP without root, BPF, the routing socket and the
+  privileged helper. Each chapter says what an iPhone or iPad gets. Pinned to zhen-core
+  0.9.0.
+subject: [Darwin, XNU, BSD sockets, Swift, networking, iOS]
+---

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" width="800" height="400">
+  <rect x="4" y="4" width="792" height="392" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- panel 1 -->
+  <rect x="24" y="24" width="240" height="352" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="44" y="64" class="t h">1</text>
+  <text x="144" y="64" class="m mid">close(5)</text>
+  <g transform="rotate(-14 150 150)">
+    <use href="#ticket" x="94" y="104" width="110" height="64"/>
+    <text x="162" y="149" class="t h mid">5</text>
+  </g>
+  <path d="M110 214 h80 l-8 70 h-64 Z" fill="#D9D3EC" stroke="#33335C" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M102 214 h96" stroke="#33335C" stroke-width="4" stroke-linecap="round"/>
+  <path d="M150 178 v26" stroke="#33335C" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="144" y="336" class="t s mid">Pip is done with 5</text>
+
+  <!-- panel 2 -->
+  <rect x="280" y="24" width="240" height="352" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="300" y="64" class="t h">2</text>
+  <use href="#device" x="330" y="190" width="140" height="122"/>
+  <use href="#ticket" x="346" y="96" width="110" height="64"/>
+  <text x="414" y="141" class="t h mid">5</text>
+  <use href="#sparkle" x="460" y="90" width="22" height="22"/>
+  <text x="400" y="336" class="t s mid">a stranger gets 5</text>
+
+  <!-- panel 3 -->
+  <rect x="536" y="24" width="240" height="352" rx="20" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="556" y="64" class="t h">3</text>
+  <text x="664" y="64" class="m mid">close(5)</text>
+  <path d="M656 96 l12 30 l30 -8 l-16 26 l26 18 l-32 4 l4 32 l-24 -22 l-24 22 l4 -32 l-32 -4 l26 -18 l-16 -26 l30 8 Z" fill="#F26B6B" stroke="#33335C" stroke-width="3" stroke-linejoin="round"/>
+  <use href="#pip-worried" x="600" y="200" width="120" height="120"/>
+  <text x="656" y="336" class="t s mid">theirs dies!</text>
+</svg>

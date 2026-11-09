@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 640" width="800" height="640">
+  <rect x="4" y="4" width="792" height="632" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <text x="40" y="58" class="t b">The boxes</text>
+
+  <g>
+    <rect x="40" y="78" width="720" height="54" rx="10" fill="#fff" stroke="#EADFCC" stroke-width="2"/>
+    <rect x="40" y="78" width="14" height="54" rx="4" fill="#6FA8FF"/>
+    <text x="72" y="114" class="t b">short</text><text x="250" y="114" class="t s">the chapter in 3–5 bullets</text>
+
+    <rect x="40" y="142" width="720" height="54" rx="10" fill="#fff" stroke="#EADFCC" stroke-width="2"/>
+    <rect x="40" y="142" width="14" height="54" rx="4" fill="#FFD45E"/>
+    <text x="72" y="178" class="t b">word</text><text x="250" y="178" class="t s">a new word, the first time</text>
+
+    <rect x="40" y="206" width="720" height="54" rx="10" fill="#fff" stroke="#EADFCC" stroke-width="2"/>
+    <rect x="40" y="206" width="14" height="54" rx="4" fill="#5DBE85"/>
+    <text x="72" y="242" class="t b">iphone</text><text x="250" y="242" class="t s">what an iPhone or iPad gets</text>
+
+    <rect x="40" y="270" width="720" height="54" rx="10" fill="#fff" stroke="#EADFCC" stroke-width="2"/>
+    <rect x="40" y="270" width="14" height="54" rx="4" fill="#F26B6B"/>
+    <text x="72" y="306" class="t b">gotcha</text><text x="250" y="306" class="t s">traps the code remembers</text>
+
+    <rect x="40" y="334" width="720" height="54" rx="10" fill="#fff" stroke="#EADFCC" stroke-width="2"/>
+    <rect x="40" y="334" width="14" height="54" rx="4" fill="#B9A3F5"/>
+    <text x="72" y="370" class="t b">remember</text><text x="250" y="370" class="t s">a three-line recap</text>
+
+    <rect x="40" y="398" width="720" height="54" rx="10" fill="#fff" stroke="#EADFCC" stroke-width="2"/>
+    <rect x="40" y="398" width="14" height="54" rx="4" fill="#FFB38A"/>
+    <text x="72" y="434" class="t b">honest</text><text x="250" y="434" class="t s">the code and its comments disagree</text>
+  </g>
+
+  <text x="40" y="508" class="t b">The marks</text>
+  <use href="#check" x="40" y="530" width="54" height="54"/>
+  <text x="104" y="566" class="t s">works</text>
+  <use href="#cross" x="220" y="530" width="54" height="54"/>
+  <text x="284" y="566" class="t s">not built,</text>
+  <text x="284" y="594" class="t s">not allowed</text>
+  <use href="#off" x="430" y="530" width="54" height="54"/>
+  <text x="494" y="566" class="t s">off, or not</text>
+  <text x="494" y="594" class="t s">measured yet</text>
+</svg>

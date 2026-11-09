@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" width="800" height="560">
+  <rect x="4" y="4" width="792" height="552" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <text x="40" y="56" class="t b">The send buffer is full</text>
+  <text x="40" y="92" class="m">sendto → EAGAIN / ENOBUFS</text>
+
+  <!-- eight tries -->
+  <path d="M60 196 H760" stroke="#EADFCC" stroke-width="8" stroke-linecap="round"/>
+  <g stroke="#33335C" stroke-width="3">
+    <circle cx="90" cy="196" r="32" fill="#FFD45E"/><circle cx="178" cy="196" r="32" fill="#FFD45E"/>
+    <circle cx="266" cy="196" r="32" fill="#FFD45E"/><circle cx="354" cy="196" r="32" fill="#FFD45E"/>
+    <circle cx="442" cy="196" r="32" fill="#6FA8FF"/><circle cx="530" cy="196" r="32" fill="#6FA8FF"/>
+    <circle cx="618" cy="196" r="32" fill="#6FA8FF"/><circle cx="706" cy="196" r="32" fill="#6FA8FF"/>
+  </g>
+  <g class="t b">
+    <text x="90" y="205" class="t b mid">1</text><text x="178" y="205" class="t b mid">2</text>
+    <text x="266" y="205" class="t b mid">3</text><text x="354" y="205" class="t b mid">4</text>
+    <text x="442" y="205" class="t b mid">5</text><text x="530" y="205" class="t b mid">6</text>
+    <text x="618" y="205" class="t b mid">7</text><text x="706" y="205" class="t b mid">8</text>
+  </g>
+  <path d="M58 244 V256 H386 V244 M410 244 V256 H738 V244" fill="none" stroke="#33335C" stroke-width="2.5"/>
+  <text x="222" y="290" class="m mid">Task.yield()</text>
+  <text x="222" y="322" class="t s mid">step aside a moment</text>
+  <g transform="translate(436 268) scale(0.8)"><path d="M8 50 Q13 45 13 32 Q13 10 34 8 Q55 10 55 32 Q55 45 60 50 Z" fill="#FFD45E" stroke="#33335C" stroke-width="3.5" stroke-linejoin="round"/><circle cx="34" cy="56" r="6" fill="#33335C"/><circle cx="34" cy="6" r="4" fill="#33335C"/></g>
+  <text x="500" y="300" class="t s">wait for the</text>
+  <text x="500" y="328" class="t s">write bell, ≤ 50 ms</text>
+
+  <!-- what not to do -->
+  <rect x="24" y="364" width="752" height="80" rx="16" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <use href="#cross" x="44" y="382" width="44" height="44"/>
+  <text x="104" y="412" class="m">Task.sleep</text>
+  <text x="250" y="412" class="t s">~1 ms a nap: tens of ms become seconds</text>
+
+  <rect x="24" y="456" width="752" height="80" rx="16" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <use href="#check" x="44" y="474" width="44" height="44"/>
+  <text x="104" y="504" class="t s">still full after 8? “not sent”, never “no answer”</text>
+</svg>

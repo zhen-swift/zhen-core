@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <rect x="4" y="4" width="792" height="492" rx="28" fill="#FFF8EE" stroke="#EADFCC" stroke-width="4"/>
+
+  <!-- panel 1: Scan hangs a token -->
+  <rect x="24" y="24" width="370" height="380" rx="22" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="209" y="66" class="t b mid">Scan</text>
+  <!-- hook -->
+  <path d="M80 100 H180" stroke="#C98A5E" stroke-width="12" stroke-linecap="round"/>
+  <path d="M130 100 v22 a12 12 0 1 0 12 12" fill="none" stroke="#33335C" stroke-width="4" stroke-linecap="round"/>
+  <!-- a luggage tag -->
+  <g transform="rotate(-8 130 190)">
+    <path d="M86 150 h88 v100 h-88 Z" fill="#FFD45E" stroke="#33335C" stroke-width="3" stroke-linejoin="round"/>
+    <circle cx="130" cy="166" r="7" fill="#fff" stroke="#33335C" stroke-width="2.5"/>
+    <text x="130" y="212" class="m mid">UUID</text>
+    <text x="130" y="238" class="m mid" opacity="0.6">7F3A…</text>
+  </g>
+  <path d="M130 134 L130 158" stroke="#33335C" stroke-width="2.5"/>
+  <use href="#pip-yay" x="220" y="130" width="140" height="140"/>
+  <text x="290" y="300" class="t s mid">task runs</text>
+  <text x="209" y="370" class="m mid">scanToken = UUID()</text>
+
+  <!-- panel 2: Stop takes it away -->
+  <rect x="406" y="24" width="370" height="380" rx="22" fill="#fff" stroke="#33335C" stroke-width="3"/>
+  <text x="591" y="66" class="t b mid">Stop</text>
+  <path d="M462 100 H562" stroke="#C98A5E" stroke-width="12" stroke-linecap="round"/>
+  <path d="M512 100 v22 a12 12 0 1 0 12 12" fill="none" stroke="#33335C" stroke-width="4" stroke-linecap="round"/>
+  <!-- the tag, gone (dashed outline) -->
+  <path d="M468 160 h88 v100 h-88 Z" fill="none" stroke="#A79FD0" stroke-width="3" stroke-dasharray="8 7"/>
+  <text x="512" y="220" class="m mid" opacity="0.6">nil</text>
+  <use href="#pip" x="600" y="150" width="130" height="130"/>
+  <text x="700" y="148" class="t b" opacity="0.6">z</text>
+  <text x="720" y="124" class="t h" opacity="0.6">z</text>
+  <text x="665" y="300" class="t s mid">task cancelled</text>
+  <text x="591" y="370" class="m mid">scanToken = nil</text>
+
+  <text x="400" y="454" class="t b mid">One place starts scans: .task(id:)</text>
+</svg>
