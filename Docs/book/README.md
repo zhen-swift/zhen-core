@@ -30,7 +30,7 @@ GitHub Pages from `main`.
 |---|---|
 | `metadata.yaml` | Title, author, language |
 | `epub.css` | Typography and the callout boxes, for the EPUB |
-| `web.css` | The web edition's stylesheet: the book's palette, a reading column and dark mode |
+| `web/` | The web edition: `template.html` (the page pandoc writes), `book.css` and `book.js`. `Scripts/book-site.py` adds the contents, top bar, previous/next cards and front page from pandoc's `sitemap.json` |
 | `chapters/NNN-slug.md` | One file per chapter or part page, in build order. The first digit is the part (`1` for Part I and so on, `0` for the opening, `9` for the appendices) |
 | `figures/_kit.svg` | The drawing kit: palette, text styles and the reusable symbols |
 | `figures/*.svg` | One file per drawing, named after its chapter (`05-socket.svg`) |
