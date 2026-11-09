@@ -15,11 +15,13 @@ on:
     paths:
       - Docs/book/**
       - Scripts/build-book.sh
+      - Scripts/book-site.py
       - .github/workflows/book.yml
   pull_request:
     paths:
       - Docs/book/**
       - Scripts/build-book.sh
+      - Scripts/book-site.py
       - .github/workflows/book.yml
   workflow_dispatch:
 

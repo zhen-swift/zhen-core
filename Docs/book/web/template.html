@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="$lang$">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="color-scheme" content="light dark" />
+$if(description-meta)$
+<meta name="description" content="$description-meta$" />
+$endif$
+<title>$pagetitle$</title>
+<link rel="icon" href="figures/cover.svg" type="image/svg+xml" />
+<link rel="stylesheet" href="book.css" />
+$if(highlighting-css)$
+<style>
+$highlighting-css$
+</style>
+$endif$
+<script src="book.js" defer></script>
+<!--BOOK:HEAD-->
+</head>
+<body>
+<a class="skip" href="#content">Skip to the text</a>
+<!--BOOK:TOP-->
+<div class="layout">
+<!--BOOK:TOC-->
+<main id="content" class="page">
+$body$
+<!--BOOK:PAGER-->
+</main>
+</div>
+<!--BOOK:FOOT-->
+</body>
+</html>

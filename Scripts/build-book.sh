@@ -147,8 +147,10 @@ epubcheck --quiet "$EPUB"
 echo "build-book: $EPUB"
 
 # ── Web edition ──────────────────────────────────────────────────────────────────────
-# The same chapters as one page each. pandoc copies the figures each page names; the
-# cover and the EPUB itself are added by hand, and the front page gets them.
+# The same chapters as one page each, named after the chapter (`ping-without-root.html`).
+# pandoc writes the pages through Docs/book/web/template.html and copies the figures they
+# name; Scripts/book-site.py then adds the contents, the top bar, the previous/next cards
+# and the front page, all from pandoc's own sitemap.json.
 if (( html )); then
     SITE=$OUT/site
     rm -rf "$SITE"
@@ -156,35 +158,15 @@ if (( html )); then
         --from markdown+fenced_divs+bracketed_spans \
         --to chunkedhtml \
         --output "$SITE" \
-        --css book.css \
+        --template "$BOOK/web/template.html" \
+        --chunk-template '%i.html' \
         --resource-path "$OUT:$BOOK" \
-        --toc --toc-depth 1 \
+        --toc --toc-depth 2 \
         --split-level 1 \
         --syntax-highlighting tango
-    cp "$BOOK/web.css" "$SITE/book.css"
+    cp "$BOOK/web/book.css" "$BOOK/web/book.js" "$SITE/"
     cp "$OUT/figures/cover.svg" "$SITE/figures/cover.svg"
     cp "$EPUB" "$SITE/"
-    python3 -I - "$SITE" "$(basename "$EPUB")" <<'PY'
-import pathlib, re, sys
-site, epub = pathlib.Path(sys.argv[1]), sys.argv[2]
-for page in site.glob("*.html"):
-    text = page.read_text()
-    # The chapter links again at the bottom, where a reader finishes a chapter.
-    nav = re.search(r'<nav id="sitenav">.*?</nav>', text, re.S)
-    if nav:
-        bottom = nav.group(0).replace('<nav id="sitenav">', '<nav class="sitenav-bottom">')
-        bottom = re.sub(r'\saccesskey="\w"', "", bottom)
-        text = text.replace("</body>", bottom + "\n</body>", 1)
-    if page.name == "index.html":
-        front = (
-            '<img class="cover" src="figures/cover.svg" alt="The cover: Pip the packet, '
-            'a castle for the kernel, a ticket and a mailbox." />\n'
-            '<p class="front">A picture-first tour of every place zhen-core talks to the '
-            'Darwin kernel, and what an iPhone or iPad gets. Pinned to zhen-core 0.9.0.</p>\n'
-            f'<p class="download"><a href="{epub}" download>Download the EPUB</a></p>\n'
-        )
-        text = text.replace("</header>", "</header>\n" + front, 1)
-    page.write_text(text)
-PY
+    python3 -I Scripts/book-site.py "$SITE" "$(basename "$EPUB")"
     echo "build-book: $SITE"
 fi
