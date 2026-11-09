@@ -4,6 +4,9 @@ A picture-first book about every place zhen-core talks to the Darwin kernel: fil
 descriptors, sockets, kqueue, ICMP without root, Bonjour, BPF, the routing socket and the
 privileged helper. Every chapter ends with what an iPhone or iPad gets.
 
+**Read it online at <https://zhen-swift.github.io/zhen-core/>**, or download the EPUB from
+the front page there.
+
 It is **pinned to tag `0.9.0`**. Every `File.swift:NN` it cites is a line at that tag, the
 version zhen-ios builds against. When the engine moves on, the book is re-pinned, not
 quietly edited.
@@ -14,16 +17,20 @@ quietly edited.
 brew install pandoc epubcheck          # once; rsvg-convert (librsvg) is optional
 Scripts/build-book.sh --check-refs     # → Docs/book/build/zhen-and-darwin.epub
 Scripts/build-book.sh --png            # also renders every figure to build/png/
+Scripts/build-book.sh --html           # also builds the web edition into build/site/
 ```
 
-`build/` is ignored. The EPUB is a build product.
+`build/` is ignored. The EPUB and the site are build products. `.github/workflows/book.yml`
+builds both on every pull request that touches the book, and publishes the site to
+GitHub Pages from `main`.
 
 ## Layout
 
 | | |
 |---|---|
 | `metadata.yaml` | Title, author, language |
-| `epub.css` | Typography and the callout boxes |
+| `epub.css` | Typography and the callout boxes, for the EPUB |
+| `web.css` | The web edition's stylesheet: the book's palette, a reading column and dark mode |
 | `chapters/NNN-slug.md` | One file per chapter or part page, in build order. The first digit is the part (`1` for Part I and so on, `0` for the opening, `9` for the appendices) |
 | `figures/_kit.svg` | The drawing kit: palette, text styles and the reusable symbols |
 | `figures/*.svg` | One file per drawing, named after its chapter (`05-socket.svg`) |

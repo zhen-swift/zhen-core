@@ -1,0 +1,126 @@
+/* Zhen & Darwin, Illustrated — the web edition (GitHub Pages).
+   The EPUB keeps epub.css, which is deliberately bare because readers restyle everything.
+   A browser does not, so this one carries the book's palette, a reading column, and a
+   dark mode. Figures and code blocks stay light cards in both modes: the drawings are
+   painted on a cream card, and the code highlighting is a light theme. */
+
+:root {
+  --paper: #FFFDF8;
+  --ink: #33335C;
+  --muted: #6B6B8F;
+  --rule: #EADFCC;
+  --link: #3F6FD8;
+  --card: #FFF8EE;
+  --tint-short: rgba(111, 168, 255, 0.10);
+  --tint-iphone: rgba(93, 190, 133, 0.12);
+  --tint-gotcha: rgba(242, 107, 107, 0.10);
+  --tint-remember: rgba(185, 163, 245, 0.14);
+  --tint-honest: rgba(255, 179, 138, 0.16);
+  --tint-word: rgba(255, 212, 94, 0.16);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #1C1C2B;
+    --ink: #ECEAF6;
+    --muted: #A9A7C8;
+    --rule: #3A3A55;
+    --link: #8FB4FF;
+    color-scheme: dark;
+  }
+}
+
+html { background: var(--paper); }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: -apple-system, "Avenir Next", "Helvetica Neue", Arial, sans-serif;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 0.5rem 16px 4rem;
+}
+
+a { color: var(--link); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+
+h1, h2, h3 { line-height: 1.25; }
+h1 { font-size: 2rem; margin: 1.2rem 0 1rem; }
+h2 { font-size: 1.4rem; margin: 2.2rem 0 0.6rem; padding-top: 0.6rem; border-top: 1px solid var(--rule); }
+h3 { font-size: 1.1rem; margin: 1.6rem 0 0.4rem; }
+
+li { margin: 0.25em 0; }
+
+/* ── Figures ─────────────────────────────────────────────────────────────────────── */
+figure { margin: 1.6rem 0; text-align: center; }
+figure img, p > img { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+figcaption { color: var(--muted); font-size: 0.92rem; font-style: italic; margin-top: 0.5rem; }
+
+/* ── Code ────────────────────────────────────────────────────────────────────────── */
+code { font-family: Menlo, "SF Mono", ui-monospace, monospace; font-size: 0.88em; }
+:not(pre) > code { background: var(--tint-word); padding: 0.05em 0.3em; border-radius: 4px; }
+pre, div.sourceCode {
+  background: var(--card) !important;
+  color: #33335C;
+  border: 1px solid #EADFCC;
+  border-radius: 10px;
+}
+pre { padding: 0.8rem 1rem; overflow-x: auto; font-size: 0.85rem; line-height: 1.45; margin: 1rem 0 0.4rem; }
+div.sourceCode pre { border: 0; margin: 0; }
+div.sourceCode { margin: 1rem 0 0.4rem; overflow-x: auto; }
+pre code { background: none; padding: 0; }
+.src { color: var(--muted); font-size: 0.82rem; text-align: right; margin-top: 0; }
+
+/* ── Callouts ────────────────────────────────────────────────────────────────────── */
+div.short, div.iphone, div.gotcha, div.remember, div.honest, div.word {
+  margin: 1.4rem 0;
+  padding: 0.6rem 1rem;
+  border-left: 6px solid;
+  border-radius: 0 10px 10px 0;
+}
+div.short    { border-color: #6FA8FF; background: var(--tint-short); }
+div.iphone   { border-color: #5DBE85; background: var(--tint-iphone); }
+div.gotcha   { border-color: #F26B6B; background: var(--tint-gotcha); }
+div.remember { border-color: #B9A3F5; background: var(--tint-remember); }
+div.honest   { border-color: #FFB38A; background: var(--tint-honest); }
+div.word     { border-color: #FFD45E; background: var(--tint-word); }
+div.short > p:first-child, div.iphone > p:first-child, div.gotcha > p:first-child,
+div.remember > p:first-child, div.honest > p:first-child, div.word > p:first-child {
+  font-weight: 700; margin-top: 0.3rem;
+}
+
+/* ── Tables: scroll sideways on a phone rather than squash ───────────────────────── */
+table { display: block; overflow-x: auto; border-collapse: collapse; margin: 1rem 0; font-size: 0.92rem; }
+th, td { border: 1px solid var(--rule); padding: 0.35em 0.6em; text-align: left; vertical-align: top; }
+th { background: var(--tint-remember); }
+
+/* ── Chapter navigation (pandoc's chunkedhtml) ───────────────────────────────────── */
+nav#sitenav, nav.sitenav-bottom {
+  font-size: 0.92rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+nav.sitenav-bottom { border-bottom: 0; border-top: 1px solid var(--rule); margin-top: 3rem; }
+div.sitenav { display: flex; flex-wrap: wrap; gap: 0.3rem 1rem; }
+span.navlink { flex: 1 1 14rem; }
+span.navlink:empty, span.navlink:has(a[rel="top"]) { display: none; }
+span.navlink-label { color: var(--muted); min-width: 3.2em; }
+
+/* ── The front page ──────────────────────────────────────────────────────────────── */
+header#title-block-header { text-align: center; margin: 1.5rem 0 0.5rem; }
+header#title-block-header h1.title { font-size: 2.4rem; margin-bottom: 0.3rem; }
+header#title-block-header .subtitle { color: var(--muted); font-size: 1.15rem; margin: 0; }
+header#title-block-header .author, header#title-block-header .date { display: none; }
+img.cover { display: block; width: min(320px, 80%); height: auto; margin: 1.5rem auto 1rem;
+            border-radius: 12px; box-shadow: 0 6px 24px rgba(51, 51, 92, 0.18); }
+p.front { text-align: center; color: var(--muted); }
+p.download { text-align: center; margin: 1rem 0 2rem; }
+p.download a {
+  display: inline-block; padding: 0.55rem 1.1rem; border-radius: 999px;
+  background: #5DBE85; color: #fff; text-decoration: none; font-weight: 700;
+}
+nav#TOC ul { list-style: none; padding-left: 0; }
+nav#TOC li { margin: 0; border-bottom: 1px solid var(--rule); }
+nav#TOC li a { display: block; padding: 0.55rem 0.2rem; text-decoration: none; }
+nav#TOC li a[href*="part-"] { font-weight: 700; margin-top: 0.6rem; }

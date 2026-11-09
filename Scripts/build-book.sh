@@ -14,9 +14,11 @@
 # Needs: pandoc 3.x, epubcheck, python3. rsvg-convert is optional (a PNG cover renders in
 # more readers than an SVG one; without it the SVG is used).
 #
-# Usage: Scripts/build-book.sh [--check-refs] [--png]
+# Usage: Scripts/build-book.sh [--check-refs] [--png] [--html]
 #   --check-refs  fail if a cited file:line does not exist at BOOK_TAG
 #   --png         also render every figure to Docs/book/build/png/, to look at them
+#   --html        also build the web edition into Docs/book/build/site/, one page per
+#                 chapter, which .github/workflows/book.yml publishes to GitHub Pages
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
@@ -27,11 +29,13 @@ EPUB=$OUT/zhen-and-darwin.epub
 
 check_refs=0
 png=0
+html=0
 for arg in "$@"; do
     case "$arg" in
         --check-refs) check_refs=1 ;;
         --png) png=1 ;;
-        *) echo "usage: $0 [--check-refs] [--png]" >&2; exit 64 ;;
+        --html) html=1 ;;
+        *) echo "usage: $0 [--check-refs] [--png] [--html]" >&2; exit 64 ;;
     esac
 done
 
@@ -141,3 +145,46 @@ pandoc "$BOOK/metadata.yaml" "$BOOK"/chapters/*.md \
 
 epubcheck --quiet "$EPUB"
 echo "build-book: $EPUB"
+
+# ── Web edition ──────────────────────────────────────────────────────────────────────
+# The same chapters as one page each. pandoc copies the figures each page names; the
+# cover and the EPUB itself are added by hand, and the front page gets them.
+if (( html )); then
+    SITE=$OUT/site
+    rm -rf "$SITE"
+    pandoc "$BOOK/metadata.yaml" "$BOOK"/chapters/*.md \
+        --from markdown+fenced_divs+bracketed_spans \
+        --to chunkedhtml \
+        --output "$SITE" \
+        --css book.css \
+        --resource-path "$OUT:$BOOK" \
+        --toc --toc-depth 1 \
+        --split-level 1 \
+        --syntax-highlighting tango
+    cp "$BOOK/web.css" "$SITE/book.css"
+    cp "$OUT/figures/cover.svg" "$SITE/figures/cover.svg"
+    cp "$EPUB" "$SITE/"
+    python3 -I - "$SITE" "$(basename "$EPUB")" <<'PY'
+import pathlib, re, sys
+site, epub = pathlib.Path(sys.argv[1]), sys.argv[2]
+for page in site.glob("*.html"):
+    text = page.read_text()
+    # The chapter links again at the bottom, where a reader finishes a chapter.
+    nav = re.search(r'<nav id="sitenav">.*?</nav>', text, re.S)
+    if nav:
+        bottom = nav.group(0).replace('<nav id="sitenav">', '<nav class="sitenav-bottom">')
+        bottom = re.sub(r'\saccesskey="\w"', "", bottom)
+        text = text.replace("</body>", bottom + "\n</body>", 1)
+    if page.name == "index.html":
+        front = (
+            '<img class="cover" src="figures/cover.svg" alt="The cover: Pip the packet, '
+            'a castle for the kernel, a ticket and a mailbox." />\n'
+            '<p class="front">A picture-first tour of every place zhen-core talks to the '
+            'Darwin kernel, and what an iPhone or iPad gets. Pinned to zhen-core 0.9.0.</p>\n'
+            f'<p class="download"><a href="{epub}" download>Download the EPUB</a></p>\n'
+        )
+        text = text.replace("</header>", "</header>\n" + front, 1)
+    page.write_text(text)
+PY
+    echo "build-book: $SITE"
+fi

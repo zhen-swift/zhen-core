@@ -1,0 +1,76 @@
+name: Book
+
+# Builds "Zhen & Darwin, Illustrated" (Docs/book) and, on main, publishes its web edition
+# to GitHub Pages. A pull request that touches the book gets the same build, so a broken
+# reference or an invalid EPUB is caught before it merges, but nothing is deployed from it.
+#
+# The build checks every `File.swift:NN` the book cites against the tag it is pinned to,
+# which is why the checkout fetches tags. zhen-ios and zhen-app are not checked out here,
+# so citations into them are counted but not checked; Scripts/build-book.sh does that when
+# those checkouts sit beside this one.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - Docs/book/**
+      - Scripts/build-book.sh
+      - .github/workflows/book.yml
+  pull_request:
+    paths:
+      - Docs/book/**
+      - Scripts/build-book.sh
+      - .github/workflows/book.yml
+  workflow_dispatch:
+
+# Read-only by default. Only the deploy job is given the Pages permissions it needs.
+permissions:
+  contents: read
+
+# One deployment at a time, and a newer push never cancels one already publishing.
+concurrency:
+  group: book-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build the book
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0   # the book cites lines at a tag
+
+      # pandoc is pinned to the version the book was written against: the Ubuntu
+      # package is older and lacks --syntax-highlighting.
+      - name: Install pandoc, epubcheck and rsvg-convert
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/pandoc.deb" \
+            https://github.com/jgm/pandoc/releases/download/3.13/pandoc-3.13-1-amd64.deb
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq "$RUNNER_TEMP/pandoc.deb" epubcheck librsvg2-bin
+          pandoc --version | head -1
+          epubcheck --version | head -1
+
+      - name: Build the EPUB and the web edition
+        run: Scripts/build-book.sh --check-refs --html
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: Docs/book/build/site
+
+  deploy:
+    name: Publish to GitHub Pages
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
