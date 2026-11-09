@@ -58,6 +58,22 @@ They live in [`zhen-app`](https://github.com/zhen-swift/zhen-app), which depends
 package by version. Contributions to either go there. Nothing in this repository knows the
 app exists, and a change here that needs the app to compile is in the wrong repository.
 
+## The book
+
+[`Docs/book/`](Docs/book/README.md) is "Zhen & Darwin, Illustrated", the picture-first
+explanation of every place the engine meets the Darwin kernel. It is published at
+<https://zhen-swift.github.io/zhen-core/>. It is pinned to a release tag and cites lines
+at that tag, so it is never wrong about the version it names. It does go stale for `main`.
+
+- **A change to the Darwin surface** says, in its pull request, which chapters it affects.
+  Those chapters are either updated or recorded as waiting for the next re-pin. The Darwin
+  surface means `ZhenDarwin`, `ZhenPrivilege`, `zhen-helper`, `CBPFShim`, `ZhenScan`, core's
+  `Platform/` seams, and the platforms and isolation in `Package.swift`.
+  `Docs/book/README.md` says how to find the chapters.
+- **After a release is tagged**, a follow-up pull request re-pins the book to the new tag.
+- **A book change** must pass `Scripts/build-book.sh --check-refs` before it merges. CI runs
+  the same command.
+
 ## Referring to the documents
 
 Refer to a section by its name, never by a section symbol. `A1's accessibility floor`
