@@ -6,6 +6,26 @@ nothing is released yet.
 The format is loosely [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions
 follow the app's `CFBundleShortVersionString`.
 
+## Unreleased
+
+### Documentation
+- **"Zhen & Darwin, Illustrated"** (`Docs/book/`).
+  - A picture-first book about every place the engine meets the Darwin kernel: 18
+    chapters, 5 appendices and 112 drawings.
+  - Each chapter ends with what an iPhone or iPad gets. Appendix D lists where the code
+    and its own docs disagree.
+  - Pinned to `0.9.0`: every one of its 680 citations into this repository is a line at
+    that tag.
+- The book is published at <https://zhen-swift.github.io/zhen-core/>, as a website with
+  chapter navigation and as an EPUB.
+  - `Scripts/build-book.sh` builds both. `--check-refs` proves every citation resolves at
+    the pinned tag.
+  - `Scripts/book-site.py` builds the web edition's navigation from pandoc's site map.
+  - `.github/workflows/book.yml` builds the book on every pull request that touches it,
+    and publishes it from `main`.
+- `CONTRIBUTING.md` and `Docs/book/README.md` say when a change has to bring the book
+  along, and how to re-pin it after a release.
+
 ## [0.9.0] — 2026-10-22 — iPadOS
 
 ### Added

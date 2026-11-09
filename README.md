@@ -159,6 +159,7 @@ main-actor by default.
 | `Docs/README.md` | what each document is and the order to read them |
 | `Docs/SPEC.md` | the original technical specification |
 | `Docs/01-the-library.md`, `Docs/02-the-cli.md` | architecture and rationale |
+| `Docs/book/` | **Zhen & Darwin, Illustrated**: how the engine talks to the Darwin kernel, in pictures, and what an iPhone or iPad gets. Read it at <https://zhen-swift.github.io/zhen-core/> |
 | `CHANGELOG.md` | what changed, newest first |
 
 ## History
