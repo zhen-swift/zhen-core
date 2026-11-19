@@ -122,11 +122,16 @@ public struct NeighborSnapshot: Sendable, Hashable {
     public var entries: [NeighborEntry]
     /// How many bytes the kernel returned for it, where the reader can say.
     public var byteCount: Int?
+    /// Where the entries came from, where the reader can say: `sysctl` for the kernel's
+    /// table, `arp_tool` for Apple's `arp`, which macOS 27 still lets see what it withholds
+    /// from other binaries. Nil when the reader does not say.
+    public var source: String?
 
     /// Creates a value from its fields. Each one is documented on the property it sets.
-    public init(entries: [NeighborEntry], byteCount: Int?) {
+    public init(entries: [NeighborEntry], byteCount: Int?, source: String? = nil) {
         self.entries = entries
         self.byteCount = byteCount
+        self.source = source
     }
 }
 

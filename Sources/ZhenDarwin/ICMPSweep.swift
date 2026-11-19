@@ -243,9 +243,11 @@ public struct ICMPSweepEngine: HostDiscovery {
         // control for the denial heuristic below.
         var neighborsByIP: [IPv4Address: MACAddress] = [:]
         var largestDump: Int?
+        var tableSources: Set<String> = []
         do {
             let first = try await neighbors.snapshot()
             largestDump = first.byteCount
+            if let source = first.source { tableSources.insert(source) }
             for entry in first.entries where entry.isComplete {
                 guard target.network.contains(entry.ip) else { continue }
                 neighborsByIP[entry.ip] = entry.mac
@@ -318,6 +320,7 @@ public struct ICMPSweepEngine: HostDiscovery {
                 let seenAt = MonotonicInstant.now
                 tally.polls += 1
                 if let bytes = read.byteCount { tally.largestDump = max(tally.largestDump ?? 0, bytes) }
+                if let source = read.source { tally.sources.insert(source) }
                 for entry in NeighborWatch.newlyResolved(
                     read.entries, baseline: baseline, reported: reported, in: target.network
                 ) {
@@ -419,6 +422,7 @@ public struct ICMPSweepEngine: HostDiscovery {
             watchReport.polls = tally.polls
             watchReport.resolved = tally.resolved
             watchReport.largestDumpBytes = [largestDump, tally.largestDump].compactMap(\.self).max()
+            tableSources.formUnion(tally.sources)
         }
 
         // Re-read the neighbour table now the sweep has finished.
@@ -433,6 +437,7 @@ public struct ICMPSweepEngine: HostDiscovery {
         // Cheap: one sysctl over a table of a few kilobytes, once, after all the
         // probing is done.
         if let refreshed = try? await neighbors.snapshot() {
+            if let source = refreshed.source { tableSources.insert(source) }
             if let bytes = refreshed.byteCount, neighborWatch {
                 watchReport.largestDumpBytes = max(watchReport.largestDumpBytes ?? 0, bytes)
             }
@@ -449,6 +454,11 @@ public struct ICMPSweepEngine: HostDiscovery {
                     }
                 }
             }
+        }
+        // Which reader answered, before and during and after the sweep: an artifact whose
+        // hardware addresses came through `arp` says so (see ArpTool).
+        if !tableSources.isEmpty {
+            watchReport.tableSource = tableSources.sorted().joined(separator: "+")
         }
 
         var hosts = await state.discovered().map { host -> HostFacts in
@@ -544,6 +554,7 @@ private struct WatchTally: Sendable {
     var polls = 0
     var resolved = 0
     var largestDump: Int?
+    var sources: Set<String> = []
 }
 
 /// One outstanding transmission.

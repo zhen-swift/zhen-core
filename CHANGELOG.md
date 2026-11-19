@@ -6,6 +6,20 @@ nothing is released yet.
 The format is loosely [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versions
 follow the app's `CFBundleShortVersionString`.
 
+## Unreleased
+
+### Fixed
+- **The neighbour table on macOS 27.** macOS 27 sizes the kernel's ARP table (`sysctl`
+  `NET_RT_FLAGS`/`RTF_LLINFO`) at 0 bytes for a binary that is not Apple's, so zhen saw no
+  hardware addresses, its neighbour watch resolved nothing, and hosts that answer only ARP
+  (no ping) went unfound. Apple's `/usr/sbin/arp` still reads it, so on macOS an empty dump
+  is now read again through `arp -an` (`ArpTool`, `posix_spawn`, an empty environment, no
+  inherited descriptors). Measured on macOS 27.2 and 27.2.1, 2026-11-19, by study 2.
+- `run.neighbor_watch.table_source` says which reader answered: `sysctl`, `arp_tool`, or
+  both joined by `+`. It is written whether or not the watch is on, since the table is read
+  before and after the sweep either way. `largest_dump_bytes` stays the kernel's count, so a
+  fallback reads 0 there.
+
 ## [0.8.1] — 2026-10-18 — macOS 15.6
 
 ### Changed

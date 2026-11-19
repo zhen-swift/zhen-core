@@ -94,11 +94,16 @@ public struct NeighborWatchReport: Sendable, Hashable, Codable {
     /// How many addresses resolved during the sweep and were reported as
     /// `neighbor_resolved` at that moment.
     public var resolved: Int?
+    /// Where the sweep's reads of the table came from (`sysctl`, `arp_tool`, or both joined
+    /// by `+`), whether or not the watch was on: the table is read before and after the
+    /// sweep either way. Nil when no read said.
+    public var tableSource: String?
 
     /// Creates a value from its fields. Each one is documented on the property it sets.
     public init(
         enabled: Bool, mechanism: String? = nil, pollIntervalMillis: Double? = nil,
-        polls: Int? = nil, largestDumpBytes: Int? = nil, resolved: Int? = nil
+        polls: Int? = nil, largestDumpBytes: Int? = nil, resolved: Int? = nil,
+        tableSource: String? = nil
     ) {
         self.enabled = enabled
         self.mechanism = mechanism
@@ -106,6 +111,7 @@ public struct NeighborWatchReport: Sendable, Hashable, Codable {
         self.polls = polls
         self.largestDumpBytes = largestDumpBytes
         self.resolved = resolved
+        self.tableSource = tableSource
     }
 
     /// The watch, switched off.
@@ -120,5 +126,6 @@ public struct NeighborWatchReport: Sendable, Hashable, Codable {
         case polls
         case largestDumpBytes = "largest_dump_bytes"
         case resolved
+        case tableSource = "table_source"
     }
 }

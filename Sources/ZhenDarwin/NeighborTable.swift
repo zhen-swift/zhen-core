@@ -5,6 +5,10 @@
 // is readable even when the Local Network permission has been denied. That asymmetry
 // is the control in the denial heuristic: probes hearing nothing while the cache is
 // populated is the signature of a grant we cannot query.
+//
+// Until macOS 27. There the kernel sizes this dump at 0 bytes for any binary that is not
+// Apple's, while Apple's `arp` still reads it, so on macOS an empty dump is read again
+// through `arp` (`ArpTool`), and the snapshot names its source.
 #if canImport(Darwin)
 
 import Darwin
@@ -29,10 +33,18 @@ public struct DarwinNeighborCache: NeighborCache {
         let bytes = try RouteSysctl.fetch(
             [CTL_NET, PF_ROUTE, 0, AF_INET, NET_RT_FLAGS, RTF_LLINFO]
         )
+        #if os(macOS)
+        // Empty is what macOS 27 gives a binary that is not Apple's (see ArpTool). A table
+        // that is genuinely empty reads empty through `arp` too, so this changes nothing
+        // there but the cost of one process. If `arp` fails, the kernel's answer stands.
+        if bytes.isEmpty, let entries = try? ArpTool.entries() {
+            return NeighborSnapshot(entries: entries, byteCount: 0, source: ArpTool.source)
+        }
+        #endif
         // SAFETY: borrowing a raw view over a buffer this call owns; the span cannot
         // outlive it.
         let entries = unsafe Self.decode(bytes[bytes.indices].span.bytes)
-        return NeighborSnapshot(entries: entries, byteCount: bytes.count)
+        return NeighborSnapshot(entries: entries, byteCount: bytes.count, source: "sysctl")
     }
 
     /// Decodes a captured `NET_RT_FLAGS` buffer.
